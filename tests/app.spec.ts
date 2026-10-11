@@ -78,6 +78,9 @@ test("the settings menu toggles back to the screen it opened from", async ({ pag
 
 test("normal, corner, centre, colour, multi-select, undo and keyboard flows work", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  const rowTracks = await page.getByRole("grid", { name: "Sudoku board" }).evaluate((board) => getComputedStyle(board).gridTemplateRows.split(" ").map(Number.parseFloat));
+  expect(rowTracks).toHaveLength(9);
+  expect(Math.max(...rowTracks) - Math.min(...rowTracks)).toBeLessThan(1);
   const empty = page.locator(".sudoku-cell:not(.given)");
   await empty.nth(0).click();
   await page.getByRole("button", { name: "Corner", exact: true }).click();
@@ -178,6 +181,15 @@ test("peer shading appears only when the selected cell contains a value", async 
   await page.locator('[data-digit="5"]').click();
   await expect(empty.locator(".cell-value")).toHaveText("5");
   expect(await page.locator(".sudoku-cell.peer").count()).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Corner", exact: true }).click();
+  await page.locator('[data-digit="4"]').click();
+  await expect(empty.locator(".corner-marks")).toHaveCount(0);
+  await expect(empty.locator(".cell-value")).toHaveText("5");
+  await page.getByRole("button", { name: "Centre", exact: true }).click();
+  await page.locator('[data-digit="6"]').click();
+  await expect(empty.locator(".centre-marks")).toHaveCount(0);
+  await expect(empty.locator(".cell-value")).toHaveText("5");
+  await page.getByRole("button", { name: "Digit", exact: true }).click();
   await page.getByRole("button", { name: "Clear" }).click();
   await expect(page.locator(".sudoku-cell.peer")).toHaveCount(0);
 });

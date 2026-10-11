@@ -72,7 +72,7 @@ test("separate notation modes, multi-cell entry, candidate cleanup, undo and red
   assert.deepEqual(game.corner[2], [4, 5]);
 });
 
-test("normal values replace notes and later multi-cell note toggles converge before removing", () => {
+test("full values reject notes while multi-cell note toggles affect only empty cells", () => {
   const game = createGame(fixture, 1);
   selectCell(game, 2);
   setMode(game, "corner");
@@ -83,15 +83,17 @@ test("normal values replace notes and later multi-cell note toggles converge bef
   assert.deepEqual(game.corner[2], []);
 
   setMode(game, "corner");
+  const historyLength = game.history.length;
   enterDigit(game, 6);
-  assert.deepEqual(game.corner[2], [6], "notes remain editable on a cell with a value");
+  assert.deepEqual(game.corner[2], [], "a full value blocks note entry");
+  assert.equal(game.history.length, historyLength, "blocked note entry does not create undo history");
   selectCell(game, 3, true);
   enterDigit(game, 4);
-  assert.deepEqual(game.corner[2], [4, 6]);
-  assert.deepEqual(game.corner[3], [4], "a mixed selection adds the note to every cell");
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.corner[3], [4], "a mixed selection adds the note only to empty cells");
   enterDigit(game, 4);
-  assert.deepEqual(game.corner[2], [6]);
-  assert.deepEqual(game.corner[3], [], "only a uniform selection removes the note from every cell");
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.corner[3], [], "a repeated note removes it from every eligible cell");
 });
 
 test("a digit is complete once all nine instances are placed", () => {
