@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
-import { applyHint as applyLogicalHint, candidateList, findHint, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
+import { applyHint as applyLogicalHint, candidateList, findHint, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
 import type { Puzzle } from "../src/types.ts";
 
 const classic = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
@@ -29,6 +29,25 @@ test("candidate calculation and logical hint identify a forced value", () => {
   const hint = findHint(values);
   assert.equal(hint?.technique, "Naked single");
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
+});
+
+test("an applied hint is no longer applicable and cannot be offered again", async () => {
+  const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
+  const puzzle = puzzles.find((item) => item.id === "seb-0000847b216e");
+  assert.ok(puzzle);
+  const values = puzzle.givens.split("").map((value) => value === "0" ? "" : value);
+  const eliminated = Array.from({ length: 81 }, () => [] as number[]);
+  let hint = findHint(values, eliminated);
+  while (hint?.kind !== "eliminate") {
+    assert.ok(hint, "fixture must reach a candidate-elimination hint");
+    applyLogicalHint(values, eliminated, hint);
+    hint = findHint(values, eliminated);
+  }
+
+  assert.equal(isHintApplicable(values, eliminated, hint), true);
+  applyLogicalHint(values, eliminated, hint);
+  assert.equal(isHintApplicable(values, eliminated, hint), false);
+  assert.notEqual(findHint(values, eliminated)?.id, hint.id);
 });
 
 test("separate notation modes, multi-cell entry, candidate cleanup, undo and redo are stable", () => {

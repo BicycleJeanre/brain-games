@@ -486,6 +486,39 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await history.getByRole("button", { name: "Close history" }).click();
 });
 
+test("an already-applied saved hint is not reopened after restart", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show answer" }).click();
+  const appliedHintId = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    db.close();
+    return data.games[data.activeGameId].hintId as string;
+  });
+  await page.getByRole("button", { name: "Apply deduction" }).click();
+
+  await page.evaluate(async (hintId) => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readwrite");
+    const store = transaction.objectStore("state");
+    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    data.games[data.activeGameId].hintStage = "preview";
+    data.games[data.activeGameId].hintId = hintId;
+    store.put(data, "app");
+    await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
+    db.close();
+  }, appliedHintId);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open Easy puzzle" }).click();
+  await expect(page.locator(".hint-panel")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Previous hints (1)" })).toBeVisible();
+});
+
 test("settings persist theme and help explains notation, ratings, offline use and backups", async ({ page }) => {
   await page.getByRole("button", { name: "Settings and help" }).click();
   await page.getByLabel("Theme").selectOption("light");

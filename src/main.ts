@@ -3,7 +3,7 @@ import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
-import { candidateList, cellLabel, findHint, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
+import { candidateList, cellLabel, findHint, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
 import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, type TrainingPosition } from "./training.ts";
 import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Theme, TrainingTechniqueId } from "./types.ts";
@@ -463,8 +463,18 @@ function showHintHistory(game: Game) {
 function renderPlayer() {
   const game = store.activeGame();
   if (!game) { view = "home"; return renderHome(); }
-  if (game.hintStage === "preview") activeHint = recordedHint(game, game.hintId) || findHint(game.values, game.eliminated);
-  else activeHint = null;
+  if (game.hintStage === "preview") {
+    const stored = recordedHint(game, game.hintId);
+    const recalculated = stored ? null : findHint(game.values, game.eliminated);
+    if (stored) activeHint = isHintApplicable(game.values, game.eliminated, stored) ? stored : null;
+    else activeHint = recalculated && (!game.hintId || recalculated.id === game.hintId) ? recalculated : null;
+    if (!activeHint) {
+      game.hintStage = "none";
+      game.hintId = null;
+      game.updatedAt = Date.now();
+      void store.putGame(game);
+    }
+  } else activeHint = null;
   const activeRecord = activeHint ? recordedHint(game, activeHint.id) : null;
   const answerShown = activeHint?.id === revealedHintId;
   const preview = activeHint ? hintPreview(activeHint) : null;
@@ -565,10 +575,25 @@ function bindPlayer(game: Game) {
     } else notify("No supported logical step was found for this position.");
     renderPlayer();
   });
-  app.querySelector("#apply-hint")?.addEventListener("click", () => activeHint && changeGame(game, () => {
-    const record = recordedHint(game, activeHint!.id); if (record) record.applied = true;
-    applyHint(game, activeHint!);
-  }));
+  app.querySelector("#apply-hint")?.addEventListener("click", async () => {
+    const hint = activeHint;
+    if (!hint) return;
+    if (!isHintApplicable(game.values, game.eliminated, hint)) {
+      activeHint = null;
+      revealedHintId = null;
+      game.hintStage = "none";
+      game.hintId = null;
+      game.updatedAt = Date.now();
+      await store.putGame(game);
+      notify("That deduction is already applied or no longer matches this position.");
+      renderPlayer();
+      return;
+    }
+    await changeGame(game, () => {
+      const record = recordedHint(game, hint.id); if (record) record.applied = true;
+      applyHint(game, hint);
+    });
+  });
   app.querySelector("#show-hint-answer")?.addEventListener("click", async () => {
     if (!activeHint) return;
     const record = recordedHint(game, activeHint.id); if (record) record.answerShown = true;

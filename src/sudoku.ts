@@ -235,6 +235,21 @@ export function findHint(values: readonly string[], eliminated: readonly number[
   return null;
 }
 
+/**
+ * A stored hint is presentation history, not authoritative solver state. Recheck
+ * every target against the live board before showing or applying it so a hint
+ * cannot survive an undo, sync merge, or already-applied candidate removal.
+ */
+export function isHintApplicable(
+  values: readonly string[],
+  eliminated: readonly number[][],
+  hint: Hint,
+): boolean {
+  return hint.targets.length > 0 && hint.targets.every(({ cell, digit }) =>
+    !values[cell] && candidateList(values, cell, eliminated).includes(digit),
+  );
+}
+
 export function applyHint(
   values: string[],
   eliminated: number[][],
