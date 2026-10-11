@@ -77,7 +77,7 @@ Hints must be progressive and educational:
 
 The first release must support at least the techniques necessary for its bundled Easy, Medium, and Hard puzzles. Do not include a puzzle in an advertised band if the local hint engine cannot explain a complete logical path through it. More advanced SE-rated puzzles may be labelled as unsupported for full hints until the relevant techniques exist.
 
-Hint history is presentation data, not solver state. Before a saved hint is displayed or applied, every target must still be a legal candidate on the current board; stale or already-applied deductions are discarded. Prefer an actively maintained, permissively licensed external logical solver over expanding a bespoke engine, but only behind STrack's hint adapter and only when it accepts the app's live candidate-elimination state, supplies structured evidence and targets, works offline, and does not increase the client or test footprint disproportionately. AGPL engines are not compatible with the current repository licence.
+Hint history is presentation data, not solver state. Before a saved hint is displayed or applied, every target must still be a legal candidate on the current board; stale or already-applied deductions are discarded. Hint discovery is provided entirely by the candidate-aware, MIT-licensed `sudoku-master` package behind STrack's adapter; STrack does not maintain a parallel logical finder. The adapter preserves the app's live candidate-elimination state, converts structured evidence and targets for the progressive UI, and works offline. AGPL engines are not compatible with the current repository licence.
 
 ## Core screens and flows
 

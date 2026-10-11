@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
-import { applyHint as applyLogicalHint, candidateList, findHint, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
+import { findHint } from "../src/hint-engine.ts";
+import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
 import type { Puzzle } from "../src/types.ts";
 
 const classic = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
@@ -27,7 +28,8 @@ test("candidate calculation and logical hint identify a forced value", () => {
   values[0] = "";
   assert.deepEqual(candidateList(values, 0), [5]);
   const hint = findHint(values);
-  assert.equal(hint?.technique, "Naked single");
+  assert.equal(hint?.technique, "Full house");
+  assert.match(hint?.id || "", /^sudoku-master-/);
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
 });
 
@@ -174,6 +176,7 @@ test("cells retain multiple colours and coloured lines participate in undo and r
 
 test("catalogue has 20 valid, rated, provenance-complete puzzles in every band", async () => {
   const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
+  const hintTechniques = new Set<string>();
   assert.equal(puzzles.length, 80);
   assert.equal(new Set(puzzles.map((puzzle) => puzzle.id)).size, 80);
   for (const band of ["Easy", "Medium", "Hard", "Diabolical"]) assert.equal(puzzles.filter((puzzle) => puzzle.difficulty === band).length, 20);
@@ -192,9 +195,12 @@ test("catalogue has 20 valid, rated, provenance-complete puzzles in every band",
       while (values.join("") !== puzzle.solution && steps++ < 500) {
         const hint = findHint(values, eliminated);
         assert.ok(hint, `${puzzle.id} must have a complete local hint path`);
+        assert.match(hint.id, /^sudoku-master-/, `${puzzle.id} must use the external hint engine`);
+        hintTechniques.add(hint.technique);
         applyLogicalHint(values, eliminated, hint);
       }
       assert.equal(values.join(""), puzzle.solution, `${puzzle.id} hint path reaches its stored solution`);
     }
   }
+  assert.ok(hintTechniques.has("Hidden pair"), "the external engine supplies techniques beyond the replaced finder");
 });

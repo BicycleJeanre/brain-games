@@ -3,7 +3,8 @@ import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
-import { candidateList, cellLabel, findHint, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
+import { findHint } from "./hint-engine.ts";
+import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
 import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, type TrainingPosition } from "./training.ts";
 import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Theme, TrainingTechniqueId } from "./types.ts";
@@ -442,12 +443,17 @@ function hintAnswer(hint: Hint) {
 }
 
 function hintPreview(hint: Hint) {
+  if (hint.technique === "Full house") return { summary: "One highlighted unit has a single empty cell.", explanation: "Identify the only digit missing from that row, column, or box." };
+  if (hint.technique === "Last digit") return { summary: "One digit has already been placed eight times.", explanation: "Scan the grid for the only row and column where its final copy can go." };
   if (hint.technique === "Naked single") return { summary: "One focus cell has only one possible candidate.", explanation: "Use the placed digits in its row, column, and box to rule out the other candidates." };
   if (hint.technique === "Hidden single") return { summary: "One candidate has only one possible home in a unit.", explanation: "Compare the highlighted unit with the intersecting rows, columns, and boxes to find which candidate is blocked everywhere else." };
   if (hint.technique === "Locked candidates") return { summary: "A candidate is confined to one line inside a box.", explanation: "When every possible position for a candidate in a box lies on the same row or column, look for that candidate elsewhere on the line." };
   if (hint.technique === "Naked pair") return { summary: "Two highlighted cells confine the same two candidates.", explanation: "Those candidates must occupy the highlighted cells, so inspect the other cells in the unit for a deduction." };
   if (hint.technique === "Naked triple") return { summary: "Three highlighted cells confine the same three candidates.", explanation: "Those candidates must occupy the highlighted cells, so inspect the other cells in the unit for a deduction." };
+  if (hint.technique.startsWith("Hidden ")) return { summary: "A highlighted set of digits is confined to the same number of cells.", explanation: "Those digits must occupy the highlighted cells, so their other candidates can be removed." };
+  if (hint.technique.includes("quadruple")) return { summary: "Four highlighted cells confine four candidates.", explanation: "Those four candidates must occupy the highlighted cells, creating eliminations in the unit." };
   if (hint.technique === "X-Wing") return { summary: "A candidate forms the same two-column pattern across two rows.", explanation: "Compare the four highlighted corners and consider where that candidate can still appear in the intersecting columns." };
+  if (hint.technique === "Swordfish" || hint.technique === "Jellyfish") return { summary: `A candidate forms a ${hint.technique} across matching rows or columns.`, explanation: "The highlighted base lines restrict the candidate to the same cover lines, creating eliminations elsewhere in those cover lines." };
   return { summary: "The highlighted cells contain a logical next step.", explanation: "Review their candidates and shared units before revealing the exact deduction." };
 }
 
@@ -465,9 +471,9 @@ function renderPlayer() {
   if (!game) { view = "home"; return renderHome(); }
   if (game.hintStage === "preview") {
     const stored = recordedHint(game, game.hintId);
-    const recalculated = stored ? null : findHint(game.values, game.eliminated);
-    if (stored) activeHint = isHintApplicable(game.values, game.eliminated, stored) ? stored : null;
-    else activeHint = recalculated && (!game.hintId || recalculated.id === game.hintId) ? recalculated : null;
+    const recalculated = findHint(game.values, game.eliminated);
+    const isCurrent = recalculated && (!game.hintId || recalculated.id === game.hintId);
+    activeHint = isCurrent ? stored && isHintApplicable(game.values, game.eliminated, stored) ? stored : recalculated : null;
     if (!activeHint) {
       game.hintStage = "none";
       game.hintId = null;
