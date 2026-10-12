@@ -6,4 +6,5 @@ for (const required of ["/strack/assets/", "/strack/manifest.webmanifest", "/str
   if (!html.includes(required)) throw new Error(`Production HTML is missing ${required}`);
 }
 if (!worker.includes("index.html") || !worker.includes("manifest.webmanifest")) throw new Error("Service worker precache is incomplete");
+if (!worker.includes("skipWaiting")) throw new Error("Service worker updates will not activate promptly");
 console.log("GitHub Pages base path OK: /strack/ assets and offline shell are present");

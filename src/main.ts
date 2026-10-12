@@ -965,7 +965,15 @@ async function boot() {
     render();
   });
   if ("serviceWorker" in navigator && import.meta.env.PROD) {
-    try { await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`); }
+    try {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+      });
+      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+    }
     catch { notify("Offline installation will retry on the next visit."); }
   }
 }
