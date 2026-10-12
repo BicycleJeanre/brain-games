@@ -92,10 +92,10 @@ export function fillAllCandidates(game: Game) {
   return true;
 }
 
-export function enterDigit(game: Game, digit: number, cleanCandidates = true) {
+export function enterDigit(game: Game, digit: number, cleanCandidates = true, multipleNoteMode: "corner" | "centre" = "corner") {
   const editable = game.selected.filter((cell) => game.puzzle.givens[cell] === "0");
   if (!editable.length) return;
-  const mode = game.mode === "normal" && editable.length > 1 ? "corner" : game.mode;
+  const mode = game.mode === "normal" && editable.length > 1 ? multipleNoteMode : game.mode;
   const targets = mode === "corner" || mode === "centre"
     ? editable.filter((cell) => !game.values[cell])
     : editable;

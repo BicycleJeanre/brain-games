@@ -59,12 +59,25 @@ export interface Game extends BoardSnapshot {
 
 export interface Preferences {
   theme: Theme;
+  noteStyle: "simple" | "advanced";
   showTimer: boolean;
+  showColours: boolean;
+  showLines: boolean;
+  showValueSelection: boolean;
+  showCandidateCalculation: boolean;
+  showControlHelp: boolean;
   autoCandidates: boolean;
   cleanCandidates: boolean;
   highlightPeers: boolean;
   highlightMatches: boolean;
   showMistakes: boolean;
+  noteSize: "small" | "medium" | "large";
+  menuSize: "small" | "medium" | "large";
+  digitSize: "small" | "medium" | "large";
+  noteColour: "classic" | "mono" | "cyan" | "amber";
+  menuColour: "standard" | "bright" | "cyan" | "amber";
+  digitColour: "cyan" | "mono" | "amber";
+  highlightColour: "cyan" | "amber" | "violet" | "green";
 }
 
 export type TrainingTechniqueId =

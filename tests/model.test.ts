@@ -96,6 +96,17 @@ test("full values reject notes while multi-cell note toggles affect only empty c
   assert.deepEqual(game.corner[3], [], "a repeated note removes it from every eligible cell");
 });
 
+test("simple multi-cell entry uses centre notes", () => {
+  const game = createGame(fixture, 1);
+  selectCell(game, 2);
+  selectCell(game, 3, true);
+  enterDigit(game, 4, true, "centre");
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.corner[3], []);
+  assert.deepEqual(game.centre[2], [4]);
+  assert.deepEqual(game.centre[3], [4]);
+});
+
 test("a digit is complete once all nine instances are placed", () => {
   const values = Array(81).fill("");
   values.splice(0, 8, ...Array(8).fill("5"));

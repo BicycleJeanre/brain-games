@@ -76,6 +76,61 @@ test("the settings menu toggles back to the screen it opened from", async ({ pag
   await expect(page.getByRole("grid", { name: "Sudoku board" })).toBeVisible();
 });
 
+test("player settings support simple notes, compact tools and readable presets", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  const legacyNoteCell = page.locator(".sudoku-cell:not(.given)").first();
+  await legacyNoteCell.click();
+  await page.getByRole("button", { name: "Corner", exact: true }).click();
+  await page.getByRole("button", { name: "7", exact: true }).click();
+  await expect(legacyNoteCell.locator(".corner-marks")).toContainText("7");
+  await page.getByRole("button", { name: "Settings and help" }).click();
+  await page.locator('[data-preference-select="noteStyle"]').selectOption("simple");
+  for (const key of ["showColours", "showLines", "showValueSelection", "showCandidateCalculation", "showControlHelp"]) {
+    await page.locator(`[data-preference="${key}"]`).uncheck();
+  }
+  await page.locator('[data-preference-select="digitSize"]').selectOption("large");
+  await page.locator('[data-preference-select="digitColour"]').selectOption("amber");
+  await page.locator('[data-preference-select="noteSize"]').selectOption("large");
+  await page.locator('[data-preference-select="noteColour"]').selectOption("amber");
+  await page.locator('[data-preference-select="menuSize"]').selectOption("large");
+  await page.locator('[data-preference-select="menuColour"]').selectOption("bright");
+  await page.locator('[data-preference-select="highlightColour"]').selectOption("violet");
+  await expect(page.locator("html")).toHaveAttribute("data-note-size", "large");
+  await expect(page.locator("html")).toHaveAttribute("data-highlight-colour", "violet");
+  await page.getByRole("button", { name: "Close settings and help" }).click();
+
+  const modes = page.getByRole("group", { name: "Entry mode" });
+  await expect(modes).toContainText("Digit");
+  await expect(modes).toContainText("Notes");
+  await expect(modes).not.toContainText("Corner");
+  await expect(modes).not.toContainText("Colour");
+  await expect(modes).not.toContainText("Lines");
+  await expect(page.getByRole("button", { name: "Highlight multiple values" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Calculate all candidates" })).toHaveCount(0);
+  await expect(page.locator(".control-help")).toHaveCount(0);
+  await expect(legacyNoteCell.locator(".corner-marks")).toHaveCount(0);
+  await expect(legacyNoteCell.locator(".centre-marks")).toContainText("7");
+
+  const empty = page.locator(".sudoku-cell:not(.given)");
+  await empty.nth(0).click();
+  await page.getByRole("button", { name: /Multi-select/ }).click();
+  await empty.nth(1).click();
+  await page.getByRole("button", { name: "Digit", exact: true }).click();
+  await page.getByRole("button", { name: "4", exact: true }).click();
+  await expect(empty.nth(0).locator(".corner-marks")).toHaveCount(0);
+  await expect(empty.nth(1).locator(".corner-marks")).toHaveCount(0);
+  await expect(empty.nth(0).locator(".centre-marks")).toContainText("4");
+  await expect(empty.nth(1).locator(".centre-marks")).toContainText("4");
+  expect(await empty.nth(0).locator(".centre-marks").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(13);
+  expect(await page.getByRole("button", { name: "Notes", exact: true }).evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
+
+  await page.reload();
+  await page.locator("[data-game]").first().click();
+  await expect(page.getByRole("group", { name: "Entry mode" })).toContainText("Notes");
+  await expect(page.getByRole("group", { name: "Entry mode" })).not.toContainText("Corner");
+  await expect(page.locator("html")).toHaveAttribute("data-digit-colour", "amber");
+});
+
 test("normal, corner, centre, colour, multi-select, undo and keyboard flows work", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const rowTracks = await page.getByRole("grid", { name: "Sudoku board" }).evaluate((board) => getComputedStyle(board).gridTemplateRows.split(" ").map(Number.parseFloat));

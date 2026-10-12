@@ -7,7 +7,7 @@ import { findHint } from "./hint-engine.ts";
 import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
 import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, type TrainingPosition } from "./training.ts";
-import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Theme, TrainingTechniqueId } from "./types.ts";
+import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, TrainingTechniqueId } from "./types.ts";
 
 const catalogue = catalogueJson as Puzzle[];
 const store = new Store();
@@ -68,8 +68,18 @@ function notify(message: string) {
   setTimeout(() => toast.classList.remove("show"), 2400);
 }
 
-function applyTheme() {
-  document.documentElement.dataset.theme = store.data.preferences.theme;
+function applyPreferences() {
+  const preferences = store.data.preferences;
+  Object.assign(document.documentElement.dataset, {
+    theme: preferences.theme,
+    noteSize: preferences.noteSize,
+    menuSize: preferences.menuSize,
+    digitSize: preferences.digitSize,
+    noteColour: preferences.noteColour,
+    menuColour: preferences.menuColour,
+    digitColour: preferences.digitColour,
+    highlightColour: preferences.highlightColour,
+  });
 }
 
 function shell(content: string, title: string) {
@@ -387,8 +397,11 @@ function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: bo
   const value = game.values[cell];
   const given = game.puzzle.givens[cell] !== "0";
   const selected = game.selected.includes(cell);
+  const simpleNotes = store.data.preferences.noteStyle === "simple";
+  const cornerDigits = simpleNotes ? [] : game.corner[cell];
+  const centreDigits = simpleNotes ? [...new Set([...game.corner[cell], ...game.centre[cell]])].sort() : game.centre[cell];
   const automaticCandidates = !value && !game.corner[cell].length && !game.centre[cell].length && store.data.preferences.autoCandidates ? candidateList(game.values, cell, game.eliminated) : [];
-  const noteDigits = [...new Set([...game.corner[cell], ...game.centre[cell], ...automaticCandidates])];
+  const noteDigits = [...new Set([...cornerDigits, ...centreDigits, ...automaticCandidates])];
   const noteMatches = store.data.preferences.highlightMatches && highlightedDigits.size > 0 && (highlightOperator === "or"
     ? noteDigits.some((digit) => highlightedDigits.has(digit))
     : [...highlightedDigits].every((digit) => noteDigits.includes(digit)));
@@ -396,13 +409,13 @@ function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: bo
   const valueMatches = store.data.preferences.highlightMatches && Boolean(value) && highlightedDigits.has(Number(value)) && (highlightOperator === "or" || highlightedDigits.size === 1);
   const cellColours = game.colours[cell];
   const hintFocus = hint?.targets.some((target) => target.cell === cell);
-  const classes = ["sudoku-cell", given ? "given" : "", value ? "has-value" : "", game.corner[cell].length ? "has-corner" : "", game.centre[cell].length ? "has-centre" : "", cellColours.length ? "has-colours" : "", selected ? "selected" : "", !selected && store.data.preferences.highlightPeers && game.selected.some((chosen) => game.values[chosen] && peers[chosen].includes(cell)) ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", store.data.preferences.showMistakes && value && value !== game.puzzle.solution[cell] ? "mistake" : "", hint?.evidence.includes(cell) ? "hint-evidence" : "", hintFocus ? answerShown ? "hint-target" : "hint-focus" : ""].filter(Boolean).join(" ");
+  const classes = ["sudoku-cell", given ? "given" : "", value ? "has-value" : "", cornerDigits.length ? "has-corner" : "", centreDigits.length ? "has-centre" : "", cellColours.length ? "has-colours" : "", selected ? "selected" : "", !selected && store.data.preferences.highlightPeers && game.selected.some((chosen) => game.values[chosen] && peers[chosen].includes(cell)) ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", store.data.preferences.showMistakes && value && value !== game.puzzle.solution[cell] ? "mistake" : "", hint?.evidence.includes(cell) ? "hint-evidence" : "", hintFocus ? answerShown ? "hint-target" : "hint-focus" : ""].filter(Boolean).join(" ");
   let content = cellColours.length ? `<span class="cell-colours" style="--colour-count:${cellColours.length}" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span>` : "";
   if (value) content = `<span class="cell-value">${value}</span>`;
-  if (!value && game.corner[cell].length) content += `<span class="corner-marks">${game.corner[cell].map(noteDigit).join("")}</span>`;
-  if (!value && game.centre[cell].length) content += `<span class="centre-marks">${game.centre[cell].map(noteDigit).join("")}</span>`;
+  if (!value && cornerDigits.length) content += `<span class="corner-marks">${cornerDigits.map(noteDigit).join("")}</span>`;
+  if (!value && centreDigits.length) content += `<span class="centre-marks">${centreDigits.map(noteDigit).join("")}</span>`;
   if (automaticCandidates.length) content = `<span class="centre-marks auto">${automaticCandidates.map(noteDigit).join("")}</span>`;
-  const noteLabel = `${game.corner[cell].length ? `, corner notes ${game.corner[cell].join(" ")}` : ""}${game.centre[cell].length ? `, centre notes ${game.centre[cell].join(" ")}` : ""}`;
+  const noteLabel = simpleNotes ? centreDigits.length ? `, notes ${centreDigits.join(" ")}` : "" : `${cornerDigits.length ? `, corner notes ${cornerDigits.join(" ")}` : ""}${centreDigits.length ? `, centre notes ${centreDigits.join(" ")}` : ""}`;
   const colourLabel = cellColours.length ? `, colours ${cellColours.join(", ")}` : "";
   const lineLabel = game.lines.filter((line) => line.from === cell || line.to === cell).map((line) => `${line.colour} line to ${cellLabel(line.from === cell ? line.to : line.from)}`).join(", ");
   return `<button class="${classes}" data-cell="${cell}" aria-label="${cellLabel(cell)}${value ? `, ${given ? "given " : ""}${value}` : ", empty"}${noteLabel}${colourLabel}${lineLabel ? `, ${lineLabel}` : ""}" aria-pressed="${selected}">${content}<span class="colour-cues" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span></button>`;
@@ -469,6 +482,14 @@ function showHintHistory(game: Game) {
 function renderPlayer() {
   const game = store.activeGame();
   if (!game) { view = "home"; return renderHome(); }
+  const preferences = store.data.preferences;
+  if (preferences.noteStyle === "simple" && game.mode === "corner") game.mode = "centre";
+  if (!preferences.showColours && game.mode === "colour") game.mode = "normal";
+  if (!preferences.showLines && game.mode === "line") game.mode = "normal";
+  if (!preferences.showValueSelection && highlightMode) {
+    highlightMode = false;
+    highlightedDigits.clear();
+  }
   if (game.hintStage === "preview") {
     const stored = recordedHint(game, game.hintId);
     const recalculated = findHint(game.values, game.eliminated);
@@ -490,7 +511,7 @@ function renderPlayer() {
     <section class="player-meta"><button class="back-button" data-nav="home">← Home</button><div>${metaPill(game.puzzle)}</div><button class="info-button" id="puzzle-info" aria-label="Puzzle details">i</button></section>
     <section class="player-layout">
       <div class="board-column">
-        <div class="board-status"><span id="timer" class="timer ${store.data.preferences.showTimer ? "" : "hidden"}">${formatTime(game.elapsed)}</span><span>${game.completedAt ? "Solved" : game.paused ? "Paused" : navigator.onLine ? "Saved on device" : "Saved · offline"}</span></div>
+        <div class="board-status"><span id="timer" class="timer ${preferences.showTimer ? "" : "hidden"}">${formatTime(game.elapsed)}</span><span>${game.completedAt ? "Solved" : game.paused ? "Paused" : navigator.onLine ? "Saved on device" : "Saved · offline"}</span></div>
         <div class="sudoku-board ${game.mode === "line" ? "drawing-lines" : ""} ${game.paused && !game.completedAt ? "paused" : ""} ${celebrating ? "celebrating" : ""}" role="grid" aria-label="Sudoku board">${Array.from({ length: 81 }, (_, cell) => cellMarkup(game, cell, activeHint, answerShown)).join("")}${lineMarkup(game)}${game.paused && !game.completedAt ? `<button class="pause-cover" id="resume-board"><strong>Paused</strong><span>Tap to continue</span></button>` : ""}</div>
         ${celebrating ? `<div class="completion-confetti" aria-hidden="true">${Array.from({ length: 14 }, () => "<i></i>").join("")}</div>` : ""}
         ${game.completedAt ? `<div class="completion-banner ${celebrating ? "celebrating" : ""}" role="status"><span aria-hidden="true">★</span><div><strong>Puzzle complete!</strong><small>${game.puzzle.difficulty} · ${rating(game.puzzle)} · ${formatTime(game.elapsed)}</small></div><button id="next-puzzle">Next puzzle</button></div>` : ""}
@@ -499,18 +520,19 @@ function renderPlayer() {
         <div class="toolbar"><button id="undo" aria-label="Undo" ${!game.history.length ? "disabled" : ""}>↶<small>Undo</small></button><button id="redo" aria-label="Redo" ${!game.future.length ? "disabled" : ""}>↷<small>Redo</small></button><button id="pause" aria-label="${game.paused ? "Resume" : "Pause"} puzzle">${game.paused ? "▶" : "Ⅱ"}<small>${game.paused ? "Resume" : "Pause"}</small></button><button id="hint" aria-label="Get a logical hint">?<small>Hint</small></button></div>
         ${activeHint && preview ? `<div class="hint-panel" role="status"><span class="eyebrow">${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : `<button id="show-hint-answer" class="secondary compact">Show answer</button>`}<button id="dismiss-hint" class="text-button">Dismiss hint</button></div></div>` : ""}
         ${game.hintHistory.length ? `<button id="hint-history" class="history-button">Previous hints (${game.hintHistory.length})</button>` : ""}
-        ${wrong && !store.data.preferences.showMistakes ? `<p class="quiet-warning">Something on the board conflicts with the solution. Turn on mistake checks in Settings for cell-level cues.</p>` : ""}
-        <div class="mode-switch" role="group" aria-label="Entry mode">${([['normal','Digit'],['corner','Corner'],['centre','Centre'],['colour','Colour'],['line','Lines']] as [EntryMode,string][]).map(([mode,label]) => `<button data-mode="${mode}" class="${game.mode === mode ? "active" : ""}" aria-pressed="${game.mode === mode}">${label}</button>`).join("")}</div>
+        ${wrong && !preferences.showMistakes ? `<p class="quiet-warning">Something on the board conflicts with the solution. Turn on mistake checks in Settings for cell-level cues.</p>` : ""}
+        ${(() => { const modes: [EntryMode, string][] = [["normal", "Digit"], ...(preferences.noteStyle === "advanced" ? [["corner", "Corner"]] as [EntryMode, string][] : []), ["centre", preferences.noteStyle === "simple" ? "Notes" : "Centre"], ...(preferences.showColours ? [["colour", "Colour"]] as [EntryMode, string][] : []), ...(preferences.showLines ? [["line", "Lines"]] as [EntryMode, string][] : [])]; return `<div class="mode-switch" style="--mode-count:${modes.length}" role="group" aria-label="Entry mode">${modes.map(([mode,label]) => `<button data-mode="${mode}" class="${game.mode === mode ? "active" : ""}" aria-pressed="${game.mode === mode}">${label}</button>`).join("")}</div>`; })()}
         ${game.mode === "colour" || game.mode === "line" ? annotationPalette(game) : `<div class="number-pad" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9].map((digit) => { const complete = digitIsComplete(game.values, digit); const active = highlightedDigits.has(digit); return `<button data-digit="${digit}" class="${active ? "active-digit " : ""}${complete ? "complete-digit" : ""}" aria-pressed="${active}" aria-label="${digit}${complete ? ", all placed" : ""}">${digit}</button>`; }).join("")}<button id="clear" class="clear-key">Clear</button></div><div class="highlight-options ${highlightMode ? "" : "hidden"}"><p>Highlight cells containing:</p><div role="group" aria-label="Multiple digit matching"><button data-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>`}
-        <div class="selection-tools"><button id="multi" class="multi-toggle ${multiSelect ? "active" : ""}" aria-pressed="${multiSelect}"><span aria-hidden="true">▦</span> Multi-select ${multiSelect ? "on" : "off"}</button><button id="highlight-mode" class="multi-toggle ${highlightMode ? "active" : ""}" aria-label="Highlight multiple values" aria-pressed="${highlightMode}"><span aria-hidden="true">◎</span> Highlight values ${highlightMode ? "on" : "off"}</button></div>
-        <button id="fill-candidates" class="secondary candidate-action">Calculate all candidates</button>
-        <p class="control-help">Keyboard: arrows move · 1–9 enter · C corner · M centre · V colour · L lines · Shift extends selection · Ctrl/⌘ Z undo. Digit entry clears both note types. Highlight values lets number keys select several matches without editing cells.</p>
+        <div class="selection-tools ${preferences.showValueSelection ? "" : "single"}"><button id="multi" class="multi-toggle ${multiSelect ? "active" : ""}" aria-pressed="${multiSelect}"><span aria-hidden="true">▦</span> Multi-select ${multiSelect ? "on" : "off"}</button>${preferences.showValueSelection ? `<button id="highlight-mode" class="multi-toggle ${highlightMode ? "active" : ""}" aria-label="Highlight multiple values" aria-pressed="${highlightMode}"><span aria-hidden="true">◎</span> Highlight values ${highlightMode ? "on" : "off"}</button>` : ""}</div>
+        ${preferences.showCandidateCalculation ? `<button id="fill-candidates" class="secondary candidate-action">Calculate all candidates</button>` : ""}
+        ${preferences.showControlHelp ? `<p class="control-help">Keyboard: arrows move · 1–9 enter · ${preferences.noteStyle === "advanced" ? "C corner · " : ""}M notes · ${preferences.showColours ? "V colour · " : ""}${preferences.showLines ? "L lines · " : ""}Shift extends selection · Ctrl/⌘ Z undo. Digit entry clears notes.${preferences.showValueSelection ? " Highlight values lets number keys select several matches without editing cells." : ""}</p>` : ""}
       </aside>
     </section>`, "Puzzle desk");
   bindPlayer(game);
 }
 
 function bindPlayer(game: Game) {
+  const preferences = store.data.preferences;
   bindCellDrag(game);
   app.querySelectorAll<HTMLElement>("[data-cell]").forEach((cell) => cell.addEventListener("click", async (event) => {
     if (suppressCellClick) { event.preventDefault(); return; }
@@ -525,7 +547,7 @@ function bindPlayer(game: Game) {
   app.querySelectorAll<HTMLElement>("[data-digit]").forEach((button) => button.addEventListener("click", () => {
     const digit = Number(button.dataset.digit);
     if (highlightMode || !game.selected.length) { highlightMode = true; toggleHighlight(digit); renderPlayer(); return; }
-    void changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, store.data.preferences.cleanCandidates); });
+    void changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, preferences.cleanCandidates, preferences.noteStyle === "simple" ? "centre" : "corner"); });
   }));
   app.querySelectorAll<HTMLElement>("[data-colour]").forEach((button) => button.addEventListener("click", () => {
     const colour = button.dataset.colour as AnnotationColour;
@@ -771,12 +793,23 @@ function renderSettings() {
       <div class="card settings-card account-card"><span class="eyebrow">Cross-device sessions</span><h2>${cloudUser ? "Progress sync is on" : "Continue on another device"}</h2>
         ${!cloudConfigured ? `<p>Cloud sessions are not configured in this build. Device-only play remains fully available.</p>` : cloudUser ? `<p>Signed in as <strong>${escapeHtml(cloudUser.email || "your account")}</strong>. Puzzle edits, notation, cell colours, drawn lines, elapsed time, completion history, preferences, and training progress sync through your private Firestore account.</p><p class="sync-message ${cloud.error ? "error" : ""}" data-cloud-status>${escapeHtml(cloud.status())}</p>${cloud.error ? `<p class="error">${escapeHtml(cloud.error)}</p><button id="retry-sync" class="secondary">Retry sync</button>` : ""}<button id="sign-out" class="secondary">Sign out on this device</button>` : `<p>Create an account or sign in with the same email on your PC and phone. Offline puzzle and training progress remains on each device and reconciles by the newest saved version when a connection returns.</p><form id="account-form"><label>Email<input id="account-email" type="email" autocomplete="email" required /></label><label>Password<input id="account-password" type="password" autocomplete="current-password" minlength="6" required /></label><div class="actions"><button class="primary compact" type="submit">Sign in</button><button class="secondary compact" type="submit" data-create="true">Create account</button></div><button class="text-button" type="button" id="reset-password">Send password reset email</button><p id="account-feedback" role="status"></p></form>`}
       </div>
-      <div class="card settings-card"><span class="eyebrow">Appearance</span><h2>Make the desk yours</h2><label>Theme<select id="theme">${(["system","light","dark"] as Theme[]).map((theme) => `<option value="${theme}" ${theme === preferences.theme ? "selected" : ""}>${theme[0].toUpperCase() + theme.slice(1)}</option>`).join("")}</select></label>${toggle("showTimer", "Show timer", "Keep time available without turning it into a score.", preferences.showTimer)}${toggle("highlightPeers", "Highlight peers", "Shade cells sharing a row, column, or box.", preferences.highlightPeers)}${toggle("highlightMatches", "Highlight matching digits", "Show every copy of the selected digit.", preferences.highlightMatches)}</div>
-      <div class="card settings-card"><span class="eyebrow">Assistance</span><h2>Notation and checks</h2>${toggle("autoCandidates", "Automatic candidates", "Show canonical candidates in empty cells with no notes.", preferences.autoCandidates)}${toggle("cleanCandidates", "Clean notes after entry", "Remove a placed digit from peer notes.", preferences.cleanCandidates)}${toggle("showMistakes", "Show conflicts with solution", "Add a symbol and outline; never rely on colour alone.", preferences.showMistakes)}</div>
+      <div class="card settings-card"><span class="eyebrow">Appearance</span><h2>Make the desk yours</h2>${selectSetting("theme", "Theme", "Follow the device or keep one theme.", preferences.theme, [["system", "System"], ["light", "Light"], ["dark", "Dark"]], "theme")}${toggle("showTimer", "Show timer", "Keep time available without turning it into a score.", preferences.showTimer)}${toggle("highlightPeers", "Highlight peers", "Shade cells sharing a row, column, or box.", preferences.highlightPeers)}${toggle("highlightMatches", "Highlight matching digits", "Show every copy of the selected digit.", preferences.highlightMatches)}</div>
+      <div class="card settings-card"><span class="eyebrow">Player layout</span><h2>Choose what stays visible</h2>${selectSetting("noteStyle", "Notes", "Simple uses centre notes only. Advanced adds separate corner notes.", preferences.noteStyle, [["simple", "Simple · centre only"], ["advanced", "Advanced · corner + centre"]])}${toggle("showColours", "Show cell colours", "Keep the Colour entry mode in the player.", preferences.showColours)}${toggle("showLines", "Show drawn lines", "Keep the Lines entry mode in the player.", preferences.showLines)}${toggle("showValueSelection", "Show value selections", "Allow selecting several digits for AND/OR highlighting.", preferences.showValueSelection)}${toggle("showCandidateCalculation", "Show candidate calculation", "Keep the calculate-all-candidates action visible.", preferences.showCandidateCalculation)}${toggle("showControlHelp", "Show help text", "Keep the keyboard and entry reminder under the controls.", preferences.showControlHelp)}</div>
+      <div class="card settings-card"><span class="eyebrow">Readability</span><h2>Type size and colour</h2><p>Choose from a few tested, high-contrast options. No fine-tuning required.</p>${selectSetting("digitSize", "Sudoku digit size", "Size of givens and entered values.", preferences.digitSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("digitColour", "Entered digit colour", "Givens remain neutral for a clear distinction.", preferences.digitColour, [["cyan", "Cyan"], ["mono", "Monochrome"], ["amber", "Amber"]])}${selectSetting("noteSize", "Note size", "Applies to corner, centre, and automatic candidates.", preferences.noteSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("noteColour", "Note colour", "Classic separates corner and centre notes; the others use one colour.", preferences.noteColour, [["classic", "Classic · amber + neutral"], ["mono", "Monochrome"], ["cyan", "Cyan"], ["amber", "Amber"]])}${selectSetting("menuSize", "Menu text size", "Player controls and top navigation.", preferences.menuSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("menuColour", "Menu text colour", "Inactive controls stay distinguishable from active controls.", preferences.menuColour, [["standard", "Standard"], ["bright", "Bright neutral"], ["cyan", "Cyan"], ["amber", "Amber"]])}${selectSetting("highlightColour", "Cell highlight colour", "Used for selected cells and matching values or notes.", preferences.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}</div>
+      <div class="card settings-card"><span class="eyebrow">Assistance</span><h2>Candidates and checks</h2>${toggle("autoCandidates", "Automatic candidates", "Show canonical candidates in empty cells with no notes.", preferences.autoCandidates)}${toggle("cleanCandidates", "Clean notes after entry", "Remove a placed digit from peer notes.", preferences.cleanCandidates)}${toggle("showMistakes", "Show conflicts with solution", "Add a symbol and outline; never rely on colour alone.", preferences.showMistakes)}</div>
       <div class="card settings-card"><span class="eyebrow">Backup</span><h2>Your device data</h2><p>Browser storage can be cleared or evicted. Cloud sync keeps signed-in sessions current across devices; JSON export remains the independent backup and the only backup for device-only play.</p><div class="stack-actions"><button id="export" class="secondary">Download JSON backup</button><label class="file-button">Import JSON backup<input type="file" id="backup-file" accept="application/json" /></label><button id="reset-current" class="danger-quiet">Reset current puzzle</button><button id="reset-history" class="danger-quiet">Clear completed history</button><button id="reset-all" class="danger-quiet">Erase all local STrack data</button></div><p class="storage-note">Local reset actions do not delete signed-in cloud copies; sign out first if you want a blank device-only workspace.</p></div>
       <div class="card settings-card"><span class="eyebrow">Help</span><h2>How STrack works</h2><button id="open-help" class="secondary">Open user guide</button><p class="storage-note"><strong>${navigator.onLine ? "Online" : "Offline"}.</strong> The app shell, catalogue, help, preferences, solver, and saved progress work without a connection after the first production load.</p></div>
     </section>`, "Settings & help");
-  app.querySelector<HTMLSelectElement>("#theme")!.addEventListener("change", async (event) => { preferences.theme = (event.target as HTMLSelectElement).value as Theme; applyTheme(); await store.saveSettings(); });
+  app.querySelectorAll<HTMLSelectElement>("[data-preference-select]").forEach((select) => select.addEventListener("change", async () => {
+    const key = select.dataset.preferenceSelect!;
+    (preferences as unknown as Record<string, string>)[key] = select.value;
+    applyPreferences();
+    if (key === "noteStyle" && select.value === "simple") {
+      const game = store.activeGame();
+      if (game?.mode === "corner") { setMode(game, "centre"); await store.putGame(game, false); }
+    }
+    await store.saveSettings();
+  }));
   app.querySelectorAll<HTMLInputElement>("[data-preference]").forEach((input) => input.addEventListener("change", async () => { (preferences as unknown as Record<string, boolean>)[input.dataset.preference!] = input.checked; await store.saveSettings(); }));
   app.querySelector("#sign-out")?.addEventListener("click", async () => { await signOutAccount(); notify("Signed out; device data remains available"); });
   app.querySelector("#retry-sync")?.addEventListener("click", () => cloud.uploadLocal());
@@ -817,6 +850,10 @@ function toggle(key: string, title: string, detail: string, checked: boolean) {
   return `<label class="toggle"><span><strong>${title}</strong><small>${detail}</small></span><input type="checkbox" role="switch" data-preference="${key}" ${checked ? "checked" : ""} /></label>`;
 }
 
+function selectSetting(key: string, title: string, detail: string, value: string, options: Array<[string, string]>, id = "") {
+  return `<label class="settings-field"><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span><select ${id ? `id="${id}"` : ""} data-preference-select="${key}">${options.map(([option, label]) => `<option value="${option}" ${option === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>`;
+}
+
 function confirmReset(scope: "current" | "history" | "all", message: string) {
   showDialog(`<h2>Confirm data reset</h2><p>${escapeHtml(message)}</p><button class="danger" id="confirm-reset">Confirm reset</button>`, "Cancel");
   dialog.querySelector("#confirm-reset")!.addEventListener("click", async () => { await store.clear(scope); dialog.close(); notify("Local data updated"); renderSettings(); });
@@ -831,6 +868,7 @@ function showDialog(content: string, closeLabel = "Done") {
 function showHelp() {
   showDialog(`<span class="eyebrow">User guide</span><h2>Solving with STrack</h2><h3>Training</h3><p>Train contains 20 lessons from singles through fish, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Core lessons use bundled puzzle positions, advanced lessons use focused candidate diagrams with strong and weak link lines, and all progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint first identifies evidence and names the technique without revealing the digit or exact elimination. Show answer explicitly reveals the deduction; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are STrack’s friendly bands, not an official universal scale. Diabolical puzzles can outgrow the local hint engine.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, training progress, and preferences through Firestore so you can continue on another device. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
   dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. Opening a challenge resumes its existing saved game; signed-in progress follows you between devices through the same private Firestore session as every other puzzle. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
+  dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
 }
 
@@ -845,7 +883,7 @@ function accountError(error: unknown) {
 }
 
 function render() {
-  applyTheme();
+  applyPreferences();
   if (view === "home") renderHome();
   else if (view === "training") activeTraining ? renderTrainingLesson() : renderTrainingHub();
   else if (view === "library") renderLibrary();
@@ -864,7 +902,7 @@ document.addEventListener("keydown", async (event) => {
     event.preventDefault();
     const digit = Number(event.key);
     if (highlightMode || !game.selected.length) { highlightMode = true; toggleHighlight(digit); renderPlayer(); }
-    else await changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, store.data.preferences.cleanCandidates); });
+    else await changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, store.data.preferences.cleanCandidates, store.data.preferences.noteStyle === "simple" ? "centre" : "corner"); });
   }
   else if (["Backspace", "Delete", "0"].includes(event.key)) {
     event.preventDefault();
@@ -875,10 +913,10 @@ document.addEventListener("keydown", async (event) => {
   else if (event.key === "ArrowDown") { event.preventDefault(); moveSelection(game, 1, 0, event.shiftKey); highlightOnly(Number(game.values[game.anchor]) || null); await store.putGame(game); renderPlayer(); }
   else if (event.key === "ArrowLeft") { event.preventDefault(); moveSelection(game, 0, -1, event.shiftKey); highlightOnly(Number(game.values[game.anchor]) || null); await store.putGame(game); renderPlayer(); }
   else if (event.key === "ArrowRight") { event.preventDefault(); moveSelection(game, 0, 1, event.shiftKey); highlightOnly(Number(game.values[game.anchor]) || null); await store.putGame(game); renderPlayer(); }
-  else if (event.key.toLowerCase() === "c") { setMode(game, "corner"); await store.putGame(game); renderPlayer(); }
+  else if (event.key.toLowerCase() === "c") { setMode(game, store.data.preferences.noteStyle === "advanced" ? "corner" : "centre"); await store.putGame(game); renderPlayer(); }
   else if (event.key.toLowerCase() === "m") { setMode(game, "centre"); await store.putGame(game); renderPlayer(); }
-  else if (event.key.toLowerCase() === "v") { setMode(game, "colour"); await store.putGame(game); renderPlayer(); }
-  else if (event.key.toLowerCase() === "l") { setMode(game, "line"); await store.putGame(game); renderPlayer(); }
+  else if (event.key.toLowerCase() === "v" && store.data.preferences.showColours) { setMode(game, "colour"); await store.putGame(game); renderPlayer(); }
+  else if (event.key.toLowerCase() === "l" && store.data.preferences.showLines) { setMode(game, "line"); await store.putGame(game); renderPlayer(); }
   else if (event.key.toLowerCase() === "n") { setMode(game, "normal"); await store.putGame(game); renderPlayer(); }
 });
 
@@ -897,7 +935,7 @@ async function boot() {
   await store.load();
   store.onGameSaved = (game) => { void cloud.syncGame(game); };
   store.onSettingsSaved = () => { void cloud.syncSettings(); };
-  applyTheme();
+  applyPreferences();
   if (new URLSearchParams(location.search).has("p")) view = "import";
   render();
   watchAuth(async (user) => {

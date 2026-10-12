@@ -6,6 +6,17 @@ import type { Puzzle } from "../src/types.ts";
 
 const puzzle: Puzzle = { id: "store-test", givens: "0".repeat(81), solution: "123456789".repeat(9), source: "Imported", sourceUrl: "", provenance: "test", licence: "test", seRating: null, ratingEngine: "Not rated", ratingVersion: "Not rated", difficulty: "Unrated", catalogueVersion: "test", fullHints: false };
 
+test("player preference presets migrate missing values and reject invalid values", async () => {
+  const { normalizePreferences } = await import("../src/store.ts");
+  const preferences = normalizePreferences({ theme: "dark", noteStyle: "simple", showLines: false, noteSize: "huge", highlightColour: "green" });
+  assert.equal(preferences.theme, "dark");
+  assert.equal(preferences.noteStyle, "simple");
+  assert.equal(preferences.showLines, false);
+  assert.equal(preferences.noteSize, "medium");
+  assert.equal(preferences.highlightColour, "green");
+  assert.equal(preferences.showColours, true);
+});
+
 test("IndexedDB persists active progress and backup import preserves existing IDs", async () => {
   const { Store } = await import("../src/store.ts");
   const first = new Store();
