@@ -86,7 +86,7 @@ Hint history is presentation data, not solver state. Before a saved hint is disp
 - Puzzle player: grid, number pad, normal/corner/centre modes, AND/OR multi-digit note highlighting, colour palette with targeted and complete clearing, undo/redo, timer, hint, settings, pause, and completion state.
 - Puzzle library: filters for difficulty, completion, source, and rating; accessible compact cards; deterministic random choice.
 - Import/share: accept common 81-character formats with `0` or `.` blanks, validate shape and uniqueness, and generate a URL-safe share link without uploading the puzzle.
-- Settings/help: theme, highlight and candidate preferences, timer, mistake behavior, notation explanation, keyboard shortcuts, SE explanation, data controls, and offline status.
+- Settings/help: theme; simple centre-only or advanced corner-and-centre notation; visibility controls for colour, lines, multi-value selection, candidate calculation, and player help; practical font-size presets for notes, player menus, and Sudoku digits; curated high-contrast colours for digits, notes, menus, and highlighted cells; timer, mistake behavior, keyboard shortcuts, SE explanation, data controls, and offline status.
 
 ## Local data and privacy
 
@@ -103,7 +103,7 @@ Hint history is presentation data, not solver state. Before a saved hint is disp
 - It is installable and relaunches offline with the app shell, help, current progress, and bundled puzzle catalogue available.
 - At least 80 uniquely solvable, redistributable puzzles are bundled across four documented SE bands.
 - Every puzzle exposes provenance, exact SE rating, rating engine/version, and friendly label.
-- Normal digits, corner marks, centre marks, colours, multi-cell selection, undo/redo, automatic candidates, highlighting, timer, save/resume, light/dark/system theme, and keyboard/touch flows work; every board row retains equal height regardless of its contents, and a full digit prevents note entry in that cell.
+- Normal digits, corner marks, centre marks, colours, multi-cell selection, undo/redo, automatic candidates, highlighting, timer, save/resume, light/dark/system theme, configurable player controls/readability, and keyboard/touch flows work; every board row retains equal height regardless of its contents, and a full digit prevents note entry in that cell.
 - Hints name and explain logical techniques and visually mark the relevant evidence.
 - Training teaches every technique currently supported by the local hint engine plus the documented advanced curriculum through interactive pattern and deduction exercises, works offline, and retains progress across signed-in devices.
 - Daily and weekly challenge cards expose all four difficulty bands, remain stable for their UTC period, work offline, resume existing cross-device sessions, and retain cadence/period metadata for completion counts, streaks, totals, and average times.

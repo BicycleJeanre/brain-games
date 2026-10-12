@@ -3,13 +3,54 @@ import type { AnnotationColour, AppData, BoardSnapshot, ColourLine, Game, Prefer
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
+  noteStyle: "advanced",
   showTimer: true,
+  showColours: true,
+  showLines: true,
+  showValueSelection: true,
+  showCandidateCalculation: true,
+  showControlHelp: true,
   autoCandidates: false,
   cleanCandidates: true,
   highlightPeers: true,
   highlightMatches: true,
   showMistakes: false,
+  noteSize: "medium",
+  menuSize: "medium",
+  digitSize: "medium",
+  noteColour: "classic",
+  menuColour: "standard",
+  digitColour: "cyan",
+  highlightColour: "cyan",
 };
+
+const preferenceValues = {
+  theme: new Set(["system", "light", "dark"]),
+  noteStyle: new Set(["simple", "advanced"]),
+  noteSize: new Set(["small", "medium", "large"]),
+  menuSize: new Set(["small", "medium", "large"]),
+  digitSize: new Set(["small", "medium", "large"]),
+  noteColour: new Set(["classic", "mono", "cyan", "amber"]),
+  menuColour: new Set(["standard", "bright", "cyan", "amber"]),
+  digitColour: new Set(["cyan", "mono", "amber"]),
+  highlightColour: new Set(["cyan", "amber", "violet", "green"]),
+} as const;
+
+const booleanPreferenceKeys = [
+  "showTimer", "showColours", "showLines", "showValueSelection", "showCandidateCalculation", "showControlHelp",
+  "autoCandidates", "cleanCandidates", "highlightPeers", "highlightMatches", "showMistakes",
+] as const;
+
+export function normalizePreferences(value: unknown): Preferences {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const result = { ...DEFAULT_PREFERENCES };
+  for (const key of booleanPreferenceKeys) if (typeof raw[key] === "boolean") result[key] = raw[key];
+  for (const [key, allowed] of Object.entries(preferenceValues)) {
+    const candidate = raw[key];
+    if (typeof candidate === "string" && (allowed as ReadonlySet<string>).has(candidate)) (result as unknown as Record<string, unknown>)[key] = candidate;
+  }
+  return result;
+}
 
 export const CATALOGUE_VERSION = "2026.10.09+bank.d8c8eba";
 
@@ -108,7 +149,7 @@ export class Store {
         ...emptyData(),
         ...saved,
         settingsUpdatedAt: saved.settingsUpdatedAt || 0,
-        preferences: { ...DEFAULT_PREFERENCES, ...saved.preferences },
+        preferences: normalizePreferences(saved.preferences),
         trainingProgress: normalizeTrainingProgress(saved.trainingProgress),
         games: Object.fromEntries(Object.entries(saved.games || {}).map(([id, game]) => [id, normalizeGame(game as Game)])),
         deletedGames: saved.deletedGames || {},
@@ -162,7 +203,7 @@ export class Store {
       changed = true;
     }
     if (this.data.settingsUpdatedAt < settings.updatedAt) {
-      this.data.preferences = { ...DEFAULT_PREFERENCES, ...settings.preferences };
+      this.data.preferences = normalizePreferences(settings.preferences);
       if (settings.trainingProgress !== undefined) this.data.trainingProgress = normalizeTrainingProgress(settings.trainingProgress);
       this.data.activeGameId = settings.activeGameId && !this.data.deletedGames[settings.activeGameId] ? settings.activeGameId : null;
       this.data.settingsUpdatedAt = settings.updatedAt;
@@ -210,7 +251,7 @@ export class Store {
         added++;
       } else throw new Error(`Game ${id} is incomplete; nothing was imported.`);
     }
-    this.data.preferences = { ...this.data.preferences, ...parsed.data.preferences };
+    this.data.preferences = normalizePreferences({ ...this.data.preferences, ...parsed.data.preferences });
     this.data.trainingProgress = { ...this.data.trainingProgress, ...normalizeTrainingProgress(parsed.data.trainingProgress) };
     await this.saveSettings();
     return { added, skipped };
