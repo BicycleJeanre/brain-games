@@ -3,7 +3,8 @@ import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
-import { candidateList, cellLabel, findHint, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
+import { findHint } from "./hint-engine.ts";
+import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
 import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, type TrainingPosition } from "./training.ts";
 import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Theme, TrainingTechniqueId } from "./types.ts";
@@ -398,8 +399,8 @@ function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: bo
   const classes = ["sudoku-cell", given ? "given" : "", value ? "has-value" : "", game.corner[cell].length ? "has-corner" : "", game.centre[cell].length ? "has-centre" : "", cellColours.length ? "has-colours" : "", selected ? "selected" : "", !selected && store.data.preferences.highlightPeers && game.selected.some((chosen) => game.values[chosen] && peers[chosen].includes(cell)) ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", store.data.preferences.showMistakes && value && value !== game.puzzle.solution[cell] ? "mistake" : "", hint?.evidence.includes(cell) ? "hint-evidence" : "", hintFocus ? answerShown ? "hint-target" : "hint-focus" : ""].filter(Boolean).join(" ");
   let content = cellColours.length ? `<span class="cell-colours" style="--colour-count:${cellColours.length}" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span>` : "";
   if (value) content = `<span class="cell-value">${value}</span>`;
-  if (game.corner[cell].length) content += `<span class="corner-marks">${game.corner[cell].map(noteDigit).join("")}</span>`;
-  if (game.centre[cell].length) content += `<span class="centre-marks">${game.centre[cell].map(noteDigit).join("")}</span>`;
+  if (!value && game.corner[cell].length) content += `<span class="corner-marks">${game.corner[cell].map(noteDigit).join("")}</span>`;
+  if (!value && game.centre[cell].length) content += `<span class="centre-marks">${game.centre[cell].map(noteDigit).join("")}</span>`;
   if (automaticCandidates.length) content = `<span class="centre-marks auto">${automaticCandidates.map(noteDigit).join("")}</span>`;
   const noteLabel = `${game.corner[cell].length ? `, corner notes ${game.corner[cell].join(" ")}` : ""}${game.centre[cell].length ? `, centre notes ${game.centre[cell].join(" ")}` : ""}`;
   const colourLabel = cellColours.length ? `, colours ${cellColours.join(", ")}` : "";
@@ -442,12 +443,17 @@ function hintAnswer(hint: Hint) {
 }
 
 function hintPreview(hint: Hint) {
+  if (hint.technique === "Full house") return { summary: "One highlighted unit has a single empty cell.", explanation: "Identify the only digit missing from that row, column, or box." };
+  if (hint.technique === "Last digit") return { summary: "One digit has already been placed eight times.", explanation: "Scan the grid for the only row and column where its final copy can go." };
   if (hint.technique === "Naked single") return { summary: "One focus cell has only one possible candidate.", explanation: "Use the placed digits in its row, column, and box to rule out the other candidates." };
   if (hint.technique === "Hidden single") return { summary: "One candidate has only one possible home in a unit.", explanation: "Compare the highlighted unit with the intersecting rows, columns, and boxes to find which candidate is blocked everywhere else." };
   if (hint.technique === "Locked candidates") return { summary: "A candidate is confined to one line inside a box.", explanation: "When every possible position for a candidate in a box lies on the same row or column, look for that candidate elsewhere on the line." };
   if (hint.technique === "Naked pair") return { summary: "Two highlighted cells confine the same two candidates.", explanation: "Those candidates must occupy the highlighted cells, so inspect the other cells in the unit for a deduction." };
   if (hint.technique === "Naked triple") return { summary: "Three highlighted cells confine the same three candidates.", explanation: "Those candidates must occupy the highlighted cells, so inspect the other cells in the unit for a deduction." };
+  if (hint.technique.startsWith("Hidden ")) return { summary: "A highlighted set of digits is confined to the same number of cells.", explanation: "Those digits must occupy the highlighted cells, so their other candidates can be removed." };
+  if (hint.technique.includes("quadruple")) return { summary: "Four highlighted cells confine four candidates.", explanation: "Those four candidates must occupy the highlighted cells, creating eliminations in the unit." };
   if (hint.technique === "X-Wing") return { summary: "A candidate forms the same two-column pattern across two rows.", explanation: "Compare the four highlighted corners and consider where that candidate can still appear in the intersecting columns." };
+  if (hint.technique === "Swordfish" || hint.technique === "Jellyfish") return { summary: `A candidate forms a ${hint.technique} across matching rows or columns.`, explanation: "The highlighted base lines restrict the candidate to the same cover lines, creating eliminations elsewhere in those cover lines." };
   return { summary: "The highlighted cells contain a logical next step.", explanation: "Review their candidates and shared units before revealing the exact deduction." };
 }
 
@@ -463,8 +469,18 @@ function showHintHistory(game: Game) {
 function renderPlayer() {
   const game = store.activeGame();
   if (!game) { view = "home"; return renderHome(); }
-  if (game.hintStage === "preview") activeHint = recordedHint(game, game.hintId) || findHint(game.values, game.eliminated);
-  else activeHint = null;
+  if (game.hintStage === "preview") {
+    const stored = recordedHint(game, game.hintId);
+    const recalculated = findHint(game.values, game.eliminated);
+    const isCurrent = recalculated && (!game.hintId || recalculated.id === game.hintId);
+    activeHint = isCurrent ? stored && isHintApplicable(game.values, game.eliminated, stored) ? stored : recalculated : null;
+    if (!activeHint) {
+      game.hintStage = "none";
+      game.hintId = null;
+      game.updatedAt = Date.now();
+      void store.putGame(game);
+    }
+  } else activeHint = null;
   const activeRecord = activeHint ? recordedHint(game, activeHint.id) : null;
   const answerShown = activeHint?.id === revealedHintId;
   const preview = activeHint ? hintPreview(activeHint) : null;
@@ -565,10 +581,25 @@ function bindPlayer(game: Game) {
     } else notify("No supported logical step was found for this position.");
     renderPlayer();
   });
-  app.querySelector("#apply-hint")?.addEventListener("click", () => activeHint && changeGame(game, () => {
-    const record = recordedHint(game, activeHint!.id); if (record) record.applied = true;
-    applyHint(game, activeHint!);
-  }));
+  app.querySelector("#apply-hint")?.addEventListener("click", async () => {
+    const hint = activeHint;
+    if (!hint) return;
+    if (!isHintApplicable(game.values, game.eliminated, hint)) {
+      activeHint = null;
+      revealedHintId = null;
+      game.hintStage = "none";
+      game.hintId = null;
+      game.updatedAt = Date.now();
+      await store.putGame(game);
+      notify("That deduction is already applied or no longer matches this position.");
+      renderPlayer();
+      return;
+    }
+    await changeGame(game, () => {
+      const record = recordedHint(game, hint.id); if (record) record.applied = true;
+      applyHint(game, hint);
+    });
+  });
   app.querySelector("#show-hint-answer")?.addEventListener("click", async () => {
     if (!activeHint) return;
     const record = recordedHint(game, activeHint.id); if (record) record.answerShown = true;
@@ -798,7 +829,7 @@ function showDialog(content: string, closeLabel = "Done") {
 }
 
 function showHelp() {
-  showDialog(`<span class="eyebrow">User guide</span><h2>Solving with STrack</h2><h3>Training</h3><p>Train contains 20 lessons from singles through fish, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Core lessons use bundled puzzle positions, advanced lessons use focused candidate diagrams with strong and weak link lines, and all progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed, and entering a final value clears both note types from that cell. Across several selected cells, a note is added everywhere first and removed everywhere only when every cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint first identifies evidence and names the technique without revealing the digit or exact elimination. Show answer explicitly reveals the deduction; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are STrack’s friendly bands, not an official universal scale. Diabolical puzzles can outgrow the local hint engine.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, training progress, and preferences through Firestore so you can continue on another device. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
+  showDialog(`<span class="eyebrow">User guide</span><h2>Solving with STrack</h2><h3>Training</h3><p>Train contains 20 lessons from singles through fish, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Core lessons use bundled puzzle positions, advanced lessons use focused candidate diagrams with strong and weak link lines, and all progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint first identifies evidence and names the technique without revealing the digit or exact elimination. Show answer explicitly reveals the deduction; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are STrack’s friendly bands, not an official universal scale. Diabolical puzzles can outgrow the local hint engine.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, training progress, and preferences through Firestore so you can continue on another device. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
   dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. Opening a challenge resumes its existing saved game; signed-in progress follows you between devices through the same private Firestore session as every other puzzle. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
 }

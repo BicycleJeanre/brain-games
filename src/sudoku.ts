@@ -101,138 +101,19 @@ export function validatePuzzle(input: string): {
   return { valid: true, normalized, solution: solutions[0], message: "Unique solution found on this device." };
 }
 
-function unitName(unit: number[]): string {
-  const index = units.indexOf(unit);
-  if (index < 9) return `row ${index + 1}`;
-  if (index < 18) return `column ${index - 8}`;
-  return `box ${index - 17}`;
-}
-
-function combinations<T>(items: T[], size: number): T[][] {
-  const result: T[][] = [];
-  const visit = (start: number, picked: T[]) => {
-    if (picked.length === size) return void result.push([...picked]);
-    for (let i = start; i <= items.length - (size - picked.length); i++) {
-      picked.push(items[i]);
-      visit(i + 1, picked);
-      picked.pop();
-    }
-  };
-  visit(0, []);
-  return result;
-}
-
-export function findHint(values: readonly string[], eliminated: readonly number[][] = []): Hint | null {
-  const candidates = Array.from({ length: 81 }, (_, cell) => candidateList(values, cell, eliminated));
-  for (let cell = 0; cell < 81; cell++) {
-    if (!values[cell] && candidates[cell].length === 1) {
-      const digit = candidates[cell][0];
-      return {
-        id: `naked-single-${cell}-${digit}`,
-        technique: "Naked single",
-        summary: `Only ${digit} can fit in row ${Math.floor(cell / 9) + 1}, column ${(cell % 9) + 1}.`,
-        explanation: "Every other digit is already used by a peer in the same row, column, or box.",
-        kind: "place",
-        evidence: peers[cell].filter((i) => values[i]),
-        targets: [{ cell, digit }],
-      };
-    }
-  }
-  for (const unit of units) {
-    for (const digit of DIGITS) {
-      const spots = unit.filter((cell) => !values[cell] && candidates[cell].includes(digit));
-      if (spots.length === 1) {
-        return {
-          id: `hidden-single-${spots[0]}-${digit}`,
-          technique: "Hidden single",
-          summary: `${digit} has only one possible home in ${unitName(unit)}.`,
-          explanation: "Other empty cells in this unit are blocked by an existing digit in one of their peers.",
-          kind: "place",
-          evidence: unit.filter((cell) => cell !== spots[0]),
-          targets: [{ cell: spots[0], digit }],
-        };
-      }
-    }
-  }
-  for (let boxIndex = 0; boxIndex < boxes.length; boxIndex++) {
-    const box = boxes[boxIndex];
-    for (const digit of DIGITS) {
-      const spots = box.filter((cell) => !values[cell] && candidates[cell].includes(digit));
-      if (spots.length < 2) continue;
-      const sameRow = spots.every((cell) => Math.floor(cell / 9) === Math.floor(spots[0] / 9));
-      const sameColumn = spots.every((cell) => cell % 9 === spots[0] % 9);
-      const outside = sameRow
-        ? rows[Math.floor(spots[0] / 9)].filter((cell) => !box.includes(cell))
-        : sameColumn
-          ? columns[spots[0] % 9].filter((cell) => !box.includes(cell))
-          : [];
-      const targets = outside
-        .filter((cell) => !values[cell] && candidates[cell].includes(digit))
-        .map((cell) => ({ cell, digit }));
-      if (targets.length) {
-        const line = sameRow ? `row ${Math.floor(spots[0] / 9) + 1}` : `column ${(spots[0] % 9) + 1}`;
-        return {
-          id: `locked-${boxIndex}-${digit}-${targets.map((t) => t.cell).join("-")}`,
-          technique: "Locked candidates",
-          summary: `${digit} is locked to ${line} inside box ${boxIndex + 1}.`,
-          explanation: `Because every place for ${digit} in that box lies on the same line, ${digit} can be removed from the rest of the line.`,
-          kind: "eliminate",
-          evidence: spots,
-          targets,
-        };
-      }
-    }
-  }
-  for (const unit of units) {
-    const open = unit.filter((cell) => !values[cell] && candidates[cell].length >= 2 && candidates[cell].length <= 3);
-    for (const size of [2, 3]) {
-      for (const group of combinations(open, size)) {
-        const union = [...new Set(group.flatMap((cell) => candidates[cell]))];
-        if (union.length !== size || !group.every((cell) => candidates[cell].every((d) => union.includes(d)))) continue;
-        const targets = unit
-          .filter((cell) => !group.includes(cell) && !values[cell])
-          .flatMap((cell) => candidates[cell].filter((digit) => union.includes(digit)).map((digit) => ({ cell, digit })));
-        if (targets.length) {
-          const label = size === 2 ? "Naked pair" : "Naked triple";
-          return {
-            id: `${label}-${group.join("-")}-${union.join("")}`,
-            technique: label,
-            summary: `${union.join(", ")} are confined to ${size} cells in ${unitName(unit)}.`,
-            explanation: `Those ${size} digits must occupy those ${size} cells, so they can be removed from every other cell in the unit.`,
-            kind: "eliminate",
-            evidence: group,
-            targets,
-          };
-        }
-      }
-    }
-  }
-  for (const digit of DIGITS) {
-    const rowPairs = rows
-      .map((row, index) => ({ index, cols: row.filter((cell) => !values[cell] && candidates[cell].includes(digit)).map((cell) => cell % 9) }))
-      .filter((item) => item.cols.length === 2);
-    for (const pair of combinations(rowPairs, 2)) {
-      if (pair[0].cols.join() !== pair[1].cols.join()) continue;
-      const targets = pair[0].cols.flatMap((column) =>
-        columns[column]
-          .filter((cell) => !pair.some((row) => Math.floor(cell / 9) === row.index) && !values[cell] && candidates[cell].includes(digit))
-          .map((cell) => ({ cell, digit })),
-      );
-      if (targets.length) {
-        const evidence = pair.flatMap((row) => row.cols.map((column) => row.index * 9 + column));
-        return {
-          id: `x-wing-${digit}-${evidence.join("-")}`,
-          technique: "X-Wing",
-          summary: `${digit} appears in the same two columns in two rows.`,
-          explanation: "One of those positions must contain the digit in each row, so the digit can be removed from those columns elsewhere.",
-          kind: "eliminate",
-          evidence,
-          targets,
-        };
-      }
-    }
-  }
-  return null;
+/**
+ * A stored hint is presentation history, not authoritative solver state. Recheck
+ * every target against the live board before showing or applying it so a hint
+ * cannot survive an undo, sync merge, or already-applied candidate removal.
+ */
+export function isHintApplicable(
+  values: readonly string[],
+  eliminated: readonly number[][],
+  hint: Hint,
+): boolean {
+  return hint.targets.length > 0 && hint.targets.every(({ cell, digit }) =>
+    !values[cell] && candidateList(values, cell, eliminated).includes(digit),
+  );
 }
 
 export function applyHint(

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
-import { applyHint as applyLogicalHint, candidateList, findHint, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
+import { findHint } from "../src/hint-engine.ts";
+import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
 import type { Puzzle } from "../src/types.ts";
 
 const classic = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
@@ -27,8 +28,28 @@ test("candidate calculation and logical hint identify a forced value", () => {
   values[0] = "";
   assert.deepEqual(candidateList(values, 0), [5]);
   const hint = findHint(values);
-  assert.equal(hint?.technique, "Naked single");
+  assert.equal(hint?.technique, "Full house");
+  assert.match(hint?.id || "", /^sudoku-master-/);
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
+});
+
+test("an applied hint is no longer applicable and cannot be offered again", async () => {
+  const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
+  const puzzle = puzzles.find((item) => item.id === "seb-0000847b216e");
+  assert.ok(puzzle);
+  const values = puzzle.givens.split("").map((value) => value === "0" ? "" : value);
+  const eliminated = Array.from({ length: 81 }, () => [] as number[]);
+  let hint = findHint(values, eliminated);
+  while (hint?.kind !== "eliminate") {
+    assert.ok(hint, "fixture must reach a candidate-elimination hint");
+    applyLogicalHint(values, eliminated, hint);
+    hint = findHint(values, eliminated);
+  }
+
+  assert.equal(isHintApplicable(values, eliminated, hint), true);
+  applyLogicalHint(values, eliminated, hint);
+  assert.equal(isHintApplicable(values, eliminated, hint), false);
+  assert.notEqual(findHint(values, eliminated)?.id, hint.id);
 });
 
 test("separate notation modes, multi-cell entry, candidate cleanup, undo and redo are stable", () => {
@@ -51,7 +72,7 @@ test("separate notation modes, multi-cell entry, candidate cleanup, undo and red
   assert.deepEqual(game.corner[2], [4, 5]);
 });
 
-test("normal values replace notes and later multi-cell note toggles converge before removing", () => {
+test("full values reject notes while multi-cell note toggles affect only empty cells", () => {
   const game = createGame(fixture, 1);
   selectCell(game, 2);
   setMode(game, "corner");
@@ -62,15 +83,17 @@ test("normal values replace notes and later multi-cell note toggles converge bef
   assert.deepEqual(game.corner[2], []);
 
   setMode(game, "corner");
+  const historyLength = game.history.length;
   enterDigit(game, 6);
-  assert.deepEqual(game.corner[2], [6], "notes remain editable on a cell with a value");
+  assert.deepEqual(game.corner[2], [], "a full value blocks note entry");
+  assert.equal(game.history.length, historyLength, "blocked note entry does not create undo history");
   selectCell(game, 3, true);
   enterDigit(game, 4);
-  assert.deepEqual(game.corner[2], [4, 6]);
-  assert.deepEqual(game.corner[3], [4], "a mixed selection adds the note to every cell");
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.corner[3], [4], "a mixed selection adds the note only to empty cells");
   enterDigit(game, 4);
-  assert.deepEqual(game.corner[2], [6]);
-  assert.deepEqual(game.corner[3], [], "only a uniform selection removes the note from every cell");
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.corner[3], [], "a repeated note removes it from every eligible cell");
 });
 
 test("a digit is complete once all nine instances are placed", () => {
@@ -155,6 +178,7 @@ test("cells retain multiple colours and coloured lines participate in undo and r
 
 test("catalogue has 20 valid, rated, provenance-complete puzzles in every band", async () => {
   const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
+  const hintTechniques = new Set<string>();
   assert.equal(puzzles.length, 80);
   assert.equal(new Set(puzzles.map((puzzle) => puzzle.id)).size, 80);
   for (const band of ["Easy", "Medium", "Hard", "Diabolical"]) assert.equal(puzzles.filter((puzzle) => puzzle.difficulty === band).length, 20);
@@ -173,9 +197,12 @@ test("catalogue has 20 valid, rated, provenance-complete puzzles in every band",
       while (values.join("") !== puzzle.solution && steps++ < 500) {
         const hint = findHint(values, eliminated);
         assert.ok(hint, `${puzzle.id} must have a complete local hint path`);
+        assert.match(hint.id, /^sudoku-master-/, `${puzzle.id} must use the external hint engine`);
+        hintTechniques.add(hint.technique);
         applyLogicalHint(values, eliminated, hint);
       }
       assert.equal(values.join(""), puzzle.solution, `${puzzle.id} hint path reaches its stored solution`);
     }
   }
+  assert.ok(hintTechniques.has("Hidden pair"), "the external engine supplies techniques beyond the replaced finder");
 });

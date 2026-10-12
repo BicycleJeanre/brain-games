@@ -1,4 +1,5 @@
-import { applyHint, candidateList, findHint } from "./sudoku.ts";
+import { findHint } from "./hint-engine.ts";
+import { applyHint, candidateList } from "./sudoku.ts";
 import type { Hint, Puzzle, TrainingTechniqueId } from "./types.ts";
 
 export interface TrainingTechnique {
@@ -71,6 +72,7 @@ function diagram(id: TrainingTechniqueId, entries: Array<[number, number[]]>, ev
 }
 
 const authoredPositions = new Map<TrainingTechniqueId, TrainingPosition>([
+  ["naked-triple", diagram("naked-triple", [[cell(1,1),[1,2]],[cell(1,2),[1,3]],[cell(1,3),[2,3]],[cell(1,4),[1,4,5]]], [cell(1,1),cell(1,2),cell(1,3)], [{cell:cell(1,4),digit:1}], "Three cells in row 1 contain only 1, 2, and 3 between them.", "Those digits must occupy the highlighted cells, so 1 can be removed from row 1, column 4.")],
   ["swordfish", diagram("swordfish", [[cell(1,2),[2,5]],[cell(1,5),[5,7]],[cell(4,5),[1,5]],[cell(4,8),[5,9]],[cell(7,2),[3,5]],[cell(7,8),[5,6]],[cell(9,2),[1,5,8]],[cell(3,6),[2,4,7]]], [cell(1,2),cell(1,5),cell(4,5),cell(4,8),cell(7,2),cell(7,8)], [{cell:cell(9,2),digit:5}], "The 5s in rows 1, 4, and 7 occupy only columns 2, 5, and 8.", "Each base row must place a 5 in one of those cover columns, so column 2 cannot contain another 5 in row 9.")],
   ["jellyfish", diagram("jellyfish", [[cell(1,1),[2,6]],[cell(1,6),[4,6]],[cell(3,3),[1,6]],[cell(3,9),[6,8]],[cell(6,1),[5,6]],[cell(6,3),[2,6]],[cell(8,6),[6,7]],[cell(8,9),[3,6]],[cell(5,3),[4,6,9]],[cell(4,5),[1,7]]], [cell(1,1),cell(1,6),cell(3,3),cell(3,9),cell(6,1),cell(6,3),cell(8,6),cell(8,9)], [{cell:cell(5,3),digit:6}], "Four rows confine 6 to columns 1, 3, 6, and 9.", "Those four rows consume all four placements in the cover columns, removing 6 from row 5, column 3.")],
   ["skyscraper", diagram("skyscraper", [[cell(2,2),[1,4]],[cell(2,8),[4,7]],[cell(5,2),[4,6]],[cell(5,7),[2,4]],[cell(3,7),[4,8]],[cell(7,4),[3,9]]], [cell(2,2),cell(2,8),cell(5,2),cell(5,7)], [{cell:cell(3,7),digit:4}], "Rows 2 and 5 each contain a strong pair for 4 with a shared base in column 2.", "At least one roof—row 2 column 8 or row 5 column 7—is 4, so row 3 column 7, which sees both roofs, cannot be 4.")],

@@ -78,6 +78,9 @@ test("the settings menu toggles back to the screen it opened from", async ({ pag
 
 test("normal, corner, centre, colour, multi-select, undo and keyboard flows work", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  const rowTracks = await page.getByRole("grid", { name: "Sudoku board" }).evaluate((board) => getComputedStyle(board).gridTemplateRows.split(" ").map(Number.parseFloat));
+  expect(rowTracks).toHaveLength(9);
+  expect(Math.max(...rowTracks) - Math.min(...rowTracks)).toBeLessThan(1);
   const empty = page.locator(".sudoku-cell:not(.given)");
   await empty.nth(0).click();
   await page.getByRole("button", { name: "Corner", exact: true }).click();
@@ -178,6 +181,15 @@ test("peer shading appears only when the selected cell contains a value", async 
   await page.locator('[data-digit="5"]').click();
   await expect(empty.locator(".cell-value")).toHaveText("5");
   expect(await page.locator(".sudoku-cell.peer").count()).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Corner", exact: true }).click();
+  await page.locator('[data-digit="4"]').click();
+  await expect(empty.locator(".corner-marks")).toHaveCount(0);
+  await expect(empty.locator(".cell-value")).toHaveText("5");
+  await page.getByRole("button", { name: "Centre", exact: true }).click();
+  await page.locator('[data-digit="6"]').click();
+  await expect(empty.locator(".centre-marks")).toHaveCount(0);
+  await expect(empty.locator(".cell-value")).toHaveText("5");
+  await page.getByRole("button", { name: "Digit", exact: true }).click();
   await page.getByRole("button", { name: "Clear" }).click();
   await expect(page.locator(".sudoku-cell.peer")).toHaveCount(0);
 });
@@ -484,6 +496,39 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await history.getByText("Show answer").click();
   await expect(history.locator(".hint-answer")).toContainText(/(Place|Remove) [1-9]/);
   await history.getByRole("button", { name: "Close history" }).click();
+});
+
+test("an already-applied saved hint is not reopened after restart", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show answer" }).click();
+  const appliedHintId = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    db.close();
+    return data.games[data.activeGameId].hintId as string;
+  });
+  await page.getByRole("button", { name: "Apply deduction" }).click();
+
+  await page.evaluate(async (hintId) => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readwrite");
+    const store = transaction.objectStore("state");
+    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    data.games[data.activeGameId].hintStage = "preview";
+    data.games[data.activeGameId].hintId = hintId;
+    store.put(data, "app");
+    await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
+    db.close();
+  }, appliedHintId);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open Easy puzzle" }).click();
+  await expect(page.locator(".hint-panel")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Previous hints (1)" })).toBeVisible();
 });
 
 test("settings persist theme and help explains notation, ratings, offline use and backups", async ({ page }) => {

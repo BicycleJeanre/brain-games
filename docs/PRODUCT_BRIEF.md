@@ -6,7 +6,7 @@ Build a polished Sudoku application in the FTrack/GTrack product family. It must
 
 The interaction target is functional parity with the strongest parts of Sudoku Exchange, implemented independently and presented with STrack's own design:
 
-- normal digit entry;
+- normal digit entry with notes restricted to empty cells;
 - separate corner/Snyder marks and centre/candidate notation;
 - multiple cell colours, including multi-cell selection;
 - logical, explanatory hints rather than unexplained answer reveals;
@@ -77,6 +77,8 @@ Hints must be progressive and educational:
 
 The first release must support at least the techniques necessary for its bundled Easy, Medium, and Hard puzzles. Do not include a puzzle in an advertised band if the local hint engine cannot explain a complete logical path through it. More advanced SE-rated puzzles may be labelled as unsupported for full hints until the relevant techniques exist.
 
+Hint history is presentation data, not solver state. Before a saved hint is displayed or applied, every target must still be a legal candidate on the current board; stale or already-applied deductions are discarded. Hint discovery is provided entirely by the candidate-aware, MIT-licensed `sudoku-master` package behind STrack's adapter; STrack does not maintain a parallel logical finder. The adapter preserves the app's live candidate-elimination state, converts structured evidence and targets for the progressive UI, and works offline. AGPL engines are not compatible with the current repository licence.
+
 ## Core screens and flows
 
 - Home: place active puzzles immediately below the hero for quick resume; open deterministic daily or weekly challenges for every difficulty; track current-period completion, consecutive-period streaks, totals, and average solve times; choose a new puzzle by band/SE range; enter training; open a puzzle string/link; and view recent completions. Challenge periods use UTC/ISO-week keys, work from the bundled offline catalogue, and resume the same local or synced game.
@@ -101,7 +103,7 @@ The first release must support at least the techniques necessary for its bundled
 - It is installable and relaunches offline with the app shell, help, current progress, and bundled puzzle catalogue available.
 - At least 80 uniquely solvable, redistributable puzzles are bundled across four documented SE bands.
 - Every puzzle exposes provenance, exact SE rating, rating engine/version, and friendly label.
-- Normal digits, corner marks, centre marks, colours, multi-cell selection, undo/redo, automatic candidates, highlighting, timer, save/resume, light/dark/system theme, and keyboard/touch flows work.
+- Normal digits, corner marks, centre marks, colours, multi-cell selection, undo/redo, automatic candidates, highlighting, timer, save/resume, light/dark/system theme, and keyboard/touch flows work; every board row retains equal height regardless of its contents, and a full digit prevents note entry in that cell.
 - Hints name and explain logical techniques and visually mark the relevant evidence.
 - Training teaches every technique currently supported by the local hint engine plus the documented advanced curriculum through interactive pattern and deduction exercises, works offline, and retains progress across signed-in devices.
 - Daily and weekly challenge cards expose all four difficulty bands, remain stable for their UTC period, work offline, resume existing cross-device sessions, and retain cadence/period metadata for completion counts, streaks, totals, and average times.

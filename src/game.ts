@@ -96,11 +96,15 @@ export function enterDigit(game: Game, digit: number, cleanCandidates = true) {
   const editable = game.selected.filter((cell) => game.puzzle.givens[cell] === "0");
   if (!editable.length) return;
   const mode = game.mode === "normal" && editable.length > 1 ? "corner" : game.mode;
+  const targets = mode === "corner" || mode === "centre"
+    ? editable.filter((cell) => !game.values[cell])
+    : editable;
+  if (!targets.length) return;
   const removeNote = mode === "corner" || mode === "centre"
-    ? editable.every((cell) => (mode === "corner" ? game.corner[cell] : game.centre[cell]).includes(digit))
+    ? targets.every((cell) => (mode === "corner" ? game.corner[cell] : game.centre[cell]).includes(digit))
     : false;
   startChange(game);
-  for (const cell of editable) {
+  for (const cell of targets) {
     if (mode === "normal") {
       game.values[cell] = String(digit);
       game.corner[cell] = [];
