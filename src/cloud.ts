@@ -23,7 +23,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import type { Store } from "./store.ts";
-import type { AnnotationColour, BoardSnapshot, Game, Preferences, TrainingProgress } from "./types.ts";
+import type { AnnotationColour, AppData, BoardSnapshot, Game, Preferences, TrainingProgress } from "./types.ts";
 
 const environment = import.meta.env ?? {};
 const config = {
@@ -81,6 +81,8 @@ type CloudGame = Omit<Game, "corner" | "centre" | "colours" | "eliminated" | "hi
   hintPath?: string;
 };
 
+const MAX_SYNCED_HINT_PATH_LENGTH = 200_000;
+
 const encodeMarks = (marks: number[][]) => marks.map((digits) => [...digits].sort().join(""));
 const decodeMarks = (marks: string[]) => marks.map((digits) => [...digits].map(Number).filter((digit) => digit >= 1 && digit <= 9));
 const encodeColours = (colours: AnnotationColour[][]) => colours.map((items) => items.join("|"));
@@ -102,8 +104,10 @@ function decodeSnapshot(value: string): BoardSnapshot | null {
 }
 
 export function encodeCloudGame(game: Game): CloudGame {
+  const hintPath = game.hintPath ? JSON.stringify(game.hintPath) : "";
+  const { hintPath: _hintPath, ...cloudGame } = game;
   return {
-    ...game,
+    ...cloudGame,
     version: 1,
     corner: encodeMarks(game.corner),
     centre: encodeMarks(game.centre),
@@ -112,7 +116,7 @@ export function encodeCloudGame(game: Game): CloudGame {
     history: game.history.slice(-80).map((snapshot) => JSON.stringify(encodeSnapshot(snapshot))),
     future: game.future.slice(-80).map((snapshot) => JSON.stringify(encodeSnapshot(snapshot))),
     hintHistory: game.hintHistory.slice(-40).map((hint) => JSON.stringify(hint)),
-    hintPath: game.hintPath ? JSON.stringify(game.hintPath) : undefined,
+    ...(hintPath && hintPath.length <= MAX_SYNCED_HINT_PATH_LENGTH ? { hintPath } : {}),
   };
 }
 
@@ -134,7 +138,11 @@ export function decodeCloudGame(value: unknown): Game | null {
   return { ...rest, corner: decodeMarks(game.corner), centre: decodeMarks(game.centre), colours: decodeColours(game.colours), eliminated: decodeMarks(game.eliminated), lines: Array.isArray(game.lines) ? game.lines : [], history: history as BoardSnapshot[], future: future as BoardSnapshot[], hintHistory, hintPath };
 }
 
-type CloudSettings = { preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number };
+export type CloudSettings = { version: 1; preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number };
+
+export function encodeCloudSettings(data: Pick<AppData, "preferences" | "activeGameId" | "deletedGames" | "trainingProgress" | "settingsUpdatedAt">): CloudSettings {
+  return { version: 1, preferences: data.preferences, activeGameId: data.activeGameId, deletedGames: data.deletedGames, trainingProgress: data.trainingProgress, updatedAt: data.settingsUpdatedAt };
+}
 
 function validSettings(value: unknown): value is CloudSettings {
   const settings = value as CloudSettings;
@@ -186,11 +194,11 @@ export class CloudSync {
       }
       if (!snapshot.metadata.fromCache) this.ready = true;
       if (updated || !snapshot.metadata.fromCache) this.changed();
-    }, () => this.fail()));
+    }, (error) => this.fail(error)));
     this.stops.push(onSnapshot(settings, { includeMetadataChanges: true }, async (snapshot) => {
       const data = snapshot.data();
       if (snapshot.exists() && validSettings(data) && await this.store.mergeCloudSettings(data)) this.changed();
-    }, () => this.fail()));
+    }, (error) => this.fail(error)));
     await this.uploadLocal();
   }
 
@@ -199,20 +207,20 @@ export class CloudSync {
     this.working = true;
     this.changed();
     try {
-      await this.syncSettings();
-      for (const id of Object.keys(this.store.data.deletedGames)) if (!await this.deleteGame(id)) throw new Error("Cloud deletion failed");
-      for (const game of Object.values(this.store.data.games)) await this.syncGame(game);
-      this.error = "";
-    } catch {
-      this.fail();
+      let succeeded = await this.syncSettings();
+      for (const id of Object.keys(this.store.data.deletedGames)) succeeded = await this.deleteGame(id) && succeeded;
+      for (const game of Object.values(this.store.data.games)) succeeded = await this.syncGame(game) && succeeded;
+      if (succeeded) this.error = "";
+    } catch (error) {
+      this.fail(error);
     } finally {
       this.working = false;
       this.changed();
     }
   }
 
-  async syncGame(game: Game) {
-    if (!this.user || !database) return;
+  async syncGame(game: Game): Promise<boolean> {
+    if (!this.user || !database) return true;
     const reference = doc(database, "users", this.user.uid, "games", game.id);
     try {
       await runTransaction(database, async (transaction) => {
@@ -221,9 +229,10 @@ export class CloudSync {
         const remoteGame = decodeCloudGame(remoteData);
         if (!remote.exists() || !remoteGame || remoteGame.updatedAt < game.updatedAt) transaction.set(reference, encodeCloudGame(game));
       });
-      this.error = "";
-    } catch {
-      this.fail();
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
     }
   }
 
@@ -231,39 +240,45 @@ export class CloudSync {
     if (!this.user || !database) return true;
     try {
       await deleteDoc(doc(database, "users", this.user.uid, "games", id));
-      this.error = "";
       return true;
-    } catch {
-      this.fail();
+    } catch (error) {
+      this.fail(error);
       return false;
     }
   }
 
-  async syncSettings() {
-    if (!this.user || !database || !this.store.data.settingsUpdatedAt) return;
+  async syncSettings(): Promise<boolean> {
+    if (!this.user || !database || !this.store.data.settingsUpdatedAt) return true;
     const reference = doc(database, "users", this.user.uid, "meta", "settings");
-    const settings = { version: 1, preferences: this.store.data.preferences, activeGameId: this.store.data.activeGameId, deletedGames: this.store.data.deletedGames, trainingProgress: this.store.data.trainingProgress, updatedAt: this.store.data.settingsUpdatedAt };
+    const settings = encodeCloudSettings(this.store.data);
     try {
       await runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
         const remoteData = remote.data();
         const remoteDeletions = validSettings(remoteData) ? remoteData.deletedGames || {} : {};
         const deletedGames = { ...remoteDeletions };
-        for (const [id, deletedAt] of Object.entries(settings.deletedGames)) deletedGames[id] = Math.max(deletedAt, deletedGames[id] || 0);
+        for (const [id, deletedAt] of Object.entries(settings.deletedGames || {})) deletedGames[id] = Math.max(deletedAt, deletedGames[id] || 0);
         const tombstonesChanged = Object.keys(deletedGames).some((id) => deletedGames[id] !== remoteDeletions[id]);
         const newest = validSettings(remoteData) && remoteData.updatedAt >= settings.updatedAt
           ? { version: 1, preferences: remoteData.preferences, activeGameId: remoteData.activeGameId, trainingProgress: remoteData.trainingProgress ?? settings.trainingProgress, updatedAt: remoteData.updatedAt }
           : settings;
         if (!remote.exists() || !validSettings(remoteData) || remoteData.updatedAt < settings.updatedAt || tombstonesChanged) transaction.set(reference, { ...newest, deletedGames });
       });
-      this.error = "";
-    } catch {
-      this.fail();
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
     }
   }
 
-  private fail() {
-    this.error = "Sync failed. Your latest changes remain saved on this device; reconnect and retry from Settings.";
+  private fail(cause?: unknown) {
+    const code = cause && typeof cause === "object" && "code" in cause ? String(cause.code) : "";
+    console.error("STrack cloud sync failed", cause);
+    this.error = code.includes("permission-denied")
+      ? "Cloud permissions rejected this sync. Update STrack, then retry from Settings; your latest changes remain saved on this device."
+      : code.includes("unavailable") || code.includes("network")
+        ? "Cloud sync is temporarily unavailable. Your latest changes remain saved on this device; reconnect and retry from Settings."
+        : "Sync failed. Your latest changes remain saved on this device; retry from Settings.";
     this.changed();
   }
 
