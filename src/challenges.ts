@@ -30,17 +30,32 @@ function challengeIndex(pool: Puzzle[], band: Difficulty, cadence: ChallengeCade
   return stableHash(`${version}:${cadence}:${challengePeriodKey(cadence, now)}:${band}`) % pool.length;
 }
 
+function datesInIsoWeek(now: Date): Date[] {
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() || 7) - 1));
+  return Array.from({ length: 7 }, (_, offset) => new Date(monday.getTime() + offset * 86_400_000));
+}
+
 export function challengePuzzle(catalogue: Puzzle[], band: Difficulty, cadence: ChallengeCadence, now = new Date()): Puzzle {
   const pool = catalogue.filter((puzzle) => puzzle.difficulty === band).sort((left, right) => left.id.localeCompare(right.id));
   if (!pool.length) throw new Error(`No ${band} puzzles are available for the challenge`);
 
   let index = challengeIndex(pool, band, cadence, now);
-  if (cadence === "weekly" && pool.length > 1 && index === challengeIndex(pool, band, "daily", now)) index = (index + 1) % pool.length;
+  if (cadence === "weekly" && pool.length > 1) {
+    const dailyIndices = new Set(datesInIsoWeek(now).map((date) => challengeIndex(pool, band, "daily", date)));
+    for (let offset = 0; offset < pool.length && dailyIndices.has(index); offset += 1) index = (index + 1) % pool.length;
+  }
   return pool[index];
 }
 
 export function challengeSet(catalogue: Puzzle[], cadence: ChallengeCadence, now = new Date()): Puzzle[] {
   return CHALLENGE_BANDS.map((band) => challengePuzzle(catalogue, band, cadence, now));
+}
+
+export function currentChallengePuzzleIds(catalogue: Puzzle[], now = new Date()): Set<string> {
+  return new Set((["daily", "weekly"] as ChallengeCadence[])
+    .flatMap((cadence) => challengeSet(catalogue, cadence, now))
+    .map((puzzle) => puzzle.id));
 }
 
 export interface ChallengeStats {

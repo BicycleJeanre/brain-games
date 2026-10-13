@@ -4,6 +4,7 @@ import { challengePeriodKey, challengeSet, challengeStats, type ChallengeCadence
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
 import { buildHintPath, nextHintFromPath } from "./hint-engine.ts";
+import { regularPuzzlePool, selectRegularPuzzle } from "./puzzle-selection.ts";
 import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
 import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, type TrainingPosition } from "./training.ts";
@@ -148,8 +149,7 @@ function renderHome() {
     ? new Intl.DateTimeFormat(undefined, { dateStyle: "long", timeZone: "UTC" }).format(new Date())
     : `ISO week ${Number(periodKey.slice(-2))}, ${periodKey.slice(0, 4)}`;
   const challengeGame = (puzzle: Puzzle) => {
-    const exact = games.find((game) => game.puzzle.id === puzzle.id && game.challenge?.cadence === challengeCadence && game.challenge.periodKey === periodKey);
-    return exact || games.find((game) => game.puzzle.id === puzzle.id && !game.challenge && !game.completedAt);
+    return games.find((game) => game.puzzle.id === puzzle.id && game.challenge?.cadence === challengeCadence && game.challenge.periodKey === periodKey);
   };
   const challengeStatus = (puzzle: Puzzle) => {
     const current = challengeGame(puzzle);
@@ -204,8 +204,7 @@ async function openChallenge(puzzleId: string, cadence: ChallengeCadence, period
   if (!puzzle) return;
   const games = Object.values(store.data.games).sort((left, right) => right.updatedAt - left.updatedAt);
   const exact = games.find((game) => game.puzzle.id === puzzle.id && game.challenge?.cadence === cadence && game.challenge.periodKey === periodKey);
-  const legacy = games.find((game) => game.puzzle.id === puzzle.id && !game.challenge && !game.completedAt);
-  const game = exact || legacy || createGame(puzzle);
+  const game = exact || createGame(puzzle);
   if (!game.challenge) {
     game.challenge = { cadence, periodKey };
     game.updatedAt = Math.max(Date.now(), game.startedAt);
@@ -340,13 +339,17 @@ function confirmDeleteGame(id: string) {
 }
 
 function pickPuzzle(band: Difficulty): Puzzle {
-  const candidates = catalogue.filter((puzzle) => puzzle.difficulty === band && puzzleStatus(puzzle) === "new");
-  const pool = candidates.length ? candidates : catalogue.filter((puzzle) => puzzle.difficulty === band);
-  const seed = [...new Date().toISOString().slice(0, 10)].reduce((total, char) => total + char.charCodeAt(0), 0) + Object.keys(store.data.games).length;
-  return pool[seed % pool.length];
+  return selectRegularPuzzle(catalogue, Object.values(store.data.games), band);
 }
 
 async function startPuzzle(puzzle: Puzzle) {
+  const now = new Date();
+  for (const cadence of ["daily", "weekly"] as ChallengeCadence[]) {
+    if (challengeSet(catalogue, cadence, now).some((candidate) => candidate.id === puzzle.id)) {
+      await openChallenge(puzzle.id, cadence, challengePeriodKey(cadence, now));
+      return;
+    }
+  }
   const existing = Object.values(store.data.games).find((game) => game.puzzle.id === puzzle.id && !game.completedAt);
   const game = existing || createGame(puzzle);
   highlightMode = false;
@@ -382,7 +385,12 @@ function renderLibrary() {
   app.querySelector<HTMLSelectElement>("#completion-filter")!.addEventListener("change", (event) => { libraryCompletion = (event.target as HTMLSelectElement).value as typeof libraryCompletion; rerender(); });
   app.querySelector<HTMLInputElement>("#min-rating")!.addEventListener("change", (event) => { minRating = (event.target as HTMLInputElement).value; rerender(); });
   app.querySelector<HTMLInputElement>("#max-rating")!.addEventListener("change", (event) => { maxRating = (event.target as HTMLInputElement).value; rerender(); });
-  app.querySelector("#surprise")?.addEventListener("click", () => startPuzzle(filtered[0] || pickPuzzle("Easy")));
+  app.querySelector("#surprise")?.addEventListener("click", () => {
+    const games = Object.values(store.data.games);
+    const pool = regularPuzzlePool(catalogue, games, filtered);
+    const puzzle = pool[(games.length + new Date().getUTCDate()) % pool.length] || filtered[0] || pickPuzzle("Easy");
+    void startPuzzle(puzzle);
+  });
   app.querySelectorAll<HTMLElement>("[data-puzzle]").forEach((button) => button.addEventListener("click", () => startPuzzle(catalogue.find((puzzle) => puzzle.id === button.dataset.puzzle)!)));
   app.querySelectorAll<HTMLElement>("[data-info]").forEach((button) => button.addEventListener("click", () => showPuzzleInfo(catalogue.find((puzzle) => puzzle.id === button.dataset.info)!)));
 }
@@ -913,7 +921,7 @@ function showDialog(content: string, closeLabel = "Done") {
 
 function showHelp() {
   showDialog(`<span class="eyebrow">User guide</span><h2>Solving with STrack</h2><h3>Training</h3><p>Train contains 20 lessons from singles through fish, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Every exercise is sourced from HoDoKu’s official regression or exemplar libraries and revalidated by the pinned local HoDoKu engine. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Exact strong and weak chain links come from HoDoKu’s step data, and progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Double-click or double-tap an empty cell with exactly one centre note to promote that note to the full digit. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint first identifies evidence and names the HoDoKu technique without revealing the digit or exact elimination. Show answer explicitly reveals the deduction; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints. STrack caches the ordered logical path, skips steps you already completed, and checks every target against the verified solution and current centre candidates. Applying an elimination removes it from the visible notes too. All Easy, Medium, and Hard puzzles and half of the Diabolical catalogue have verified complete paths; the other Diabolical puzzles receive every available logical hint before the enabled engine limit is reported.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are STrack’s friendly bands, not an official universal scale.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, cached hint paths, training progress, and preferences through Firestore so you can continue on another device. The current board and completion always sync; only regenerable hint data and the oldest cloud undo/redo entries are omitted when an extensively annotated session would otherwise exceed Firestore’s document limit. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
-  dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. Opening a challenge resumes its existing saved game; signed-in progress follows you between devices through the same private Firestore session as every other puzzle. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
+  dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. A weekly puzzle stays fixed for its full week and is not reused by a daily slot during that week. The eight current challenge puzzles are also reserved from regular automatic selection. Opening a challenge creates or resumes its dedicated challenge session; signed-in progress follows you between devices through the same private Firestore account. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
 }
