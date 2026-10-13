@@ -19,7 +19,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ### Home and library
 
 - Resume active puzzles before discovery content.
-- Browse and filter word searches and crosswords.
+- Browse 100 bundled puzzles and filter by type or by Easy, Medium, Hard, and Diabolical difficulty.
 - Show difficulty, progress, completion, and provenance details.
 - Support deterministic daily/weekly challenges once the catalogue is large enough.
 
@@ -60,9 +60,9 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ## Catalogue and provenance
 
-The first scaffold includes four original demonstration puzzles: two word searches and two compact crosswords. Their words and clues were authored for WTrack; layout generation tools and versions are recorded in the catalogue. These establish the data contract, not the final release volume.
+Catalogue version 2026.10.2 includes 100 WTrack-original puzzles: 50 word searches and 50 crosswords. It preserves the first four demonstration puzzles and adds 96 deterministic puzzles generated from 12 original theme banks. The committed catalogue contains 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical puzzles.
 
-Release one should target at least 100 reviewed puzzles across both formats, with enough variety to make offline discovery meaningful. External feeds may help catalogue preparation, but runtime play must not depend on them.
+The catalogue is static and validated at build time, so discovery and play never depend on an external puzzle feed. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
 
 ## Acceptance criteria
 

@@ -2,7 +2,7 @@
 
 ## Starting and resuming
 
-Open **Puzzles**, choose a word search or crossword, and select **Start**. WTrack saves progress on the device after every found word or entered crossword letter. Started puzzles appear on Home for quick resume.
+Open **Puzzles** to browse the 100-puzzle public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Choose a puzzle and select **Start**. WTrack saves progress on the device after every found word or entered crossword letter. Started puzzles appear on Home for quick resume.
 
 ## Word searches
 
@@ -29,4 +29,4 @@ After the production app has loaded once, its shell and bundled catalogue are ca
 
 ## Accounts and privacy
 
-An account is optional. When Firebase is configured, email/password sign-in privately syncs progress and preferences under your user ID. Core play contains no analytics or advertising and remains available when signed out.
+An account is optional. When Firebase is configured, email/password sign-in privately syncs progress and preferences under your user ID. Signing in on another browser restores that saved state after synchronization. Core play contains no analytics or advertising and remains available when signed out.

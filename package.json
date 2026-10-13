@@ -6,10 +6,13 @@
   "description": "An offline-first word search and crossword PWA with optional private Firebase sync.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
+    "catalogue:generate": "node scripts/generate-catalogue.mjs",
+    "catalogue:check": "node scripts/check-catalogue.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "playwright test",
+    "test:cloud": "firebase emulators:exec --only auth,firestore --project demo-wtrack \"playwright test --config playwright.cloud.config.ts\"",
     "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-wtrack \"node --test tests/rules.test.mjs\"",
     "test:base-path": "BASE_PATH=/wtrack/ npm run build && node scripts/check-base-path.mjs"

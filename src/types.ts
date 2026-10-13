@@ -1,5 +1,5 @@
 export type PuzzleKind = "word-search" | "crossword";
-export type Difficulty = "Easy" | "Medium" | "Hard";
+export type Difficulty = "Easy" | "Medium" | "Hard" | "Diabolical";
 export type Theme = "system" | "light" | "dark";
 
 export interface PuzzleSource {

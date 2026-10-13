@@ -6,6 +6,9 @@ test("home and catalogue expose both puzzle types", async ({ page }) => {
   await page.getByRole("button", { name: "Puzzles" }).click();
   await expect(page.getByText("Word craft")).toBeVisible();
   await expect(page.getByText("Puzzle desk")).toBeVisible();
+  await expect(page.locator(".catalogue-badge")).toContainText("100 puzzles");
+  await page.getByRole("button", { name: "Diabolical", exact: true }).click();
+  await expect(page.getByText("Showing 24 of 100 puzzles")).toBeVisible();
 });
 
 test("word-search progress survives reload", async ({ page }) => {
