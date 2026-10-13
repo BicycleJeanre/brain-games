@@ -37,7 +37,7 @@ Last updated: 2026-10-13
 - Deterministic catalogue generation plus integrity and provenance validation.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
 - GitHub Pages deployment now requires and injects the four public Firebase web identifiers.
-- Production Firebase project: `wtrack-9d4c7` (independent Spark plan, `$0/month`, no billing account linked).
+- Production Firebase project: `wtrack-9d4c7` (activated 2026-10-13; independent Spark plan, `$0/month`, no billing account linked).
 - Firestore: Standard default database in `nam5`, `freeTier: true`, deletion protection enabled; owner-only rules and indexes deployed.
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized; no phone provider or paid service enabled.
 - Firebase Web app: `1:283171656458:web:d26cce81a969ee907e60f3`; all four public identifiers are present as GitHub Actions secrets.
