@@ -25,14 +25,15 @@
     "@xwordly/xword-parser": "^1.1.0",
     "crossword-layout-generator": "^0.1.1",
     "firebase": "^12.19.0",
-    "idb": "^8.0.3"
+    "idb": "^8.0.3",
+    "pure-rand": "^8.4.2"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.10.0",
-    "firebase-tools": "^15.30.0",
     "fake-indexeddb": "^6.2.4",
+    "firebase-tools": "^15.30.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
   },

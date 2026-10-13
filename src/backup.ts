@@ -19,6 +19,7 @@ function hasValidProgress(value: unknown) {
       && (item.kind === "word-search" || item.kind === "crossword")
       && Array.isArray(item.foundWordIds) && item.foundWordIds.every((id) => typeof id === "string")
       && Array.isArray(item.entries) && item.entries.every((entry) => typeof entry === "string")
+      && (item.hintedCells === undefined || (Array.isArray(item.hintedCells) && item.hintedCells.every((entry) => Number.isInteger(entry) && entry >= 0)))
       && [item.elapsedSeconds, item.startedAt, item.updatedAt].every((field) => typeof field === "number")
       && (item.completedAt === null || typeof item.completedAt === "number");
   });

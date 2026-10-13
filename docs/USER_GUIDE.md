@@ -10,9 +10,15 @@ Drag from the first letter of a word to its last, or select the two endpoints in
 
 With a keyboard, focus the grid, move between letters with the arrow keys, and use Enter or Space to select each endpoint.
 
+Choose **Give me a hint** to highlight one cell crossed by a word you have not found. The hint does not mark the word as found. Used hints are saved with the puzzle and remain visible after a restart.
+
 ## Crosswords
 
 Select a clue or grid cell and type a letter. The active clue is highlighted. Arrow keys move to the next open cell. Enable **Mark incorrect crossword letters** in Settings if you want immediate feedback; leave it off for traditional unassisted solving.
+
+Choose **Reveal a letter** to fill one unresolved cell in the active clue. If that clue is already solved, WTrack chooses an unresolved cell elsewhere. Revealed letters have a visible outline, and the hint count is saved with progress.
+
+Hint selection runs locally with a bundled deterministic library. It needs no account, network request, paid service, or third-party puzzle feed.
 
 ## Creating previews
 

@@ -1,6 +1,6 @@
 # Architecture
 
-WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/puzzles.ts` validates catalogue data and pure puzzle rules; `src/store.ts` owns the versioned IndexedDB document; `src/cloud.ts` lazily loads Firebase and reconciles that document with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
+WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/puzzles.ts` validates catalogue data and pure puzzle rules; `src/hints.ts` chooses deterministic local hints through `pure-rand`; `src/store.ts` owns the versioned IndexedDB document; `src/cloud.ts` lazily loads Firebase and reconciles that document with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
 
 The public catalogue is a committed JSON asset. `scripts/generate-catalogue.mjs` deterministically expands the original theme banks into the release catalogue, while `scripts/check-catalogue.mjs` prevents malformed grids, missing clue paths, duplicate IDs, incomplete provenance, or an undersized difficulty tier from entering a build.
 
@@ -13,6 +13,8 @@ The public catalogue is a committed JSON asset. `scripts/generate-catalogue.mjs`
 5. Firestore snapshots merge newer progress and settings back into the local document.
 
 This order keeps latency and network availability outside the critical play path.
+
+Hint history is part of each puzzle progress record. Word-search hints persist highlighted cells without changing found-word state. Crossword hints persist both the revealed answer letter and its hinted-cell marker. Older version-one progress records normalize to an empty hint history, so backups and Firestore documents remain backward compatible.
 
 Production uses Firebase Email/Password Authentication and one owner-protected Firestore document per account. Pull-request CI exercises the complete two-browser save-and-restore journey against the local Auth and Firestore emulators, in addition to testing the rules directly.
 

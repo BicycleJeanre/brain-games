@@ -59,6 +59,7 @@ export interface PuzzleProgress {
   kind: PuzzleKind;
   foundWordIds: string[];
   entries: string[];
+  hintedCells: number[];
   elapsedSeconds: number;
   startedAt: number;
   updatedAt: number;

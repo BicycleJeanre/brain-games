@@ -10,6 +10,7 @@ test("new progress has a cell entry for the whole grid", () => {
   assert.equal(progress.entries.length, puzzle.rows * puzzle.columns);
   assert.equal(progress.startedAt, 42);
   assert.deepEqual(progress.foundWordIds, []);
+  assert.deepEqual(progress.hintedCells, []);
 });
 
 test("normalization preserves safe preferences and defaults invalid values", () => {
@@ -19,6 +20,14 @@ test("normalization preserves safe preferences and defaults invalid values", () 
   assert.equal(data.preferences.showTimer, false);
   assert.equal(data.preferences.checkAsYouType, DEFAULT_PREFERENCES.checkAsYouType);
   assert.deepEqual(data.progress, {});
+});
+
+test("normalization adds hint history to older progress records", () => {
+  const puzzle = wordSearches[0]!;
+  const progress = newProgress(puzzle, 42);
+  const { hintedCells: _removed, ...legacyProgress } = progress;
+  const data = normalizeData({ version: 1, preferences: DEFAULT_PREFERENCES, progress: { [puzzle.id]: legacyProgress } });
+  assert.deepEqual(data.progress[puzzle.id]?.hintedCells, []);
 });
 
 test("store persists found words in IndexedDB", async () => {

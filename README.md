@@ -16,6 +16,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. Bundled 
 - `.puz`, iPUZ, JPZ, and XD parsing foundation through `@xwordly/xword-parser`.
 - Light, dark, and system themes; visible focus; keyboard-first crossword entry; reduced-motion support.
 - Pointer, touch, and keyboard word-search selection plus JSON device backup and restore.
+- Persistent offline hints: a highlighted path cell for word searches and a revealed active-clue letter for crosswords.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Unit, browser, catalogue-integrity, Firestore-rules, and emulator-backed cloud-journey checks.
 

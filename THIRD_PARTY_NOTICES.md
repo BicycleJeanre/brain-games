@@ -9,5 +9,6 @@ WTrack depends on the following puzzle libraries. They are installed from npm an
 | `@xwordly/xword-parser` | `^1.1.0` | `.puz`, iPUZ, JPZ, and XD parsing | MIT | <https://github.com/mjkoo/xword-parser> |
 | `firebase` | `^12.19.0` | Optional authentication and Firestore synchronization | Apache-2.0 | <https://github.com/firebase/firebase-js-sdk> |
 | `idb` | `^8.0.3` | IndexedDB promise wrapper | ISC | <https://github.com/jakearchibald/idb> |
+| `pure-rand` | `^8.4.2` | Deterministic, unbiased offline hint selection | MIT | <https://github.com/dubzzz/pure-rand> |
 
 Complete dependency metadata is recorded in `package-lock.json`. Puzzle content has separate provenance requirements documented in `docs/PUZZLE_PROVENANCE.md`.
