@@ -4,8 +4,8 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Deployed application commit: `main` at `e91821f`
-- Latest source pull request: [#15 — Add on-demand public puzzle generation](https://github.com/BicycleJeanre/wtrack/pull/15)
+- Deployed application commit: `main` at `3a0a529`
+- Latest source pull request: [#17 — Add adjacent-letter Word Grid game](https://github.com/BicycleJeanre/wtrack/pull/17)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-13
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `e91821f`
-- Deployment: [GitHub Pages run 38394541080](https://github.com/BicycleJeanre/wtrack/actions/runs/38394541080)
-- Verification: deployment workflow passed. A cache-busted production browser generated and opened a Hard astronomy word search from live English Wikipedia topic links and Wikidata terms, showing 12 themed answers, offline availability, hints, and source-generation details.
+- Source: `main` at `3a0a529`
+- Deployment: [GitHub Pages run 38427057844](https://github.com/BicycleJeanre/wtrack/actions/runs/38427057844)
+- Verification: deployment workflow passed. Cache-busted production catalogue requests returned version `2026.10.3`, 116 total puzzles, 16 Word Grids, and the complete `Letter Lab I` playable payload with 91 accepted words and a 10-point target.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -82,11 +82,11 @@ Last updated: 2026-10-13
 
 ## Validation
 
-- `npm run test:unit`: 21 passing, including deterministic challenges, private import, non-destructive backup merge, bounded deletion tombstones, hints, ten-puzzle least-recently-opened cache eviction, Wikimedia normalization/fetching, and generated payload validation.
+- `npm run test:unit`: 23 passing, including Word Grid adjacency, scoring, target completion, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 36 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes auto-saving settings, contextual puzzle reset, accessibility, theme persistence, landscape layout, private import, public-data generation and reload, challenge isolation, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
-- `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
+- `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
+- `npm run catalogue:check`: passing for 116 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
 - Full clean-runner workflow: [CI run 38371495785](https://github.com/BicycleJeanre/wtrack/actions/runs/38371495785) passed.
@@ -105,6 +105,8 @@ Last updated: 2026-10-13
 - Settings-parity production release: [deployment run 38389782784](https://github.com/BicycleJeanre/wtrack/actions/runs/38389782784) passed from merge commit `86ef0c0`; live browser verification confirmed the expanded auto-saving Settings surface.
 - Public-data generation pull-request CI: [run 38394209878](https://github.com/BicycleJeanre/wtrack/actions/runs/38394209878) passed, including Firestore rules, WebKit, and the two-device cloud-sync journey.
 - Public-data generation production release: [deployment run 38394541080](https://github.com/BicycleJeanre/wtrack/actions/runs/38394541080) passed from merge commit `e91821f`; a live browser created a Hard astronomy word search directly from Wikimedia data and opened it from the offline payload cache.
+- Word Grid pull-request CI: [run 38426669092](https://github.com/BicycleJeanre/wtrack/actions/runs/38426669092) passed before merge.
+- Word Grid production release: [deployment run 38427057844](https://github.com/BicycleJeanre/wtrack/actions/runs/38427057844) passed from merge commit `3a0a529`; production catalogue and payload endpoints confirmed all 16 new grids.
 
 ## Next release-one work
 
