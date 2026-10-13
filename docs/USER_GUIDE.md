@@ -88,8 +88,8 @@ The home screen places unfinished games under **Active puzzles** directly below 
 
 **Hint** is intentionally progressive:
 
-1. STrack highlights the evidence and focus cells without naming the digit or exact elimination.
-2. It names the technique and explains what pattern to inspect in plain language.
+1. The first hint names only the technique, without changing or highlighting the grid.
+2. **Show pattern** highlights the evidence and focus cells and explains what to inspect, without naming the exact elimination or placement.
 3. **Show answer** explicitly exposes the exact placement or elimination without changing the grid.
 4. Only after that reveal, **Apply deduction** places the forced value or records candidate eliminations.
 

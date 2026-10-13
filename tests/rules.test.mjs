@@ -36,6 +36,7 @@ test("owners can store and read valid games while other users cannot", async () 
   await assertSucceeds(setDoc(doc(owner, "users/owner/games/daily"), { ...game, id: "daily", challenge: { cadence: "daily", periodKey: "2026-10-10" } }));
   const gameWithHints = structuredClone(localGame);
   gameWithHints.id = "with-hints";
+  gameWithHints.hintStage = "minimal";
   gameWithHints.hintPath = { engine: "HoDoKu test", generatedAt: 2, complete: true, hints: [] };
   await assertSucceeds(setDoc(doc(owner, "users/owner/games/with-hints"), encodeCloudGame(gameWithHints)));
   const { hintHistory: _hintHistory, ...legacyGame } = game;

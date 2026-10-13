@@ -546,7 +546,11 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect(hint.locator(".hint-answer")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Apply deduction" })).toHaveCount(0);
   await expect(page.locator(".sudoku-cell.hint-target")).toHaveCount(0);
-  expect(await page.locator(".sudoku-cell.hint-focus").count()).toBeGreaterThan(0);
+  await expect(page.locator(".sudoku-cell.hint-focus, .sudoku-cell.hint-evidence")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Show answer" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Show pattern" })).toBeVisible();
+  await page.getByRole("button", { name: "Show pattern" }).click();
+  await expect.poll(() => page.locator(".sudoku-cell.hint-focus").count()).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Dismiss hint" })).toBeVisible();
 
@@ -560,6 +564,8 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await page.getByRole("button", { name: "Get a logical hint" }).click();
   await expect(page.locator(".hint-panel .hint-answer")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Apply deduction" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Show pattern" })).toBeVisible();
+  await page.getByRole("button", { name: "Show pattern" }).click();
   await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
   await page.getByRole("button", { name: "Dismiss hint" }).click();
 
@@ -575,6 +581,7 @@ test("hints can show answers, be dismissed, and remain available in history", as
 test("an already-applied saved hint is not reopened after restart", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show pattern" }).click();
   await page.getByRole("button", { name: "Show answer" }).click();
   const appliedHintId = await page.evaluate(async () => {
     const request = indexedDB.open("strack-v1");
@@ -614,6 +621,7 @@ test("locked-candidate hints use the right direction and never target absent cen
   await page.getByRole("button", { name: "Calculate all candidates" }).click();
 
   await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show pattern" }).click();
   await expect(page.locator(".hint-panel")).toContainText("A candidate on a line is confined to one box.");
   await page.getByRole("button", { name: "Show answer" }).click();
   await expect(page.locator(".hint-answer")).toContainText("Remove 8 from Row 4, column 1");

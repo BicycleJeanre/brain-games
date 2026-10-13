@@ -48,7 +48,7 @@ export interface Game extends BoardSnapshot {
   updatedAt: number;
   completedAt: number | null;
   paused: boolean;
-  hintStage: "none" | "preview";
+  hintStage: "none" | "minimal" | "preview";
   hintId: string | null;
   hintHistory: HintRecord[];
   hintPath?: HintPath;

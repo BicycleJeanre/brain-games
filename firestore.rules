@@ -34,7 +34,7 @@ service cloud.firestore {
         && d.updatedAt is number && d.updatedAt >= d.startedAt
         && (d.completedAt == null || (d.completedAt is number && d.completedAt >= d.startedAt))
         && d.paused is bool
-        && d.hintStage in ['none', 'preview']
+        && d.hintStage in ['none', 'minimal', 'preview']
         && (d.hintId == null || (d.hintId is string && d.hintId.size() <= 240))
         && (!('challenge' in d) || (d.challenge is map
           && d.challenge.keys().hasAll(['cadence', 'periodKey'])
