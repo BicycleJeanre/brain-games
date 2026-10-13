@@ -4,19 +4,19 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Production branch: `main` at `19dc61f`
-- Active release branch: `codex/catalogue-firestore`
-- Active pull request: [#3 — Expand public catalogue and complete Firestore release path](https://github.com/BicycleJeanre/wtrack/pull/3)
-- Active release state: implementation, CI, and independent Spark backend complete; merge and Pages deployment pending
+- Production branch: `main` at `4896167`
+- Source pull request: [#3 — Expand public catalogue and complete Firestore release path](https://github.com/BicycleJeanre/wtrack/pull/3)
+- Active release state: live and production-verified
 
 ## Production deployment
 
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `629ecb5207b99a39e8852d3420f73422f2e01867`
-- Deployment: [GitHub Pages run 38372457404](https://github.com/BicycleJeanre/wtrack/actions/runs/38372457404)
-- Verification: deployment workflow passed; public route returned HTTP 200 and rendered the WTrack home screen with four offline puzzles.
+- Source: `main` at `48961676980a339a6f4277a8c26eec3e8c685c9b`
+- Deployment: [GitHub Pages run 38377922212](https://github.com/BicycleJeanre/wtrack/actions/runs/38377922212)
+- Verification: deployment workflow passed; the public route returned HTTP 200 and rendered 100 puzzles, 50/50 type counts, all four difficulty filters, Catalogue 2026.10.2, and production account controls.
+- Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
 
@@ -53,10 +53,10 @@ Last updated: 2026-10-13
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
 - Full clean-runner workflow: [CI run 38371495785](https://github.com/BicycleJeanre/wtrack/actions/runs/38371495785) passed.
 - Catalogue and Firestore release candidate: [CI run 38375200367](https://github.com/BicycleJeanre/wtrack/actions/runs/38375200367) passed, including the emulator-backed cloud journey.
+- Final merged release head: [CI run 38377302555](https://github.com/BicycleJeanre/wtrack/actions/runs/38377302555) passed before merge.
+- Production Pages release: [deployment run 38377922212](https://github.com/BicycleJeanre/wtrack/actions/runs/38377922212) passed from merge commit `4896167`.
 
 ## Next release-one work
 
-1. Merge the validated release pull request and deploy GitHub Pages.
-2. Verify production account creation and cross-browser progress restoration.
-3. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-4. Collect first-release feedback before expanding or retiring any production surface.
+1. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
+2. Collect first-release feedback before expanding or retiring any production surface.

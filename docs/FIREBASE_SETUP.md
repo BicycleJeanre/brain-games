@@ -12,8 +12,8 @@ The project must remain on Firebase's no-cost Spark plan with no Cloud Billing a
 4. Create the Standard default Firestore database. **Complete:** `nam5`, `freeTier: true`, deletion protection enabled.
 5. Deploy `firestore.rules` and `firestore.indexes.json` from this repository. **Complete.**
 6. Add the Web app's public identifiers to GitHub Actions as `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID`. **Complete.**
-7. Run the manual GitHub Pages deployment workflow from `main`.
-8. Create a production test account, save puzzle progress, sign in from a second clean browser context, and confirm the progress restores.
+7. Run the manual GitHub Pages deployment workflow from `main`. **Complete:** [run 38377922212](https://github.com/BicycleJeanre/wtrack/actions/runs/38377922212).
+8. Validate production Authentication and Firestore using a disposable synthetic account and owner document, then remove both. **Complete:** account creation, owner write/read, unauthenticated denial, and cleanup passed on 2026-10-13. The two-browser progress-restoration journey also passes against the Auth and Firestore emulators in CI.
 9. Verify the underlying Google Cloud project has no billing account linked. **Complete:** Google Cloud reports that the project has no billing account; Firebase reports Spark, no cost (`$0/month`).
 
 The deploy workflow deliberately fails when any of the four public identifiers are absent. This prevents a release that appears account-enabled while silently falling back to device-only storage.
