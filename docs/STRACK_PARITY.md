@@ -9,6 +9,7 @@ WTrack follows STrack's reusable product and engineering conventions while retai
 | Area | WTrack implementation |
 | --- | --- |
 | Visual family | Shared charcoal/cyan language, dense but readable cards, light/dark/system themes, visible focus, reduced-motion behavior, and phone/landscape layouts. |
+| Settings | Auto-saving theme, timer, hint/help visibility, grid/clue/menu sizing, four highlight palettes, crossword correctness assistance, backup, scoped storage controls, and contextual current-puzzle reset. Older preference documents migrate to defaults. |
 | Local-first play | Every meaningful move saves to IndexedDB before optional cloud work. Startup and play do not wait for Firebase. |
 | Offline PWA | App shell, help, catalogue metadata, settings, progress, and the ten most recently opened puzzle payloads restart after the serving origin is unavailable. |
 | Connectivity clarity | The header reports browser connectivity separately from device-only or signed-in cloud state. |

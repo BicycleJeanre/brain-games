@@ -3,7 +3,17 @@ import { CATALOGUE_VERSION } from "./catalogue.ts";
 import { isPuzzleComplete } from "./puzzles.ts";
 import type { AppData, ChallengeCadence, Difficulty, Preferences, Puzzle, PuzzleProgress } from "./types.ts";
 
-export const DEFAULT_PREFERENCES: Preferences = { theme: "system", showTimer: true, checkAsYouType: false };
+export const DEFAULT_PREFERENCES: Preferences = {
+  theme: "system",
+  showTimer: true,
+  checkAsYouType: false,
+  showHints: true,
+  showControlHelp: true,
+  gridTextSize: "medium",
+  clueTextSize: "medium",
+  menuTextSize: "medium",
+  highlightColour: "cyan",
+};
 export const MAX_OFFLINE_PUZZLES = 10;
 
 interface CachedPuzzle {
@@ -51,6 +61,7 @@ export function normalizeData(value: unknown): AppData {
   const raw = value && typeof value === "object" ? value as Partial<AppData> : {};
   const base = defaults();
   const preferences: Partial<Preferences> = raw.preferences && typeof raw.preferences === "object" ? raw.preferences : {};
+  const size = (value: unknown): Preferences["gridTextSize"] => ["small", "medium", "large"].includes(String(value)) ? value as Preferences["gridTextSize"] : "medium";
   const progress = raw.progress && typeof raw.progress === "object"
     ? Object.fromEntries(Object.entries(raw.progress).flatMap(([id, item]) => {
       if (!item || typeof item !== "object") return [];
@@ -85,6 +96,12 @@ export function normalizeData(value: unknown): AppData {
       theme: ["system", "light", "dark"].includes(preferences.theme ?? "") ? preferences.theme! : "system",
       showTimer: typeof preferences.showTimer === "boolean" ? preferences.showTimer : true,
       checkAsYouType: typeof preferences.checkAsYouType === "boolean" ? preferences.checkAsYouType : false,
+      showHints: typeof preferences.showHints === "boolean" ? preferences.showHints : true,
+      showControlHelp: typeof preferences.showControlHelp === "boolean" ? preferences.showControlHelp : true,
+      gridTextSize: size(preferences.gridTextSize),
+      clueTextSize: size(preferences.clueTextSize),
+      menuTextSize: size(preferences.menuTextSize),
+      highlightColour: ["cyan", "amber", "violet", "green"].includes(preferences.highlightColour ?? "") ? preferences.highlightColour! : "cyan",
     },
     progress,
     deletedProgress: boundedDeletedProgress(raw.deletedProgress),

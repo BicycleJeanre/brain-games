@@ -6,7 +6,7 @@ Last updated: 2026-10-13
 
 - Deployed application commit: `main` at `7b7fb8c`
 - Latest source pull request: [#11 — Bring WTrack closer to STrack parity](https://github.com/BicycleJeanre/wtrack/pull/11)
-- Active release state: live and production-verified
+- Active release state: settings-parity release candidate on `codex/strack-settings-parity`; current production remains verified
 
 ## Production deployment
 
@@ -57,12 +57,19 @@ Last updated: 2026-10-13
 - Desktop Chromium, WebKit, mobile Chromium, accessibility, landscape, base-path, ten-puzzle cache, and true server-stop offline coverage.
 - Detailed comparison and intentional domain differences in `docs/STRACK_PARITY.md`.
 
+## Settings-parity release candidate
+
+- Auto-saving appearance, player-visibility, readability, assistance, backup, storage, and help settings aligned with STrack's relevant controls.
+- Small, medium, and large grid, clue, and menu text presets plus cyan, amber, violet, and green board-highlight palettes.
+- Settings preserves the active player and toggles back to its originating screen; a confirmed current-puzzle reset is available from that context.
+- Older local, backup, and cloud preference objects normalize to current defaults. Firestore rules accept the legacy and expanded schemas during rollout.
+
 ## Validation
 
 - `npm run test:unit`: 17 passing, including deterministic challenges, private import, non-destructive backup merge, bounded deletion tombstones, hints, and ten-puzzle least-recently-opened cache eviction.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 30 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes accessibility, theme persistence, landscape layout, private import, challenge sessions, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
+- `npm test`: 33 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes auto-saving settings, contextual puzzle reset, accessibility, theme persistence, landscape layout, private import, challenge sessions, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
 - `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
