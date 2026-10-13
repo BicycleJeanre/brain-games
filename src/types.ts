@@ -19,6 +19,8 @@ export interface PuzzleBase {
   source: PuzzleSource;
 }
 
+export type PuzzleSummary = PuzzleBase;
+
 export interface GridPoint { x: number; y: number }
 
 export interface WordSearchWord {

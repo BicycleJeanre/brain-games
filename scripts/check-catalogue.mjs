@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 
 const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8"));
 const difficulties = ["Easy", "Medium", "Hard", "Diabolical"];
-assert.equal(puzzles.length, 100, "release catalogue must contain exactly 100 puzzles");
+assert.ok(puzzles.length >= 100, "release catalogue must contain at least 100 puzzles");
 assert.equal(new Set(puzzles.map((puzzle) => puzzle.id)).size, puzzles.length, "puzzle IDs must be unique");
-assert.equal(puzzles.filter((puzzle) => puzzle.kind === "word-search").length, 50, "catalogue must contain 50 word searches");
-assert.equal(puzzles.filter((puzzle) => puzzle.kind === "crossword").length, 50, "catalogue must contain 50 crosswords");
+assert.ok(puzzles.filter((puzzle) => puzzle.kind === "word-search").length >= 50, "catalogue must contain at least 50 word searches");
+assert.ok(puzzles.filter((puzzle) => puzzle.kind === "crossword").length >= 50, "catalogue must contain at least 50 crosswords");
 
 for (const difficulty of difficulties) {
   assert.ok(puzzles.filter((puzzle) => puzzle.difficulty === difficulty).length >= 20, `${difficulty} needs at least 20 puzzles`);

@@ -1,8 +1,8 @@
 # Puzzle provenance
 
-## Bundled catalogue 2026.10.2
+## Public catalogue 2026.10.2
 
-All 100 bundled puzzles are WTrack originals created for this repository. They are not sourced from commercial or newspaper puzzle archives. The catalogue contains 50 word searches and 50 crosswords across four friendly difficulty tiers.
+All 100 published puzzles are WTrack originals created for this repository. They are not sourced from commercial or newspaper puzzle archives. The catalogue contains 50 word searches and 50 crosswords across four friendly difficulty tiers.
 
 | Difficulty | Puzzle count |
 | --- | ---: |
@@ -20,7 +20,7 @@ The four initial puzzles remain unchanged. The other 96 puzzles are built determ
 | Puzzle desk | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
 | Along the coast | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
 
-The generated grids are committed as static catalogue data so offline play is deterministic and does not depend on package behavior changing at runtime. `scripts/generate-catalogue.mjs` rebuilds the catalogue from `src/data/catalogue-themes.json`; `scripts/check-catalogue.mjs` verifies identifiers, provenance, paths, crossword coverage, type balance, and difficulty distribution.
+The generated grids are committed as static catalogue source so reviewed content does not depend on package behavior changing at runtime. `scripts/generate-catalogue.mjs` rebuilds the source from `src/data/catalogue-themes.json`; `scripts/check-catalogue.mjs` verifies identifiers, provenance, paths, crossword coverage, type balance, and difficulty distribution; and `scripts/export-catalogue.mjs` prepares individually downloadable same-origin payloads. Up to ten opened payloads are retained offline.
 
 ```sh
 npm run catalogue:generate

@@ -1,8 +1,10 @@
 # Architecture
 
-WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/puzzles.ts` validates catalogue data and pure puzzle rules; `src/hints.ts` chooses deterministic local hints through `pure-rand`; `src/store.ts` owns the versioned IndexedDB document; `src/cloud.ts` lazily loads Firebase and reconciles that document with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
+WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/catalogue.ts` loads the discovery index and on-demand puzzle payloads; `src/puzzles.ts` validates full puzzle data and owns pure puzzle rules; `src/hints.ts` chooses deterministic local hints through `pure-rand`; `src/store.ts` owns the versioned IndexedDB progress document and ten-puzzle LRU cache; `src/cloud.ts` lazily loads Firebase and reconciles progress with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
 
-The public catalogue is a committed JSON asset. `scripts/generate-catalogue.mjs` deterministically expands the original theme banks into the release catalogue, while `scripts/check-catalogue.mjs` prevents malformed grids, missing clue paths, duplicate IDs, incomplete provenance, or an undersized difficulty tier from entering a build.
+The public catalogue source is committed as JSON. `scripts/generate-catalogue.mjs` deterministically expands the original theme banks, while `scripts/check-catalogue.mjs` prevents malformed grids, missing clue paths, duplicate IDs, incomplete provenance, or an undersized difficulty tier from entering a build. `scripts/export-catalogue.mjs` turns that reviewed source into a metadata-only `catalogue/index.json` plus one `catalogue/puzzles/<id>.json` file per puzzle during development and production builds.
+
+The application bundle does not import the full catalogue. Opening a puzzle checks IndexedDB first, otherwise fetches its same-origin static payload with HTTP caching disabled, validates it, and inserts it into the local LRU store. An eleventh payload evicts the least recently opened payload while progress remains in the separate application document. This makes future catalogue packs additive without increasing the core JavaScript bundle or the ten-puzzle offline ceiling.
 
 ## Data flow
 
@@ -20,7 +22,7 @@ Production uses Firebase Email/Password Authentication and one owner-protected F
 
 ## Offline build
 
-The Vite plugin emits a versioned `sw.js` containing the built asset list. Navigations beneath the configured base path fall back to the cached `index.html`. Static assets and the bundled catalogue are cache-first after installation.
+The Vite plugin emits a versioned `sw.js` containing the built asset list. Navigations beneath the configured base path fall back to the cached `index.html`. Static application assets and the metadata-only catalogue index are cache-first after installation. Full puzzle payloads are deliberately excluded from Cache Storage and controlled exclusively by the ten-item IndexedDB LRU.
 
 ## Next hardening passes
 

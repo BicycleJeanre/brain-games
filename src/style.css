@@ -67,6 +67,8 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .puzzle-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
 .puzzle-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; min-height:120px; padding:17px; }
 .puzzle-card p { margin:0; font-size:11px; }
+.offline-label { display:inline-block; margin-top:7px; color:var(--success); font-size:9px; font-weight:850; letter-spacing:.4px; text-transform:uppercase; }
+button:disabled { cursor:not-allowed; opacity:.55; }
 .player-heading { display:grid; grid-template-columns:110px minmax(0,1fr) 110px; align-items:end; }
 .player-heading .timer { text-align:right; }
 .timer { font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; }

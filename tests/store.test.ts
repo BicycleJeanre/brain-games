@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "fake-indexeddb/auto";
-import { wordSearches } from "../src/puzzles.ts";
-import { DEFAULT_PREFERENCES, newProgress, normalizeData, Store } from "../src/store.ts";
+import { puzzles, wordSearches } from "./fixtures.ts";
+import { DEFAULT_PREFERENCES, MAX_OFFLINE_PUZZLES, newProgress, normalizeData, Store } from "../src/store.ts";
 
 test("new progress has a cell entry for the whole grid", () => {
   const puzzle = wordSearches[0]!;
@@ -40,4 +40,14 @@ test("store persists found words in IndexedDB", async () => {
   const reloaded = new Store();
   await reloaded.load();
   assert.deepEqual(reloaded.data.progress[puzzle.id]?.foundWordIds, [puzzle.words[0]!.id]);
+});
+
+test("puzzle cache keeps only the ten most recently opened payloads", async () => {
+  const store = new Store();
+  await store.load();
+  for (let index = 0; index <= MAX_OFFLINE_PUZZLES; index += 1) await store.cachePuzzle(puzzles[index]!, index + 1);
+  const ids = await store.cachedPuzzleIds();
+  assert.equal(ids.length, MAX_OFFLINE_PUZZLES);
+  assert.equal(ids.includes(puzzles[0]!.id), false);
+  assert.equal(ids.includes(puzzles[MAX_OFFLINE_PUZZLES]!.id), true);
 });
