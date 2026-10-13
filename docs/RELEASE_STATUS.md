@@ -4,8 +4,8 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Deployed application commit: `main` at `bfb0316`
-- Latest source pull request: [#5 — Add persistent offline puzzle hints](https://github.com/BicycleJeanre/wtrack/pull/5)
+- Deployed application commit: `main` at `c54d1ad`
+- Latest source pull requests: [#8 — Add expandable catalogue with ten-puzzle offline cache](https://github.com/BicycleJeanre/wtrack/pull/8) and [#9 — Keep WTrack startup non-blocking](https://github.com/BicycleJeanre/wtrack/pull/9)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-13
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `bfb03161bb3c4e849586444bbebf7e076ebb176b`
-- Deployment: [GitHub Pages run 38380217540](https://github.com/BicycleJeanre/wtrack/actions/runs/38380217540)
-- Verification: deployment workflow passed; the public route returned HTTP 200 and rendered the word-search **Give me a hint** and crossword **Reveal a letter** controls alongside the 100-puzzle catalogue and production account controls.
+- Source: `main` at `c54d1adb53a18bf2093337213022563063badfc3`
+- Deployment: [GitHub Pages run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022)
+- Verification: deployment workflow passed; the public route returned HTTP 200, the metadata-only catalogue exposed 100 entries, individual puzzle payloads loaded on demand, and a fresh browser moved from `0/10 offline` to `1/10 offline` after opening a puzzle.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -32,9 +32,10 @@ Last updated: 2026-10-13
 
 ## Catalogue, Firestore, and hints
 
-- 100 bundled original puzzles: 50 word searches and 50 crosswords.
+- 100 published original puzzles: 50 word searches and 50 crosswords, exported as a metadata-only index plus individual on-demand payloads.
 - Difficulty filters and distribution: 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical.
 - Deterministic catalogue generation plus integrity and provenance validation.
+- IndexedDB retains no more than ten puzzle payloads by least-recently-opened order while progress remains stored independently.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
 - GitHub Pages deployment now requires and injects the four public Firebase web identifiers.
 - Production Firebase project: `wtrack-9d4c7` (activated 2026-10-13; independent Spark plan, `$0/month`, no billing account linked).
@@ -47,10 +48,10 @@ Last updated: 2026-10-13
 
 ## Validation
 
-- `npm run test:unit`: 12 passing, including deterministic word-search and crossword hint selection.
+- `npm run test:unit`: 13 passing, including deterministic hints and ten-puzzle least-recently-opened cache eviction.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 13 passing across desktop and mobile Chromium, with one intentional desktop skip for a mobile-only assertion. The hint journey covers persistent word-search markers and crossword letter reveals.
+- `npm test`: 14 passing across desktop and mobile Chromium, with two intentional project-specific skips. Coverage includes offline restart after 11 puzzle downloads and confirms that only the ten most recently opened payloads remain playable offline.
 - `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
@@ -60,9 +61,12 @@ Last updated: 2026-10-13
 - Production Pages release: [deployment run 38377922212](https://github.com/BicycleJeanre/wtrack/actions/runs/38377922212) passed from merge commit `4896167`.
 - Hint release CI: [run 38379978842](https://github.com/BicycleJeanre/wtrack/actions/runs/38379978842) passed before merge.
 - Hint production release: [deployment run 38380217540](https://github.com/BicycleJeanre/wtrack/actions/runs/38380217540) passed from merge commit `bfb0316`; live smoke verification confirmed both hint controls.
+- Expandable-catalogue release CI: [run 38383136981](https://github.com/BicycleJeanre/wtrack/actions/runs/38383136981) passed before merge, including the two-device Firestore journey.
+- Non-blocking-startup hotfix CI: [run 38383994345](https://github.com/BicycleJeanre/wtrack/actions/runs/38383994345) passed before merge.
+- Current production release: [deployment run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022) passed from merge commit `c54d1ad`; endpoint and fresh-profile browser smoke tests passed.
 
 ## Next release-one work
 
 1. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-2. Validate and release the `codex/ten-puzzle-offline-cache` catalogue architecture: metadata remains browsable offline, puzzle payloads download on first open, and IndexedDB retains at most ten by least-recently-opened order.
+2. Add licensed, provenance-complete puzzle packs through the expandable catalogue pipeline without increasing the ten-puzzle offline cap.
 3. Collect first-release feedback before expanding or retiring any production surface.
