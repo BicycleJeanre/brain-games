@@ -16,7 +16,8 @@
     "test:cloud": "firebase emulators:exec --only auth,firestore --project demo-strack \"playwright test --config playwright.cloud.config.ts\"",
     "test:base-path": "BASE_PATH=/strack/ npm run build && node scripts/check-base-path.mjs",
     "catalogue:build": "node scripts/build-catalogue.mjs",
-    "catalogue:check": "node scripts/check-catalogue.mjs"
+    "catalogue:check": "node scripts/check-catalogue.mjs",
+    "training:build": "npm run vendor:build && node scripts/build-hodoku-training.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

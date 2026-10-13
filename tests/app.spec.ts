@@ -5,6 +5,8 @@ import { extname, resolve } from "node:path";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./");
+  await page.waitForFunction(() => !("serviceWorker" in navigator) || Boolean(navigator.serviceWorker.controller));
+  await page.waitForTimeout(100);
 });
 
 test("home, library and puzzle details expose the offline catalogue and SE provenance", async ({ page }) => {
@@ -58,9 +60,9 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await page.getByRole("button", { name: "All lessons" }).click();
   await expect(page.getByRole("button", { name: /Naked single/ }).last()).toContainText("1 completed");
   await page.getByRole("button", { name: /X-Chain/ }).click();
-  await expect(page.locator(".training-links .strong")).toHaveCount(2);
-  await expect(page.locator(".training-links .weak")).toHaveCount(1);
-  await expect(page.getByText(/Original STrack candidate diagram/)).toBeVisible();
+  await expect(page.locator(".training-links .strong")).toHaveCount(3);
+  await expect(page.locator(".training-links .weak")).toHaveCount(2);
+  await expect(page.getByRole("link", { name: /HoDoKu reglib-1.3 · X_CHAIN/ })).toBeVisible();
 });
 
 test("the settings menu toggles back to the screen it opened from", async ({ page }) => {

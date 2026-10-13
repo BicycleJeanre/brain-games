@@ -94,6 +94,7 @@ function evidenceFor(hint: HoDoKuHint, targets: Hint["targets"], values: readonl
     ...raw.endoFins.map(({ index }) => index),
     ...raw.cannibalistic.map(({ index }) => index),
     ...raw.alses.flatMap(({ indices }) => indices),
+    ...raw.colorCandidates.keys(),
     ...hint.links.flatMap(({ from, to }) => [from.index, to.index]),
   ];
   if (hint.placements.length === 1) evidence.push(...singleEvidence(hint.technique, hint.placements[0].index, hint.placements[0].value, values, candidates));
@@ -113,7 +114,7 @@ function targetMatchesContext(target: { cell: number; digit: number }, kind: Hin
   return true;
 }
 
-function convertHint(hint: HoDoKuHint, values: readonly string[], candidates: readonly number[][], context: HintContext): Hint | null {
+export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], candidates: readonly number[][], context: HintContext = {}): Hint | null {
   const kind: Hint["kind"] = hint.placements.length ? "place" : "eliminate";
   const sourceTargets = kind === "place" ? hint.placements : hint.eliminations;
   const targets = sourceTargets
@@ -154,7 +155,7 @@ export function buildHintPath(values: readonly string[], eliminated: readonly nu
   const hints: Hint[] = [];
   for (const step of logical) {
     const pathCandidates = liveCandidates(pathValues, pathEliminated);
-    const hint = convertHint(step, pathValues, pathCandidates, context);
+    const hint = convertHoDoKuHint(step, pathValues, pathCandidates, context);
     if (!hint) continue;
     hints.push(hint);
     for (const { cell, digit } of hint.targets) {

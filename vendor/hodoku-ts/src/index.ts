@@ -13,6 +13,7 @@ export const VERSION = "0.0.0";
 export {
   generate,
   hint,
+  findTechnique,
   solve,
   rate,
   countSolutions,

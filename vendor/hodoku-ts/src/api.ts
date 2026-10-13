@@ -20,6 +20,7 @@ import { CATEGORY_NAMES, DifficultyType } from "./core/step-config.js";
 import { SOLVER_STEPS_SORTED, getStepConfig } from "./config/defaults.js";
 import { countSolutions as countSolutionsInternal } from "./solver/brute-force.js";
 import { SudokuSolver } from "./solver/solver.js";
+import { StepFinder } from "./solver/step-finder.js";
 import {
   type GenerateByDifficultyOptions,
   generateByDifficulty,
@@ -224,6 +225,18 @@ export function generate(opts: GenerateOptions = {}): GeneratedPuzzleResult | nu
 export function hint(board: BoardInput): Hint | null {
   const result = new SudokuSolver().getHint(toBoard(board));
   return result ? toHint(result.step) : null;
+}
+
+/**
+ * Returns an instance of one requested technique on the supplied candidate
+ * state. This is the HoDoKu training-mode primitive: callers can present a
+ * known regression-library position without allowing easier techniques to
+ * replace the lesson's target technique.
+ */
+export function findTechnique(board: BoardInput, technique: SolutionType): Hint | null {
+  const state = toBoard(board);
+  const step = new StepFinder(state).getStep(technique);
+  return step ? toHint(step) : null;
 }
 
 /** Solves `board`, returning the ordered list of human steps plus the final rating. */

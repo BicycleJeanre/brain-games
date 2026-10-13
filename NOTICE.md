@@ -13,3 +13,13 @@ Hobiger. Its licence and attribution are preserved under `vendor/hodoku-ts/`.
 
 STrack's integration, candidate-state validation, progressive presentation,
 path caching, persistence, and user interface are project-specific changes.
+
+## HoDoKu2 training libraries
+
+STrack's training catalogue contains compact records selected from HoDoKu2's
+official `reglib-1.3.txt` regression library and `exemplars-1.0.txt` exemplar
+library, pinned to commit `405a68437af277ad31a37106b489079295ad1fca` from
+<https://github.com/wyzelli/Hodoku2>. The generated catalogue preserves the
+source library, line number, technique code, commit, and upstream link for every
+lesson. HoDoKu2 is licensed under GPL-3.0; the GPL-3.0 text distributed at
+`vendor/hodoku-ts/COPYING` applies to these records as well.

@@ -16,7 +16,7 @@ Open **Train** to follow a 20-technique curriculum from singles to expert forcin
 
 The **Curriculum filters** at the bottom are interactive. Choose a family such as **Wings** or **Coloring & chains** to show only those lesson cards; the page returns to the filtered lesson list automatically. Choose the active family again or select **Show all techniques** to restore the complete curriculum.
 
-Core lessons use positions extracted from the documented bundled catalogue. Advanced lessons use original, purpose-built candidate diagrams so the pattern stays legible and every relevant candidate is visible without unrelated puzzle noise. Chain diagrams draw solid strong links and dashed weak links. Both lesson types are bundled and work offline.
+Every lesson uses a compact position from HoDoKu2's official regression or exemplar library, pinned to a specific upstream commit. STrack rebuilds the candidate state from the original HoDoKu record and asks the local HoDoKu engine for that exact technique before showing the exercise. The source link below each board opens the precise upstream record. Chain diagrams use HoDoKu's structured links: solid for strong links and dashed for weak links. The records and engine are bundled, so training works offline.
 
 Every available lesson uses a genuine position derived from the bundled, documented puzzle catalogue and has four stages:
 
