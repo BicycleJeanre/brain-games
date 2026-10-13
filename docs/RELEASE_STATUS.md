@@ -6,7 +6,8 @@ Last updated: 2026-10-13
 
 - Production branch: `main` at `19dc61f`
 - Active release branch: `codex/catalogue-firestore`
-- Active release state: implementation complete locally; pull request and cloud provisioning pending
+- Active pull request: [#3 — Expand public catalogue and complete Firestore release path](https://github.com/BicycleJeanre/wtrack/pull/3)
+- Active release state: implementation and CI complete; cloud provisioning pending
 
 ## Production deployment
 
@@ -48,6 +49,7 @@ Last updated: 2026-10-13
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
 - Full clean-runner workflow: [CI run 38371495785](https://github.com/BicycleJeanre/wtrack/actions/runs/38371495785) passed.
+- Catalogue and Firestore release candidate: [CI run 38375200367](https://github.com/BicycleJeanre/wtrack/actions/runs/38375200367) passed, including the emulator-backed cloud journey.
 
 ## Next release-one work
 
