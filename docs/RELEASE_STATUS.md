@@ -4,19 +4,18 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Deployed application commit: `main` at `c54d1ad`
-- Latest source pull requests: [#8 — Add expandable catalogue with ten-puzzle offline cache](https://github.com/BicycleJeanre/wtrack/pull/8) and [#9 — Keep WTrack startup non-blocking](https://github.com/BicycleJeanre/wtrack/pull/9)
-- Active source candidate: `codex/strack-parity` (awaiting reviewed merge and deployment)
-- Active production state: live and production-verified at the prior release
+- Deployed application commit: `main` at `7b7fb8c`
+- Latest source pull request: [#11 — Bring WTrack closer to STrack parity](https://github.com/BicycleJeanre/wtrack/pull/11)
+- Active release state: live and production-verified
 
 ## Production deployment
 
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `c54d1adb53a18bf2093337213022563063badfc3`
-- Deployment: [GitHub Pages run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022)
-- Verification: deployment workflow passed; the public route returned HTTP 200, the metadata-only catalogue exposed 100 entries, individual puzzle payloads loaded on demand, and a fresh browser moved from `0/10 offline` to `1/10 offline` after opening a puzzle.
+- Source: `main` at `7b7fb8cb7711c9740f2877642beb9126fa853b6d`
+- Deployment: [GitHub Pages run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695)
+- Verification: deployment workflow passed. A cache-busted production browser reload showed the explicit Online state, active-session deletion, four daily and four weekly challenges, private crossword-file import, non-destructive backup merge, and separate completed-progress, all-progress, and offline-payload controls.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -47,7 +46,7 @@ Last updated: 2026-10-13
 - Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
 
-## STrack parity release candidate
+## STrack parity release
 
 - Stable daily and weekly challenges across all four rated difficulty bands, with period-scoped sessions and completion, streak, and average-time statistics.
 - Separate active and completed history, individual session deletion, bounded cloud tombstones, and scoped data controls.
@@ -75,7 +74,10 @@ Last updated: 2026-10-13
 - Hint production release: [deployment run 38380217540](https://github.com/BicycleJeanre/wtrack/actions/runs/38380217540) passed from merge commit `bfb0316`; live smoke verification confirmed both hint controls.
 - Expandable-catalogue release CI: [run 38383136981](https://github.com/BicycleJeanre/wtrack/actions/runs/38383136981) passed before merge, including the two-device Firestore journey.
 - Non-blocking-startup hotfix CI: [run 38383994345](https://github.com/BicycleJeanre/wtrack/actions/runs/38383994345) passed before merge.
-- Current production release: [deployment run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022) passed from merge commit `c54d1ad`; endpoint and fresh-profile browser smoke tests passed.
+- Previous production release: [deployment run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022) passed from merge commit `c54d1ad`; endpoint and fresh-profile browser smoke tests passed.
+- STrack parity pull-request CI: [run 38386771834](https://github.com/BicycleJeanre/wtrack/actions/runs/38386771834) passed, including WebKit, Firestore rules, and the two-device sync journey.
+- STrack parity merged-main CI: [run 38387042269](https://github.com/BicycleJeanre/wtrack/actions/runs/38387042269) passed from merge commit `7b7fb8c`.
+- Current production release: [deployment run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695) passed from merge commit `7b7fb8c`; live browser verification confirmed the parity surfaces.
 
 ## Next release-one work
 
