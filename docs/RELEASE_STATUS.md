@@ -25,13 +25,13 @@ Last updated: 2026-10-13
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 11 passing across desktop and mobile Chromium, with one intentional desktop skip for a mobile-only assertion.
-- `npm run test:rules`: covered by CI because this workstation does not have a Java runtime.
+- `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
+- Full clean-runner workflow: [CI run 38371495785](https://github.com/BicycleJeanre/wtrack/actions/runs/38371495785) passed.
 
 ## Next release-one work
 
-1. Review the first CI run and resolve any Firestore-emulator or clean-runner differences.
-2. Add transactional cloud-merge tests, tombstone compaction, and a non-destructive backup/cloud conflict flow.
-3. Normalize supported crossword import formats into the catalogue contract.
-4. Expand offline restart, accessibility, touch, and responsive browser coverage.
-5. Grow the reviewed catalogue beyond the four schema-demonstration puzzles.
-6. Merge PR #1 after review, configure GitHub Pages, and perform the first manual deployment.
+1. Add transactional cloud-merge tests, tombstone compaction, and a non-destructive backup/cloud conflict flow.
+2. Normalize supported crossword import formats into the catalogue contract.
+3. Expand offline restart, accessibility, touch, and responsive browser coverage.
+4. Grow the reviewed catalogue beyond the four schema-demonstration puzzles.
+5. Merge PR #1 after review, configure GitHub Pages, and perform the first manual deployment.
