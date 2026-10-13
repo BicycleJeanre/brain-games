@@ -17,8 +17,8 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Word-search generation through `@blex41/word-search`.
 - Crossword layout generation through `crossword-layout-generator`.
 - Private `.puz`, iPUZ, JPZ, and XD file import through `@xwordly/xword-parser`; imported payloads remain local and Unrated.
-- Light, dark, and system themes; visible focus; keyboard-first crossword entry; reduced-motion support.
-- Pointer, touch, and keyboard word-search selection plus non-destructive JSON device backup merge.
+- Auto-saving STrack-style preferences for light/dark/system themes, timer and hint/help visibility, grid/clue/menu text sizes, four highlight palettes, and crossword correctness feedback.
+- Pointer, touch, and keyboard word-search selection plus non-destructive JSON device backup merge and scoped storage controls.
 - Persistent offline hints: a highlighted path cell for word searches and a revealed active-clue letter for crosswords.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Chromium, mobile Chromium, and WebKit browser coverage plus unit, catalogue-integrity, real server-stop offline restart, base-path, Firestore-rules, and emulator-backed cloud-journey checks.

@@ -12,10 +12,16 @@ service cloud.firestore {
         && d.settingsUpdatedAt is number && d.settingsUpdatedAt > 0
         && d.preferences is map
         && d.preferences.keys().hasAll(['theme', 'showTimer', 'checkAsYouType'])
-        && d.preferences.keys().hasOnly(['theme', 'showTimer', 'checkAsYouType'])
+        && d.preferences.keys().hasOnly(['theme', 'showTimer', 'checkAsYouType', 'showHints', 'showControlHelp', 'gridTextSize', 'clueTextSize', 'menuTextSize', 'highlightColour'])
         && d.preferences.theme in ['system', 'light', 'dark']
         && d.preferences.showTimer is bool
         && d.preferences.checkAsYouType is bool
+        && (!('showHints' in d.preferences) || d.preferences.showHints is bool)
+        && (!('showControlHelp' in d.preferences) || d.preferences.showControlHelp is bool)
+        && (!('gridTextSize' in d.preferences) || d.preferences.gridTextSize in ['small', 'medium', 'large'])
+        && (!('clueTextSize' in d.preferences) || d.preferences.clueTextSize in ['small', 'medium', 'large'])
+        && (!('menuTextSize' in d.preferences) || d.preferences.menuTextSize in ['small', 'medium', 'large'])
+        && (!('highlightColour' in d.preferences) || d.preferences.highlightColour in ['cyan', 'amber', 'violet', 'green'])
         && d.progress is map && d.progress.size() <= 2000
         && d.deletedProgress is map && d.deletedProgress.size() <= 500
         && (d.activePuzzleId == null || validId(d.activePuzzleId));

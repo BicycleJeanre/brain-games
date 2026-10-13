@@ -20,6 +20,8 @@ Ordinary play uses the puzzle ID as its session ID. Challenges use a period-scop
 
 Hint history is part of each puzzle progress record. Word-search hints persist highlighted cells without changing found-word state. Crossword hints persist both the revealed answer letter and its hinted-cell marker. Older version-one progress records normalize to an empty hint history, so backups and Firestore documents remain backward compatible.
 
+Preferences are normalized on load so older local backups and cloud documents receive current defaults. The renderer applies theme, text-size, and highlight choices as root `data-*` attributes, while visibility and assistance preferences determine which controls and feedback are rendered. Firestore rules accept both the legacy three-field preference object and the expanded validated schema so an app/rules rollout does not strand older service-worker clients.
+
 Production uses Firebase Email/Password Authentication and one owner-protected Firestore document per account. Pull-request CI exercises the complete two-browser save-and-restore journey against the local Auth and Firestore emulators, in addition to testing the rules directly. Puzzle payloads for private imports are intentionally excluded from sync; only their progress record can travel to another device.
 
 ## Offline build

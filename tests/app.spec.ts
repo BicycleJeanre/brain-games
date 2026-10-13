@@ -79,11 +79,27 @@ test("settings merge a WTrack JSON backup without replacing local progress", asy
     })),
   });
   await page.getByRole("button", { name: "Merge backup" }).click();
-  await expect(page.getByRole("status")).toContainText("Backup merged");
+  await expect(page.getByText(/^Backup merged:/)).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="ws-word-craft-001"]').click();
   await expect(page.getByText("Found").first()).toBeVisible();
+});
+
+test("settings can reset the current puzzle and return to the player", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await page.locator('[data-word-cell="2,0"]').click();
+  await page.locator('[data-word-cell="6,4"]').click();
+  await expect(page.getByText("Found").first()).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Reset current puzzle" }).click();
+  await expect(page.getByText("Current puzzle reset.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("grid", { name: /word search/ })).toBeVisible();
+  await expect(page.getByText("Found").first()).toHaveCount(0);
 });
 
 test("challenge sessions are independent and saved history can be deleted", async ({ page }) => {
@@ -148,8 +164,19 @@ test("themes, focus, reduced motion, and landscape layout meet the shared access
 
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByLabel("Theme").selectOption("light");
-  await page.getByRole("button", { name: "Save preferences" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByLabel("Grid letter size").selectOption("large");
+  await page.getByLabel("Clue and word-list size").selectOption("large");
+  await page.getByLabel("Menu text size").selectOption("large");
+  await page.getByLabel("Board highlight colour").selectOption("amber");
+  await page.locator('[data-preference-toggle="showHints"]').uncheck();
+  await page.locator('[data-preference-toggle="showControlHelp"]').uncheck();
+  await expect(page.locator("html")).toHaveAttribute("data-grid-text-size", "large");
+  await expect(page.locator("html")).toHaveAttribute("data-clue-text-size", "large");
+  await expect(page.locator("html")).toHaveAttribute("data-menu-text-size", "large");
+  await expect(page.locator("html")).toHaveAttribute("data-highlight-colour", "amber");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
@@ -158,6 +185,10 @@ test("themes, focus, reduced motion, and landscape layout meet the shared access
   await page.locator('[data-open="ws-word-craft-001"]').click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole("grid", { name: /word search/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Give me a hint" })).toHaveCount(0);
+  await expect(page.locator(".board-note")).toHaveCount(0);
+  expect(await page.locator(".word-cell").first().evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThan(18);
+  expect(await page.locator("html").evaluate((element) => getComputedStyle(element).getPropertyValue("--highlight").trim())).toBe("#8c5700");
 });
 
 test("only ten downloaded puzzles remain playable offline", async ({ page, context }, testInfo) => {
@@ -218,6 +249,7 @@ test("production app relaunches after its server stops with catalogue and cached
   await page.locator('[data-open="ws-word-craft-001"]').click();
   await page.locator('[data-word-cell="2,0"]').click();
   await page.locator('[data-word-cell="6,4"]').click();
+  await expect(page.getByText("Found").first()).toBeVisible();
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   server.closeAllConnections();

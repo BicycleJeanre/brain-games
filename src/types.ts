@@ -2,6 +2,8 @@ export type PuzzleKind = "word-search" | "crossword";
 export type Difficulty = "Easy" | "Medium" | "Hard" | "Diabolical" | "Unrated";
 export type Theme = "system" | "light" | "dark";
 export type ChallengeCadence = "daily" | "weekly";
+export type TextSize = "small" | "medium" | "large";
+export type HighlightColour = "cyan" | "amber" | "violet" | "green";
 
 export interface PuzzleSource {
   name: string;
@@ -78,6 +80,12 @@ export interface Preferences {
   theme: Theme;
   showTimer: boolean;
   checkAsYouType: boolean;
+  showHints: boolean;
+  showControlHelp: boolean;
+  gridTextSize: TextSize;
+  clueTextSize: TextSize;
+  menuTextSize: TextSize;
+  highlightColour: HighlightColour;
 }
 
 export interface AppData {

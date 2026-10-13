@@ -8,7 +8,7 @@ const validState = {
   version: 1,
   catalogueVersion: "2026.10.2",
   settingsUpdatedAt: 1,
-  preferences: { theme: "system", showTimer: true, checkAsYouType: false },
+  preferences: { theme: "system", showTimer: true, checkAsYouType: false, showHints: true, showControlHelp: true, gridTextSize: "medium", clueTextSize: "medium", menuTextSize: "medium", highlightColour: "cyan" },
   progress: {},
   deletedProgress: {},
   activePuzzleId: null,
@@ -38,5 +38,7 @@ test("rules reject unknown state documents and schema versions", async () => {
   await assertFails(owner.doc("users/owner/state/other").set({ version: 1 }));
   await assertFails(owner.doc("users/owner/state/app").set({ ...validState, version: 2 }));
   await assertFails(owner.doc("users/owner/state/app").set({ ...validState, preferences: { ...validState.preferences, theme: "ultraviolet" } }));
+  await assertFails(owner.doc("users/owner/state/app").set({ ...validState, preferences: { ...validState.preferences, gridTextSize: "huge" } }));
   await assertFails(owner.doc("users/owner/state/app").set({ ...validState, unexpected: true }));
+  await assertSucceeds(owner.doc("users/owner/state/app").set({ ...validState, preferences: { theme: "system", showTimer: true, checkAsYouType: false } }));
 });

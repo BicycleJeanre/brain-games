@@ -12,6 +12,7 @@ type View = "home" | "library" | "create" | "settings" | "help" | "player";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const store = new Store();
 let view: View = "home";
+let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let activePuzzle: Puzzle | null = null;
 let activeSessionId: string | null = null;
 let libraryType: "all" | PuzzleKind = "all";
@@ -38,8 +39,15 @@ const completedCount = () => Object.values(store.data.progress).filter((progress
 const cloud = new CloudSync(store, () => render());
 let authReady: ReturnType<typeof watchAuth> | undefined;
 
-function applyTheme() {
-  document.documentElement.dataset.theme = store.data.preferences.theme;
+function applyPreferences() {
+  const preferences = store.data.preferences;
+  Object.assign(document.documentElement.dataset, {
+    theme: preferences.theme,
+    gridTextSize: preferences.gridTextSize,
+    clueTextSize: preferences.clueTextSize,
+    menuTextSize: preferences.menuTextSize,
+    highlightColour: preferences.highlightColour,
+  });
 }
 
 function chrome(content: string) {
@@ -135,10 +143,10 @@ function wordSearchPlayer(puzzle: WordSearchPuzzle, progress: PuzzleProgress) {
             return `<button role="gridcell" class="word-cell ${foundCells.has(`${x}:${y}`) ? "found" : ""} ${hinted ? "hinted" : ""} ${selectionStart?.x === x && selectionStart?.y === y ? "selected" : ""}" data-word-cell="${x},${y}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}${hinted ? ", hint highlighted" : ""}">${letter}</button>`;
           })).join("")}
         </div>
-        <p class="board-note">Drag across a word, or select its first and last letters. With a keyboard, use the arrow keys to move and Enter or Space to select.</p>
+        ${store.data.preferences.showControlHelp ? `<p class="board-note">Drag across a word, or select its first and last letters. With a keyboard, use the arrow keys to move and Enter or Space to select.</p>` : ""}
       </div>
       <aside class="controls card"><div class="control-heading"><span class="eyebrow">Find these words</span><strong>${progress.foundWordIds.length} / ${puzzle.words.length}</strong></div>
-        <div class="hint-actions"><button class="secondary" data-hint>Give me a hint</button><span>${progress.hintedCells.length} used</span></div>
+        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Give me a hint</button><span>${progress.hintedCells.length} used</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <ul class="word-list">${puzzle.words.map((word) => `<li class="${progress.foundWordIds.includes(word.id) ? "found" : ""}"><span>${escapeHtml(word.label)}</span><span>${progress.foundWordIds.includes(word.id) ? "Found" : `${word.label.length} letters`}</span></li>`).join("")}</ul>
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
@@ -166,9 +174,9 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
           const hinted = progress.hintedCells.includes(index);
           return `<label class="crossword-cell ${selectedCells.has(`${y}:${x}`) ? "active" : ""} ${wrong ? "wrong" : ""} ${hinted ? "hinted" : ""}">${numberAt.has(`${y}:${x}`) ? `<span>${numberAt.get(`${y}:${x}`)}</span>` : ""}<input maxlength="1" autocomplete="off" autocapitalize="characters" data-crossword-cell="${index}" data-row="${y}" data-column="${x}" value="${escapeHtml(value)}" aria-label="Row ${y + 1}, column ${x + 1}${hinted ? ", letter revealed by hint" : ""}" /></label>`;
         })).join("")}
-      </div><p class="board-note">Type a letter to move through the active clue. Use arrow keys to navigate the grid.</p></div>
+      </div>${store.data.preferences.showControlHelp ? `<p class="board-note">Type a letter to move through the active clue. Use arrow keys to navigate the grid.</p>` : ""}</div>
       <aside class="clue-panel card">
-        <div class="hint-actions"><button class="secondary" data-hint>Reveal a letter</button><span>${progress.hintedCells.length} used</span></div>
+        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Reveal a letter</button><span>${progress.hintedCells.length} used</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         ${(["across","down"] as const).map((direction) => `<section><span class="eyebrow">${direction}</span><ol>${puzzle.clues.filter((clue) => clue.direction === direction).map((clue) => `<li><button class="clue ${selectedClue === clueKey(clue.number, clue.direction) ? "active" : ""}" data-clue="${clueKey(clue.number, clue.direction)}"><b>${clue.number}</b><span>${escapeHtml(clue.clue)}</span></button></li>`).join("")}</ol></section>`).join("")}
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
@@ -195,28 +203,50 @@ function createLab() {
     <p class="privacy-note">Generated previews stay on this device. Curated catalogue publication requires provenance and licence review.</p>`;
 }
 
+function settingSelect(key: keyof Preferences, title: string, detail: string, value: string, options: Array<[string, string]>) {
+  return `<label class="settings-field"><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span><select data-preference-select="${key}" aria-label="${escapeHtml(title)}">${options.map(([option, label]) => `<option value="${option}" ${value === option ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>`;
+}
+
+function settingToggle(key: keyof Preferences, title: string, detail: string, checked: boolean) {
+  return `<label class="toggle settings-field"><input type="checkbox" data-preference-toggle="${key}" ${checked ? "checked" : ""}/><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></span></label>`;
+}
+
 function settings() {
   const preferences = store.data.preferences;
-  return `<div class="page-heading"><div><span class="eyebrow">Device and cloud</span><h1>Settings</h1></div></div>
+  const sizes: Array<[string, string]> = [["small", "Small"], ["medium", "Medium"], ["large", "Large"]];
+  return `<div class="page-heading"><div><span class="eyebrow">Device and cloud</span><h1>Settings</h1></div><span class="catalogue-badge">Changes save automatically</span></div>
+    ${settingsMessage ? `<p class="status-message ${settingsError ? "error" : ""}" role="status">${escapeHtml(settingsMessage)}</p>` : ""}
     <div class="settings-grid">
-      <form class="card settings-card" id="preferences-form"><h2>Appearance & play</h2>
-        <label>Theme<select name="theme"><option value="system" ${preferences.theme === "system" ? "selected" : ""}>System</option><option value="light" ${preferences.theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${preferences.theme === "dark" ? "selected" : ""}>Dark</option></select></label>
-        <label class="toggle"><input type="checkbox" name="showTimer" ${preferences.showTimer ? "checked" : ""}/><span>Show puzzle timer</span></label>
-        <label class="toggle"><input type="checkbox" name="checkAsYouType" ${preferences.checkAsYouType ? "checked" : ""}/><span>Mark incorrect crossword letters</span></label>
-        <button class="primary" type="submit">Save preferences</button>
-      </form>
-      <form class="card settings-card" id="account-form"><h2>Private sync</h2>
+      <form class="card settings-card account-card" id="account-form"><span class="eyebrow">Cross-device sessions</span><h2>Private sync</h2>
         ${!cloudConfigured ? `<p>Firebase is not configured in this build. Device storage remains fully functional.</p>` : cloud.user ? `<p>Signed in as <strong>${escapeHtml(cloud.user.email ?? "account")}</strong>.</p><button class="secondary" type="button" data-sync>Sync now</button><button class="text-button" type="button" data-sign-out>Sign out</button>` : `<p>Sign in to privately sync progress and preferences. Offline play does not require an account.</p><label>Email<input type="email" name="email" required autocomplete="email" /></label><label>Password<input type="password" name="password" minlength="6" required autocomplete="current-password" /></label><div class="button-row"><button class="primary" name="action" value="sign-in">Sign in</button><button class="secondary" name="action" value="create">Create account</button></div><button class="text-button" name="action" value="reset">Send reset email</button>`}
         ${cloud.error ? `<p class="error">${escapeHtml(cloud.error)}</p>` : ""}
       </form>
-      <section class="card settings-card"><h2>Device backup</h2>
+      <section class="card settings-card"><span class="eyebrow">Appearance</span><h2>Make the desk yours</h2>
+        ${settingSelect("theme", "Theme", "Follow the device or keep one theme.", preferences.theme, [["system", "System"], ["light", "Light"], ["dark", "Dark"]])}
+        ${settingToggle("showTimer", "Show timer", "Keep elapsed time visible without turning it into a score.", preferences.showTimer)}
+        <p class="preference-status" data-preferences-status role="status">Preferences save on this device and sync when signed in.</p>
+      </section>
+      <section class="card settings-card"><span class="eyebrow">Player layout</span><h2>Choose what stays visible</h2>
+        ${settingToggle("showHints", "Show hint controls", "Keep the local word-search and crossword hint actions in the player.", preferences.showHints)}
+        ${settingToggle("showControlHelp", "Show help text", "Keep keyboard, touch, and selection reminders beneath each board.", preferences.showControlHelp)}
+      </section>
+      <section class="card settings-card"><span class="eyebrow">Readability</span><h2>Type size and highlight</h2><p>Choose from tested presets rather than fine-tuning individual values.</p>
+        ${settingSelect("gridTextSize", "Grid letter size", "Letters inside word-search and crossword cells.", preferences.gridTextSize, sizes)}
+        ${settingSelect("clueTextSize", "Clue and word-list size", "Crossword clues and the word-search target list.", preferences.clueTextSize, sizes)}
+        ${settingSelect("menuTextSize", "Menu text size", "Navigation and primary player controls.", preferences.menuTextSize, sizes)}
+        ${settingSelect("highlightColour", "Board highlight colour", "Selected cells, active clues, and hint outlines.", preferences.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}
+      </section>
+      <section class="card settings-card"><span class="eyebrow">Assistance</span><h2>Hints and checks</h2>
+        ${settingToggle("checkAsYouType", "Mark incorrect crossword letters", "Add a visible error state without revealing the correct answer.", preferences.checkAsYouType)}
+        <p>Hiding hint controls does not erase hints already used. All hint selection still runs locally and works offline.</p>
+      </section>
+      <section class="card settings-card"><span class="eyebrow">Backup</span><h2>Your device data</h2>
         <p>Download a private JSON copy of your progress and preferences. Restore merges missing sessions without replacing progress already on this device.</p>
         <button class="secondary" type="button" data-export-backup>Download backup</button>
         <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Merge backup</button></form>
-        ${settingsMessage ? `<p class="status-message ${settingsError ? "error" : ""}" role="status">${escapeHtml(settingsMessage)}</p>` : ""}
       </section>
-      <section class="card settings-card"><h2>Offline puzzle cache</h2><p><strong>${cachedPuzzleIds.size} of ${MAX_OFFLINE_PUZZLES}</strong> puzzle slots are in use. Opening a puzzle downloads it for offline play. After ten, WTrack removes the least recently opened puzzle payload while keeping all progress.</p></section>
-      <section class="card settings-card"><h2>Local data controls</h2><p>Clear completed sessions, all saved progress, or downloaded puzzle payloads independently. Preferences and your exported backup remain separate.</p><div class="data-actions"><button class="secondary" type="button" data-clear-progress="completed">Clear completed sessions</button><button class="secondary danger-action" type="button" data-clear-progress="all">Clear all progress</button><button class="secondary" type="button" data-clear-cache>Clear offline puzzles</button></div></section>
+      <section class="card settings-card"><span class="eyebrow">Storage</span><h2>Offline data controls</h2><p><strong>${cachedPuzzleIds.size} of ${MAX_OFFLINE_PUZZLES}</strong> offline puzzle slots are in use. Reset the current session, clear history, all progress, or downloaded payloads independently.</p><div class="data-actions">${activePuzzle && activeSessionId ? `<button class="secondary danger-action" type="button" data-reset-current>Reset current puzzle</button>` : ""}<button class="secondary" type="button" data-clear-progress="completed">Clear completed sessions</button><button class="secondary danger-action" type="button" data-clear-progress="all">Clear all progress</button><button class="secondary" type="button" data-clear-cache>Clear offline puzzles</button></div><p class="storage-note">Progress deletion synchronizes when signed in. Clearing offline puzzle payloads keeps progress and preferences.</p></section>
+      <section class="card settings-card"><span class="eyebrow">Help</span><h2>How WTrack works</h2><button class="secondary" type="button" data-nav="help">Open user guide</button><p class="storage-note"><strong>${navigator.onLine ? "Online" : "Offline"}.</strong> The shell, help, preferences, saved progress, catalogue index, and ten most recently opened puzzles work without a connection after the first production load.</p></section>
     </div>`;
 }
 
@@ -234,7 +264,7 @@ function help() {
 }
 
 function render() {
-  applyTheme();
+  applyPreferences();
   const content = catalogueError
     ? `<div class="empty card"><h1>Catalogue unavailable</h1><p>${escapeHtml(catalogueError)}</p><button class="primary" data-retry-catalogue>Try again</button></div>`
     : view === "home" ? home() : view === "library" ? library() : view === "create" ? createLab() : view === "settings" ? settings() : view === "help" ? help() : player();
@@ -315,7 +345,17 @@ function downloadBackup() {
 }
 
 function bind() {
-  app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => { view = element.dataset.nav as View; if (view !== "player") { activePuzzle = null; activeSessionId = null; } message = ""; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => {
+    let next = element.dataset.nav as View;
+    if (next === "settings") {
+      if (view === "settings") next = viewBeforeSettings;
+      else { viewBeforeSettings = view; next = "settings"; }
+    }
+    view = next;
+    if (view !== "player" && view !== "settings") { activePuzzle = null; activeSessionId = null; }
+    message = "";
+    render();
+  }));
   app.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => element.addEventListener("click", () => {
     const cadence = element.dataset.challenge as ChallengeCadence | undefined;
     const challenge = cadence ? { cadence, periodKey: element.dataset.period!, difficulty: element.dataset.difficulty as Difficulty } : undefined;
@@ -432,12 +472,17 @@ function bind() {
     });
   });
 
-  app.querySelector<HTMLFormElement>("#preferences-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget as HTMLFormElement);
-    await store.setPreferences({ theme: form.get("theme") as Preferences["theme"], showTimer: form.has("showTimer"), checkAsYouType: form.has("checkAsYouType") });
-    render(); void cloud.upload();
-  });
+  const savePreference = async (key: keyof Preferences, value: string | boolean) => {
+    const preferences = { ...store.data.preferences };
+    (preferences as unknown as Record<string, unknown>)[key] = value;
+    await store.setPreferences(preferences);
+    applyPreferences();
+    const status = app.querySelector<HTMLElement>("[data-preferences-status]");
+    if (status) status.textContent = "Saved on this device. Syncing when available.";
+    void cloud.upload();
+  };
+  app.querySelectorAll<HTMLSelectElement>("[data-preference-select]").forEach((select) => select.addEventListener("change", () => void savePreference(select.dataset.preferenceSelect as keyof Preferences, select.value)));
+  app.querySelectorAll<HTMLInputElement>("[data-preference-toggle]").forEach((toggle) => toggle.addEventListener("change", () => void savePreference(toggle.dataset.preferenceToggle as keyof Preferences, toggle.checked)));
 
   app.querySelector<HTMLFormElement>("#account-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -453,6 +498,16 @@ function bind() {
   app.querySelector<HTMLElement>("[data-sign-out]")?.addEventListener("click", () => void signOutAccount());
   app.querySelector<HTMLElement>("[data-sync]")?.addEventListener("click", () => void cloud.upload());
   app.querySelector<HTMLElement>("[data-export-backup]")?.addEventListener("click", downloadBackup);
+  app.querySelector<HTMLElement>("[data-reset-current]")?.addEventListener("click", async () => {
+    if (!activePuzzle || !activeSessionId || !confirm("Reset the current puzzle session?")) return;
+    await store.reset(activePuzzle, activeSessionId);
+    selectionStart = null;
+    playerMessage = "";
+    settingsMessage = "Current puzzle reset.";
+    settingsError = false;
+    render();
+    void cloud.upload();
+  });
   app.querySelectorAll<HTMLElement>("[data-delete-progress]").forEach((element) => element.addEventListener("click", async () => {
     const sessionId = element.dataset.deleteProgress!;
     if (!confirm("Delete this saved session? This keeps the downloaded puzzle available offline.")) return;
@@ -488,7 +543,7 @@ function bind() {
       const result = await store.importData(imported);
       settingsMessage = `Backup merged: ${result.added} session${result.added === 1 ? "" : "s"} added, ${result.skipped} existing session${result.skipped === 1 ? "" : "s"} kept.`;
       settingsError = false;
-      applyTheme();
+      applyPreferences();
       render();
     } catch (error) {
       settingsMessage = error instanceof Error ? error.message : "Could not restore this backup.";
@@ -557,7 +612,7 @@ async function boot() {
       : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
   }
   for (const puzzle of await store.cachedPuzzles()) if (puzzle.catalogueVersion === "local-import-1") registerLocalPuzzle(puzzle);
-  applyTheme();
+  applyPreferences();
   authReady = watchAuth((user) => void cloud.setUser(user));
   render();
   if ("serviceWorker" in navigator) void navigator.serviceWorker.register(new URL("./sw.js", document.baseURI));

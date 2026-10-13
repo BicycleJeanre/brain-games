@@ -20,6 +20,9 @@ test("normalization preserves safe preferences and defaults invalid values", () 
   assert.equal(data.preferences.theme, "system");
   assert.equal(data.preferences.showTimer, false);
   assert.equal(data.preferences.checkAsYouType, DEFAULT_PREFERENCES.checkAsYouType);
+  assert.equal(data.preferences.showHints, DEFAULT_PREFERENCES.showHints);
+  assert.equal(data.preferences.gridTextSize, "medium");
+  assert.equal(data.preferences.highlightColour, "cyan");
   assert.deepEqual(data.progress, {});
   assert.equal(Object.keys(data.deletedProgress).length, 500);
   assert.equal(data.deletedProgress.invalid, undefined);

@@ -22,6 +22,12 @@ Choose **Reveal a letter** to fill one unresolved cell in the active clue. If th
 
 Hint selection runs locally with a bundled deterministic library. It needs no account, network request, paid service, or third-party puzzle feed.
 
+## Settings and readability
+
+Settings auto-save as soon as you change them. Choose a light, dark, or system theme; show or hide the timer, hint controls, and short board instructions; select small, medium, or large grid, clue, and menu text; choose one of four board-highlight palettes; and optionally mark incorrect crossword letters while typing. Hiding hint controls does not remove previously used hints or change saved puzzle progress.
+
+Open **Settings** again to return to the screen you came from. When you open it during a puzzle, **Reset current puzzle** is also available under Storage and offline data. Resetting is confirmed first and clears only that puzzle attempt.
+
 ## Creating previews
 
 The Create screen offers three local tools:
@@ -36,7 +42,7 @@ Generation and file parsing happen in the browser. Imported puzzles are marked *
 
 After the production app has loaded once, its shell and catalogue index are cached. WTrack separately stores the ten most recently opened puzzle payloads in IndexedDB. Opening an eleventh removes the least recently opened payload, but never its progress; reconnect and open that puzzle to download it again and resume. Puzzles labelled **Online only** cannot be opened while disconnected.
 
-Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup. **Merge backup** adds sessions missing from the current device and preserves existing progress instead of replacing it. Settings also has independent controls for completed sessions, all saved progress, and offline puzzle payloads.
+Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Backup** to download a private JSON backup. **Merge backup** adds sessions missing from the current device and preserves existing progress instead of replacing it. Settings also has independent controls for completed sessions, all saved progress, and offline puzzle payloads.
 
 The header reports **Online** or **Offline** independently from the account-sync state. This makes it clear whether an uncached puzzle can be downloaded even when you are using WTrack without an account.
 

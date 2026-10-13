@@ -54,6 +54,13 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Provide JSON export and non-destructive merge import before relying on cloud sync as the only backup path.
 - Provide separate controls for completed progress, all progress, and downloaded puzzle payloads.
 
+### Settings and readability
+
+- Auto-save theme, timer visibility, hint-control visibility, board-help visibility, crossword correctness feedback, and readable grid, clue, and menu text-size presets.
+- Offer multiple accessible highlight palettes without making colour the only signal for selection, hints, or completion.
+- Preserve the active puzzle while Settings is open, return to the originating screen, and offer a confirmed current-puzzle reset when Settings was opened from a player.
+- Keep preferences local-first, synchronize them through the same optional owner-only account state, and normalize older preference documents to current defaults.
+
 ## Technical conventions
 
 - Vite + strict TypeScript, static GitHub Pages build at `/wtrack/`.
@@ -78,5 +85,5 @@ The committed source is validated at build time, then exported to one lightweigh
 - Progress saves locally on every meaningful move and optionally synchronizes privately through Firestore.
 - Every published puzzle exposes provenance and licence details.
 - Custom generators work locally and make their review boundary explicit.
-- Automated tests cover model validation, persistence, completion, challenge selection, private import, Firestore rules, Chromium/WebKit browser play, true server-stop offline restart, accessibility, responsive layout, themes, and base paths.
+- Automated tests cover model validation, persistence, completion, challenge selection, private import, preference migration, Firestore rules, Chromium/WebKit browser play, current-puzzle reset, true server-stop offline restart, accessibility, responsive layout, themes, and base paths.
 - README, user guide, provenance documentation, architecture notes, and deployment workflow stay aligned with behavior.
