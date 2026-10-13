@@ -2,7 +2,7 @@
 
 ## Starting and resuming
 
-Open **Puzzles** to browse the 100-puzzle public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Choose a puzzle and select **Start**. WTrack saves progress on the device after every found word or entered crossword letter. Started puzzles appear on Home for quick resume.
+Open **Puzzles** to browse the public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its grid and clues and marks it **Available offline**. WTrack saves progress on the device after every found word or entered crossword letter. Started puzzles appear on Home for quick resume.
 
 ## Word searches
 
@@ -31,7 +31,9 @@ Generation happens in the browser. Previews are not added to the public catalogu
 
 ## Offline use
 
-After the production app has loaded once, its shell and bundled catalogue are cached. Your current progress and settings are stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup and restore it later on any WTrack installation.
+After the production app has loaded once, its shell and catalogue index are cached. WTrack separately stores the ten most recently opened puzzle payloads in IndexedDB. Opening an eleventh removes the least recently opened payload, but never its progress; reconnect and open that puzzle to download it again and resume. Puzzles labelled **Online only** cannot be opened while disconnected.
+
+Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup and restore it later on any WTrack installation.
 
 ## Accounts and privacy
 

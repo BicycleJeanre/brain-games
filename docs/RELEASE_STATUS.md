@@ -64,4 +64,5 @@ Last updated: 2026-10-13
 ## Next release-one work
 
 1. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-2. Collect first-release feedback before expanding or retiring any production surface.
+2. Validate and release the `codex/ten-puzzle-offline-cache` catalogue architecture: metadata remains browsable offline, puzzle payloads download on first open, and IndexedDB retains at most ten by least-recently-opened order.
+3. Collect first-release feedback before expanding or retiring any production surface.

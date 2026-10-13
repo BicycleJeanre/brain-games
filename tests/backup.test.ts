@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createBackup, parseBackup } from "../src/backup.ts";
-import { wordSearches } from "../src/puzzles.ts";
+import { wordSearches } from "./fixtures.ts";
 import { newProgress, normalizeData } from "../src/store.ts";
 
 test("backup round-trip preserves progress and preferences", () => {

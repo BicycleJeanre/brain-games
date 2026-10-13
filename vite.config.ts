@@ -9,6 +9,7 @@ function offline(): Plugin {
         "index.html",
         "manifest.webmanifest",
         "icon.svg",
+        "catalogue/index.json",
         ...Object.keys(bundle).filter((file) => !file.endsWith(".map")),
       ];
       const version = `wtrack-${Date.now()}`;

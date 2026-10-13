@@ -1,10 +1,11 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
+import { crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, wordSearches } from "./catalogue.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { chooseCrosswordHint, chooseWordSearchHint } from "./hints.ts";
-import { crosswords, findWord, puzzleById, puzzles, wordPath, wordSearches } from "./puzzles.ts";
-import { Store } from "./store.ts";
-import type { CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, WordSearchPuzzle } from "./types.ts";
+import { findWord, wordPath } from "./puzzles.ts";
+import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
+import type { CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordSearchPuzzle } from "./types.ts";
 
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -19,13 +20,16 @@ let suppressWordClick = false;
 let selectedClue = "";
 let message = "";
 let playerMessage = "";
+let libraryMessage = "";
+let catalogueError = "";
+let cachedPuzzleIds = new Set<string>();
 let settingsMessage = "";
 let settingsError = false;
 let renderToken = 0;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-const progressFor = (puzzle: Puzzle) => store.data.progress[puzzle.id];
+const progressFor = (puzzle: { id: string }) => store.data.progress[puzzle.id];
 const completedCount = () => Object.values(store.data.progress).filter((progress) => progress.completedAt).length;
 
 const cloud = new CloudSync(store, () => render());
@@ -48,21 +52,23 @@ function chrome(content: string) {
     <footer class="app-footer"><span>Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/wtrack">Source & provenance</a></footer>`;
 }
 
-function puzzleCard(puzzle: Puzzle) {
+function puzzleCard(puzzle: PuzzleSummary) {
   const progress = progressFor(puzzle);
   const status = progress?.completedAt ? "Complete" : progress ? "Continue" : "Start";
+  const cached = cachedPuzzleIds.has(puzzle.id);
+  const available = navigator.onLine || cached;
   return `<article class="puzzle-card card">
     <span class="kind-icon" aria-hidden="true">${puzzle.kind === "word-search" ? "WS" : "CW"}</span>
-    <div><span class="eyebrow">${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p></div>
-    <button class="secondary compact" data-open="${puzzle.id}">${status}</button>
+    <div><span class="eyebrow">${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
+    <button class="secondary compact" data-open="${puzzle.id}" ${available ? "" : "disabled"}>${available ? status : "Online only"}</button>
   </article>`;
 }
 
 function home() {
   const active = Object.values(store.data.progress).filter((progress) => !progress.completedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3);
   return `<section class="hero card">
-    <div><span class="eyebrow">Your quiet word-puzzle desk</span><h1>Find the pattern.<br>Fill the crossing.</h1><p>Word searches and crosswords designed for focused play. Everything needed for the bundled collection works offline.</p></div>
-    <button class="primary" data-nav="library">Choose a puzzle<small>${puzzles.length} ready offline</small></button>
+    <div><span class="eyebrow">Your quiet word-puzzle desk</span><h1>Find the pattern.<br>Fill the crossing.</h1><p>Browse the growing public catalogue online. Your ten most recently opened puzzles stay ready for offline play.</p></div>
+    <button class="primary" data-nav="library">Choose a puzzle<small>${puzzles.length} in the public catalogue</small></button>
   </section>
   ${active.length ? `<section class="section"><div class="section-heading"><div><span class="eyebrow">Pick up where you left off</span><h2>In progress</h2></div></div><div class="puzzle-list">${active.map((progress) => puzzleById(progress.puzzleId)).filter(Boolean).map((puzzle) => puzzleCard(puzzle!)).join("")}</div></section>` : ""}
   <section class="stat-grid">
@@ -78,7 +84,7 @@ function home() {
 
 function library() {
   const visible = puzzles.filter((puzzle) => (libraryType === "all" || puzzle.kind === libraryType) && (libraryDifficulty === "all" || puzzle.difficulty === libraryDifficulty));
-  return `<div class="page-heading"><div><span class="eyebrow">Offline public catalogue</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · Catalogue 2026.10.2</span></div>
+  return `<div class="page-heading"><div><span class="eyebrow">Expandable public catalogue</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · ${cachedPuzzleIds.size}/${MAX_OFFLINE_PUZZLES} offline</span></div>
     <div class="filter-row">
       <div class="filter-tabs" role="group" aria-label="Puzzle type">
         ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
@@ -87,7 +93,8 @@ function library() {
         ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
       </div>
     </div>
-    <p class="result-count">Showing ${visible.length} of ${puzzles.length} puzzles</p>
+    ${libraryMessage ? `<p class="status-message ${libraryMessage.startsWith("Could not") ? "error" : ""}" role="status">${escapeHtml(libraryMessage)}</p>` : ""}
+    <p class="result-count">Showing ${visible.length} of ${puzzles.length} puzzles · opening a puzzle makes it available offline</p>
     <div class="puzzle-list">${visible.map(puzzleCard).join("")}</div>`;
 }
 
@@ -182,6 +189,7 @@ function settings() {
         <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Restore backup</button></form>
         ${settingsMessage ? `<p class="status-message ${settingsError ? "error" : ""}" role="status">${escapeHtml(settingsMessage)}</p>` : ""}
       </section>
+      <section class="card settings-card"><h2>Offline puzzle cache</h2><p><strong>${cachedPuzzleIds.size} of ${MAX_OFFLINE_PUZZLES}</strong> puzzle slots are in use. Opening a puzzle downloads it for offline play. After ten, WTrack removes the least recently opened puzzle payload while keeping all progress.</p></section>
     </div>`;
 }
 
@@ -191,27 +199,47 @@ function help() {
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
       <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter in the active clue. Hints run locally, work offline, and stay recorded with your progress.</p></article>
-      <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell and bundled catalogue are cached for offline use. Firebase sync is optional and owner-protected.</p></article>
-      <article class="card help-card"><h2>Puzzle provenance</h2><p>Every bundled puzzle names its source, generator version, and licence. Imported or generated previews are not published automatically.</p></article>
+      <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
+      <article class="card help-card"><h2>Puzzle provenance</h2><p>Every published puzzle names its source, generator version, and licence. Imported or generated previews are not published automatically.</p></article>
     </div>`;
 }
 
 function render() {
   applyTheme();
-  const content = view === "home" ? home() : view === "library" ? library() : view === "create" ? createLab() : view === "settings" ? settings() : view === "help" ? help() : player();
+  const content = catalogueError
+    ? `<div class="empty card"><h1>Catalogue unavailable</h1><p>${escapeHtml(catalogueError)}</p><button class="primary" data-retry-catalogue>Try again</button></div>`
+    : view === "home" ? home() : view === "library" ? library() : view === "create" ? createLab() : view === "settings" ? settings() : view === "help" ? help() : player();
   app.innerHTML = chrome(content);
   bind();
 }
 
 async function openPuzzle(id: string) {
-  const puzzle = puzzleById(id);
-  if (!puzzle) return;
+  const summary = puzzleById(id);
+  if (!summary) return;
+  libraryMessage = cachedPuzzleIds.has(id) ? "Opening saved offline puzzle…" : "Downloading puzzle for offline play…";
+  render();
+  let puzzle = await store.getCachedPuzzle(id);
+  try {
+    if (!puzzle) {
+      puzzle = await downloadPuzzle(id);
+      cachedPuzzleIds = new Set(await store.cachePuzzle(puzzle));
+    } else {
+      cachedPuzzleIds = new Set(await store.cachedPuzzleIds());
+    }
+  } catch (error) {
+    libraryMessage = navigator.onLine
+      ? `Could not open this puzzle. ${error instanceof Error ? error.message : "Please try again."}`
+      : "Could not open this puzzle offline. Reconnect once to download it.";
+    render();
+    return;
+  }
   activePuzzle = puzzle;
   selectionStart = null;
   playerMessage = "";
   selectedClue = puzzle.kind === "crossword" && puzzle.clues[0] ? clueKey(puzzle.clues[0].number, puzzle.clues[0].direction) : "";
   await store.start(puzzle);
   view = "player";
+  libraryMessage = "";
   render();
 }
 
@@ -262,7 +290,16 @@ function bind() {
   app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as PuzzleKind; view = "library"; render(); }));
   app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as "all" | PuzzleKind; render(); }));
   app.querySelectorAll<HTMLElement>("[data-difficulty-filter]").forEach((element) => element.addEventListener("click", () => { libraryDifficulty = element.dataset.difficultyFilter as "all" | Difficulty; render(); }));
-  app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => { const puzzle = puzzleById(element.dataset.reset!); if (puzzle && confirm("Start this puzzle over?")) { await store.reset(puzzle); selectionStart = null; playerMessage = ""; render(); void cloud.upload(); } }));
+  app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => {
+    const puzzle = activePuzzle;
+    if (!puzzle || puzzle.id !== element.dataset.reset || !confirm("Start this puzzle over?")) return;
+    await store.reset(puzzle);
+    selectionStart = null;
+    playerMessage = "";
+    render();
+    void cloud.upload();
+  }));
+  app.querySelector<HTMLElement>("[data-retry-catalogue]")?.addEventListener("click", () => void reloadCatalogue());
   app.querySelector<HTMLButtonElement>("[data-hint]")?.addEventListener("click", async () => {
     if (!activePuzzle) return;
     const progress = progressFor(activePuzzle);
@@ -422,8 +459,28 @@ function bind() {
   });
 }
 
+async function reloadCatalogue() {
+  try {
+    await loadCatalogue();
+    catalogueError = "";
+  } catch (error) {
+    catalogueError = navigator.onLine
+      ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
+      : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
+  }
+  render();
+}
+
 async function boot() {
   await store.load();
+  cachedPuzzleIds = new Set(await store.cachedPuzzleIds());
+  try {
+    await loadCatalogue();
+  } catch (error) {
+    catalogueError = navigator.onLine
+      ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
+      : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
+  }
   applyTheme();
   void watchAuth((user) => void cloud.setUser(user));
   render();
@@ -441,4 +498,6 @@ async function boot() {
   }, 1000);
 }
 
+addEventListener("online", render);
+addEventListener("offline", render);
 void boot();

@@ -90,3 +90,39 @@ test("mobile layout keeps primary navigation usable", async ({ page }, testInfo)
   await page.getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("heading", { name: "Create", exact: true })).toBeVisible();
 });
+
+test("only ten downloaded puzzles remain playable offline", async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "One cache-cap journey is sufficient");
+  await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  const buttons = await page.locator("[data-open]").all();
+  const ids = (await Promise.all(buttons.slice(0, 11).map((button) => button.getAttribute("data-open")))).filter((id): id is string => Boolean(id));
+  expect(ids).toHaveLength(11);
+  for (const id of ids) {
+    await page.locator(`[data-open="${id}"]`).click();
+    await expect(page.getByRole("button", { name: "← Puzzles" })).toBeVisible();
+    await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  }
+
+  const cachedIds = await page.evaluate(async () => await new Promise<string[]>((resolve, reject) => {
+    const request = indexedDB.open("wtrack", 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const keys = request.result.transaction("puzzle-cache").objectStore("puzzle-cache").getAllKeys();
+      keys.onerror = () => reject(keys.error);
+      keys.onsuccess = () => resolve(keys.result.map(String));
+    };
+  }));
+  expect(cachedIds).toHaveLength(10);
+  expect(cachedIds).not.toContain(ids[0]);
+  expect(cachedIds).toContain(ids[10]);
+
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await expect(page.locator(`[data-open="${ids[0]}"]`)).toBeDisabled();
+  await page.locator(`[data-open="${ids[10]}"]`).click();
+  await expect(page.getByRole("button", { name: "← Puzzles" })).toBeVisible();
+});

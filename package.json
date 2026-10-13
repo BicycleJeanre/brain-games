@@ -7,8 +7,11 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "catalogue:generate": "node scripts/generate-catalogue.mjs",
+    "catalogue:export": "node scripts/export-catalogue.mjs",
     "catalogue:check": "node scripts/check-catalogue.mjs",
+    "predev": "npm run catalogue:export",
     "dev": "vite",
+    "prebuild": "npm run catalogue:export",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "playwright test",

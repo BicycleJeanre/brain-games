@@ -1,13 +1,14 @@
 # WTrack
 
-WTrack is an offline-first word-search and crossword PWA in the FTrack/GTrack/STrack visual family. It provides one focused puzzle desk, responsive keyboard and touch play, transparent puzzle provenance, device-first persistence, and optional private Firebase synchronization.
+WTrack is a local-first word-search and crossword PWA in the FTrack/GTrack/STrack visual family. It provides one focused puzzle desk, responsive keyboard and touch play, transparent puzzle provenance, a ten-puzzle offline cache, and optional private Firebase synchronization.
 
-The production build targets `https://bicyclejeanre.github.io/wtrack/`. Bundled puzzles and core play do not depend on a live puzzle API, an account, or a network connection.
+The production build targets `https://bicyclejeanre.github.io/wtrack/`. The catalogue is hosted with the static app rather than fetched from a third-party puzzle API. Browsing metadata and the ten most recently opened puzzles remain available offline.
 
 ## Current foundation
 
 - Original Vite + strict TypeScript app with no UI framework.
-- 100 original puzzles bundled for offline play: 50 word searches and 50 crosswords.
+- 100 original public puzzles: 50 word searches and 50 crosswords, exported as individually downloadable static payloads.
+- An IndexedDB least-recently-used cache capped at ten playable offline puzzles; eviction never deletes progress.
 - Easy, Medium, Hard, and Diabolical library filters, with at least 24 puzzles in each tier.
 - IndexedDB-first progress, completion state, preferences, and timer.
 - Optional Firebase email/password accounts and owner-protected Firestore state.
@@ -20,7 +21,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. Bundled 
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Unit, browser, catalogue-integrity, Firestore-rules, and emulator-backed cloud-journey checks.
 
-The Create screen currently produces local previews. Moving a generated or imported puzzle into the bundled catalogue is deliberately a reviewed process: provenance, clue authorship, redistribution terms, connectivity, and answer correctness must be documented first.
+The Create screen currently produces local previews. Moving a generated or imported puzzle into the public catalogue is deliberately a reviewed process: provenance, clue authorship, redistribution terms, connectivity, and answer correctness must be documented first.
 
 ## Local development
 
@@ -53,6 +54,8 @@ npm run test:cloud
 The catalogue is generated deterministically from the original theme banks in
 `src/data/catalogue-themes.json`. Run `npm run catalogue:generate` only when intentionally
 rebuilding the committed catalogue, then run `npm run catalogue:check` before review.
+`npm run build` automatically exports the committed source into a lightweight index and
+one static JSON payload per puzzle; `npm run catalogue:export` can run that step directly.
 
 ## Firebase setup
 

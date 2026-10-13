@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { crosswords, findWord, isPuzzleComplete, puzzles, wordPath, wordSearches } from "../src/puzzles.ts";
+import { crosswords, puzzles, wordSearches } from "./fixtures.ts";
+import { findWord, isPuzzleComplete, validatePuzzle, wordPath } from "../src/puzzles.ts";
 
 test("catalogue contains validated puzzles of both kinds", () => {
   assert.equal(puzzles.length, 100);
@@ -8,6 +9,7 @@ test("catalogue contains validated puzzles of both kinds", () => {
   assert.equal(crosswords.length, 50);
   assert.deepEqual(new Set(puzzles.map((puzzle) => puzzle.difficulty)), new Set(["Easy", "Medium", "Hard", "Diabolical"]));
   assert.ok(puzzles.every((puzzle) => puzzle.source.licence && puzzle.source.note && puzzle.catalogueVersion));
+  puzzles.forEach(validatePuzzle);
 });
 
 test("word paths support straight lines and reject bent selections", () => {

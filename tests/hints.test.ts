@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chooseCrosswordHint, chooseWordSearchHint } from "../src/hints.ts";
-import { crosswords, wordSearches } from "../src/puzzles.ts";
+import { crosswords, wordSearches } from "./fixtures.ts";
 import { newProgress } from "../src/store.ts";
 
 test("word-search hints identify unused cells on unfinished words", () => {

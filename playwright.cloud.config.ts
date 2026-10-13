@@ -11,7 +11,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
   webServer: {
-    command: "VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_AUTH_DOMAIN=demo-wtrack.firebaseapp.com VITE_FIREBASE_PROJECT_ID=demo-wtrack VITE_FIREBASE_APP_ID=demo-app VITE_USE_EMULATORS=true vite --host 127.0.0.1 --port 5174 --strictPort",
+    command: "npm run catalogue:export && VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_AUTH_DOMAIN=demo-wtrack.firebaseapp.com VITE_FIREBASE_PROJECT_ID=demo-wtrack VITE_FIREBASE_APP_ID=demo-app VITE_USE_EMULATORS=true vite --host 127.0.0.1 --port 5174 --strictPort",
     url: "http://127.0.0.1:5174/",
     reuseExistingServer: false,
   },

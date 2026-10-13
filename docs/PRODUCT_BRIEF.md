@@ -8,7 +8,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ## Product principles
 
-1. **Offline is a complete mode.** Bundled puzzles, players, progress, settings, and help work without sign-in or connectivity.
+1. **Offline is a focused mode.** The shell, catalogue index, progress, settings, help, and up to ten recently opened puzzle payloads work without sign-in or connectivity.
 2. **Local first, cloud second.** Every move saves to IndexedDB before optional Firestore reconciliation.
 3. **Provenance is product data.** A puzzle is not release-ready until its grid, words, clues, generator, licence, and source can be explained.
 4. **No universal difficulty claims.** Friendly difficulty labels are catalogue metadata, not an industry-standard score.
@@ -19,7 +19,8 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ### Home and library
 
 - Resume active puzzles before discovery content.
-- Browse 100 bundled puzzles and filter by type or by Easy, Medium, Hard, and Diabolical difficulty.
+- Browse the expandable public catalogue and filter by type or by Easy, Medium, Hard, and Diabolical difficulty.
+- Download a puzzle on first open and retain at most ten playable payloads offline using least-recently-opened eviction.
 - Show difficulty, progress, completion, and provenance details.
 - Support deterministic daily/weekly challenges once the catalogue is large enough.
 
@@ -55,7 +56,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ## Technical conventions
 
 - Vite + strict TypeScript, static GitHub Pages build at `/wtrack/`.
-- IndexedDB through `idb`; versioned service-worker app-shell and catalogue cache.
+- IndexedDB through `idb`; versioned service-worker app-shell/catalogue-index cache and a ten-puzzle payload cache.
 - Deterministic hint selection through the bundled MIT-licensed `pure-rand` library; no live hint API.
 - Firebase modular Web SDK with persistent multi-tab Firestore cache.
 - Deterministic Node unit tests and Chromium/WebKit Playwright coverage.
@@ -65,15 +66,15 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 Catalogue version 2026.10.2 includes 100 WTrack-original puzzles: 50 word searches and 50 crosswords. It preserves the first four demonstration puzzles and adds 96 deterministic puzzles generated from 12 original theme banks. The committed catalogue contains 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical puzzles.
 
-The catalogue is static and validated at build time, so discovery and play never depend on an external puzzle feed. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
+The committed source is validated at build time, then exported to one lightweight discovery index and one static payload per puzzle. This creates an expandable catalogue without a live third-party feed or a growing application bundle. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
 
 ## Acceptance criteria
 
 - Builds and serves correctly from `/wtrack/`.
-- Installs and restarts offline with the shell, help, active progress, and bundled catalogue.
+- Installs and restarts offline with the shell, help, progress, catalogue index, and no more than ten recently opened playable puzzles.
 - Both game types support keyboard, mouse, and touch on desktop and narrow phones.
 - Progress saves locally on every meaningful move and optionally synchronizes privately through Firestore.
-- Every bundled puzzle exposes provenance and licence details.
+- Every published puzzle exposes provenance and licence details.
 - Custom generators work locally and make their review boundary explicit.
 - Automated tests cover model validation, persistence, completion, Firestore rules, browser play, offline restart, themes, and base paths.
 - README, user guide, provenance documentation, architecture notes, and deployment workflow stay aligned with behavior.

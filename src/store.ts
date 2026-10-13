@@ -1,8 +1,16 @@
 import { openDB } from "idb";
-import { CATALOGUE_VERSION, isPuzzleComplete } from "./puzzles.ts";
+import { CATALOGUE_VERSION } from "./catalogue.ts";
+import { isPuzzleComplete } from "./puzzles.ts";
 import type { AppData, Preferences, Puzzle, PuzzleProgress } from "./types.ts";
 
 export const DEFAULT_PREFERENCES: Preferences = { theme: "system", showTimer: true, checkAsYouType: false };
+export const MAX_OFFLINE_PUZZLES = 10;
+
+interface CachedPuzzle {
+  id: string;
+  puzzle: Puzzle;
+  lastOpenedAt: number;
+}
 
 function defaults(): AppData {
   return {
@@ -74,13 +82,39 @@ export class Store {
   private database?: Awaited<ReturnType<typeof openDB>>;
 
   async load() {
-    this.database = await openDB("wtrack", 1, { upgrade(db) { if (!db.objectStoreNames.contains("state")) db.createObjectStore("state"); } });
+    this.database = await openDB("wtrack", 2, { upgrade(db) {
+      if (!db.objectStoreNames.contains("state")) db.createObjectStore("state");
+      if (!db.objectStoreNames.contains("puzzle-cache")) db.createObjectStore("puzzle-cache");
+    } });
     this.data = normalizeData(await this.database.get("state", "app"));
     return this.data;
   }
 
   async save() {
     if (this.database) await this.database.put("state", this.data, "app");
+  }
+
+  async cachedPuzzleIds() {
+    if (!this.database) return [];
+    return (await this.database.getAllKeys("puzzle-cache")).filter((key): key is string => typeof key === "string");
+  }
+
+  async getCachedPuzzle(id: string, now = Date.now()) {
+    if (!this.database) return null;
+    const cached = await this.database.get("puzzle-cache", id) as CachedPuzzle | undefined;
+    if (!cached) return null;
+    cached.lastOpenedAt = now;
+    await this.database.put("puzzle-cache", cached, id);
+    return cached.puzzle;
+  }
+
+  async cachePuzzle(puzzle: Puzzle, now = Date.now()) {
+    if (!this.database) return [];
+    await this.database.put("puzzle-cache", { id: puzzle.id, puzzle, lastOpenedAt: now } satisfies CachedPuzzle, puzzle.id);
+    const cached = await this.database.getAll("puzzle-cache") as CachedPuzzle[];
+    const overflow = cached.sort((left, right) => right.lastOpenedAt - left.lastOpenedAt || left.id.localeCompare(right.id)).slice(MAX_OFFLINE_PUZZLES);
+    await Promise.all(overflow.map((entry) => this.database!.delete("puzzle-cache", entry.id)));
+    return this.cachedPuzzleIds();
   }
 
   async start(puzzle: Puzzle) {

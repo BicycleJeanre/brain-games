@@ -1,7 +1,4 @@
-import rawPuzzles from "./data/puzzles.json" with { type: "json" };
-import type { CrosswordClue, CrosswordPuzzle, GridPoint, Puzzle, WordSearchPuzzle } from "./types.ts";
-
-export const CATALOGUE_VERSION = "2026.10.2";
+import type { CrosswordClue, GridPoint, Puzzle, WordSearchPuzzle } from "./types.ts";
 
 const pointKey = ({ x, y }: GridPoint) => `${x}:${y}`;
 
@@ -34,7 +31,7 @@ export function isPuzzleComplete(puzzle: Puzzle, foundWordIds: string[], entries
   return puzzle.grid.every((row, y) => [...row].every((letter, x) => letter === "#" || entries[y * puzzle.columns + x] === letter));
 }
 
-function validatePuzzle(puzzle: Puzzle) {
+export function validatePuzzle(puzzle: Puzzle) {
   if (puzzle.grid.length !== puzzle.rows || puzzle.grid.some((row) => row.length !== puzzle.columns)) throw new Error(`Invalid grid for ${puzzle.id}`);
   if (puzzle.kind === "word-search") {
     for (const word of puzzle.words) {
@@ -48,10 +45,3 @@ function validatePuzzle(puzzle: Puzzle) {
     }
   }
 }
-
-export const puzzles = rawPuzzles as Puzzle[];
-puzzles.forEach(validatePuzzle);
-
-export const wordSearches = puzzles.filter((puzzle): puzzle is WordSearchPuzzle => puzzle.kind === "word-search");
-export const crosswords = puzzles.filter((puzzle): puzzle is CrosswordPuzzle => puzzle.kind === "crossword");
-export const puzzleById = (id: string) => puzzles.find((puzzle) => puzzle.id === id);
