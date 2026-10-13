@@ -1,6 +1,6 @@
 # Architecture
 
-WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/puzzles.ts` validates catalogue data and pure puzzle rules; `src/store.ts` owns the versioned IndexedDB document; `src/cloud.ts` reconciles that document with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
+WTrack is a static Vite application. `src/main.ts` owns the small view router and accessible DOM rendering; `src/puzzles.ts` validates catalogue data and pure puzzle rules; `src/store.ts` owns the versioned IndexedDB document; `src/cloud.ts` lazily loads Firebase and reconciles that document with the signed-in owner's Firestore path; and `src/external.ts` isolates third-party generator/parser adapters.
 
 ## Data flow
 
@@ -20,7 +20,6 @@ The Vite plugin emits a versioned `sw.js` containing the built asset list. Navig
 
 - split rendering into view modules without adding a UI framework;
 - add deletion-tombstone compaction and transactional cloud-merge tests;
-- complete pointer-drag and keyboard word-search selection;
 - normalize all parser formats into the catalogue contract;
-- add JSON export/import and non-destructive conflict review;
+- add non-destructive backup/cloud conflict review;
 - expand deterministic browser, offline, accessibility, and responsive coverage.

@@ -96,6 +96,12 @@ export class Store {
     await this.save();
   }
 
+  async replaceData(value: unknown) {
+    this.data = normalizeData(value);
+    await this.save();
+    return this.data;
+  }
+
   async mergeRemote(remote: AppData) {
     const incoming = normalizeData(remote);
     for (const [id, progress] of Object.entries(incoming.progress)) {

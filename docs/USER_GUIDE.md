@@ -6,9 +6,9 @@ Open **Puzzles**, choose a word search or crossword, and select **Start**. WTrac
 
 ## Word searches
 
-Select the first letter of a word, then its last letter. WTrack accepts straight horizontal, vertical, and diagonal paths in either direction. A correct find remains highlighted and receives a textual **Found** status in the word list.
+Drag from the first letter of a word to its last, or select the two endpoints individually. WTrack accepts straight horizontal, vertical, and diagonal paths in either direction. A correct find remains highlighted and receives a textual **Found** status in the word list.
 
-The initial scaffold uses endpoint selection. Pointer-drag and keyboard selection are part of the release-one interaction work described in the product brief.
+With a keyboard, focus the grid, move between letters with the arrow keys, and use Enter or Space to select each endpoint.
 
 ## Crosswords
 
@@ -25,7 +25,7 @@ Generation happens in the browser. Previews are not added to the public catalogu
 
 ## Offline use
 
-After the production app has loaded once, its shell and bundled catalogue are cached. Your current progress and settings are stored in IndexedDB. Browser storage can be cleared or evicted, so a JSON export remains a planned release-one backup feature.
+After the production app has loaded once, its shell and bundled catalogue are cached. Your current progress and settings are stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup and restore it later on any WTrack installation.
 
 ## Accounts and privacy
 

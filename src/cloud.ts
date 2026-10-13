@@ -1,24 +1,5 @@
-import { initializeApp } from "firebase/app";
-import {
-  connectAuthEmulator,
-  createUserWithEmailAndPassword,
-  getAuth,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signOut,
-  type User,
-} from "firebase/auth";
-import {
-  connectFirestoreEmulator,
-  doc,
-  initializeFirestore,
-  onSnapshot,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  runTransaction,
-  type Unsubscribe,
-} from "firebase/firestore";
+import type { Auth, User } from "firebase/auth";
+import type { Firestore, Unsubscribe } from "firebase/firestore";
 import { normalizeData, type Store } from "./store.ts";
 import type { AppData } from "./types.ts";
 
@@ -31,27 +12,75 @@ const config = {
 };
 
 export const cloudConfigured = Object.values(config).every(Boolean);
-const app = cloudConfigured ? initializeApp(config) : null;
-export const auth = app ? getAuth(app) : null;
-const database = app ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }) : null;
 
-if (environment.VITE_USE_EMULATORS === "true" && auth && database) {
-  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  connectFirestoreEmulator(database, "127.0.0.1", 8080);
+type AuthApi = typeof import("firebase/auth");
+type FirestoreApi = typeof import("firebase/firestore");
+
+interface CloudServices {
+  auth: Auth;
+  database: Firestore;
+  authApi: AuthApi;
+  firestoreApi: FirestoreApi;
 }
 
-export const watchAuth = (changed: (user: User | null) => void) => auth ? onAuthStateChanged(auth, changed) : (changed(null), () => {});
+let servicesPromise: Promise<CloudServices> | undefined;
+
+async function initializeServices() {
+  const [{ initializeApp }, authApi, firestoreApi] = await Promise.all([
+    import("firebase/app"),
+    import("firebase/auth"),
+    import("firebase/firestore"),
+  ]);
+  const app = initializeApp(config);
+  const auth = authApi.getAuth(app);
+  const database = firestoreApi.initializeFirestore(app, {
+    localCache: firestoreApi.persistentLocalCache({ tabManager: firestoreApi.persistentMultipleTabManager() }),
+  });
+
+  if (environment.VITE_USE_EMULATORS === "true") {
+    authApi.connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    firestoreApi.connectFirestoreEmulator(database, "127.0.0.1", 8080);
+  }
+  return { auth, database, authApi, firestoreApi };
+}
+
+function services() {
+  if (!cloudConfigured) return null;
+  servicesPromise ??= initializeServices();
+  return servicesPromise;
+}
+
+export async function watchAuth(changed: (user: User | null) => void) {
+  const available = services();
+  if (!available) {
+    changed(null);
+    return () => {};
+  }
+  const { auth, authApi } = await available;
+  return authApi.onAuthStateChanged(auth, changed);
+}
 
 export async function signInAccount(email: string, password: string, create = false) {
-  if (!auth) throw new Error("Cloud accounts are not configured for this installation.");
-  if (create) await createUserWithEmailAndPassword(auth, email, password);
-  else await signInWithEmailAndPassword(auth, email, password);
+  const available = services();
+  if (!available) throw new Error("Cloud accounts are not configured for this installation.");
+  const { auth, authApi } = await available;
+  if (create) await authApi.createUserWithEmailAndPassword(auth, email, password);
+  else await authApi.signInWithEmailAndPassword(auth, email, password);
 }
 
-export async function signOutAccount() { if (auth) await signOut(auth); }
+export async function signOutAccount() {
+  const available = services();
+  if (available) {
+    const { auth, authApi } = await available;
+    await authApi.signOut(auth);
+  }
+}
+
 export async function sendReset(email: string) {
-  if (!auth) throw new Error("Cloud accounts are not configured for this installation.");
-  await sendPasswordResetEmail(auth, email);
+  const available = services();
+  if (!available) throw new Error("Cloud accounts are not configured for this installation.");
+  const { auth, authApi } = await available;
+  await authApi.sendPasswordResetEmail(auth, email);
 }
 
 function validCloudData(value: unknown): value is AppData {
@@ -81,9 +110,11 @@ export class CloudSync {
     this.ready = false;
     this.error = "";
     this.changed();
-    if (!user || !database) return;
-    const reference = doc(database, "users", user.uid, "state", "app");
-    this.stopListening = onSnapshot(reference, { includeMetadataChanges: true }, async (snapshot) => {
+    const available = services();
+    if (!user || !available) return;
+    const { database, firestoreApi } = await available;
+    const reference = firestoreApi.doc(database, "users", user.uid, "state", "app");
+    this.stopListening = firestoreApi.onSnapshot(reference, { includeMetadataChanges: true }, async (snapshot) => {
       const data: unknown = snapshot.data();
       if (snapshot.exists() && validCloudData(data)) await this.store.mergeRemote(data);
       if (!snapshot.metadata.fromCache) this.ready = true;
@@ -93,12 +124,14 @@ export class CloudSync {
   }
 
   async upload() {
-    if (!this.user || !database) return;
+    const available = services();
+    if (!this.user || !available) return;
     this.working = true;
     this.changed();
-    const reference = doc(database, "users", this.user.uid, "state", "app");
+    const { database, firestoreApi } = await available;
+    const reference = firestoreApi.doc(database, "users", this.user.uid, "state", "app");
     try {
-      await runTransaction(database, async (transaction) => {
+      await firestoreApi.runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
         if (remote.exists() && validCloudData(remote.data())) await this.store.mergeRemote(normalizeData(remote.data()));
         transaction.set(reference, this.store.data);

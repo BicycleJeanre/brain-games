@@ -101,6 +101,8 @@ textarea { min-height:155px; padding:12px; resize:vertical; font-family:ui-monos
 .toggle { display:flex; align-items:center; gap:10px; padding:10px 0; }
 .toggle input { width:18px; min-height:18px; margin:0; }
 .button-row { display:flex; gap:8px; }
+.import-form { display:grid; gap:12px; }
+.status-message { margin:0; color:var(--success); }
 .generator-output { margin-top:18px; padding:22px; }
 .mini-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); width:min(100%,480px); aspect-ratio:1; margin:15px 0; border:2px solid var(--border-strong); }
 .mini-grid span { display:grid; place-items:center; min-width:0; border:1px solid var(--border); background:var(--panel-soft); font-size:clamp(8px,1.8vw,15px); }

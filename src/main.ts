@@ -1,4 +1,5 @@
 import "./style.css";
+import { createBackup, parseBackup } from "./backup.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { crosswords, findWord, puzzleById, puzzles, wordPath, wordSearches } from "./puzzles.ts";
 import { Store } from "./store.ts";
@@ -10,8 +11,12 @@ const store = new Store();
 let view: View = "home";
 let activePuzzle: Puzzle | null = null;
 let selectionStart: GridPoint | null = null;
+let dragStart: GridPoint | null = null;
+let suppressWordClick = false;
 let selectedClue = "";
 let message = "";
+let settingsMessage = "";
+let settingsError = false;
 let renderToken = 0;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
@@ -84,7 +89,7 @@ function wordSearchPlayer(puzzle: WordSearchPuzzle, progress: PuzzleProgress) {
         <div class="word-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} word search">
           ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="word-cell ${foundCells.has(`${x}:${y}`) ? "found" : ""} ${selectionStart?.x === x && selectionStart?.y === y ? "selected" : ""}" data-word-cell="${x},${y}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}">${letter}</button>`)).join("")}
         </div>
-        <p class="board-note">Select the first and last letter of a word. Drag support is planned for the next interaction pass.</p>
+        <p class="board-note">Drag across a word, or select its first and last letters. With a keyboard, use the arrow keys to move and Enter or Space to select.</p>
       </div>
       <aside class="controls card"><div class="control-heading"><span class="eyebrow">Find these words</span><strong>${progress.foundWordIds.length} / ${puzzle.words.length}</strong></div>
         <ul class="word-list">${puzzle.words.map((word) => `<li class="${progress.foundWordIds.includes(word.id) ? "found" : ""}"><span>${escapeHtml(word.label)}</span><span>${progress.foundWordIds.includes(word.id) ? "Found" : `${word.label.length} letters`}</span></li>`).join("")}</ul>
@@ -152,6 +157,12 @@ function settings() {
         ${!cloudConfigured ? `<p>Firebase is not configured in this build. Device storage remains fully functional.</p>` : cloud.user ? `<p>Signed in as <strong>${escapeHtml(cloud.user.email ?? "account")}</strong>.</p><button class="secondary" type="button" data-sync>Sync now</button><button class="text-button" type="button" data-sign-out>Sign out</button>` : `<p>Sign in to privately sync progress and preferences. Offline play does not require an account.</p><label>Email<input type="email" name="email" required autocomplete="email" /></label><label>Password<input type="password" name="password" minlength="6" required autocomplete="current-password" /></label><div class="button-row"><button class="primary" name="action" value="sign-in">Sign in</button><button class="secondary" name="action" value="create">Create account</button></div><button class="text-button" name="action" value="reset">Send reset email</button>`}
         ${cloud.error ? `<p class="error">${escapeHtml(cloud.error)}</p>` : ""}
       </form>
+      <section class="card settings-card"><h2>Device backup</h2>
+        <p>Download a private JSON copy of your progress and preferences, or restore one previously exported by WTrack.</p>
+        <button class="secondary" type="button" data-export-backup>Download backup</button>
+        <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Restore backup</button></form>
+        ${settingsMessage ? `<p class="status-message ${settingsError ? "error" : ""}" role="status">${escapeHtml(settingsMessage)}</p>` : ""}
+      </section>
     </div>`;
 }
 
@@ -197,6 +208,33 @@ function nextCrosswordIndex(puzzle: CrosswordPuzzle, current: number, key: strin
   return current;
 }
 
+function pointFromCell(cell: HTMLElement): GridPoint {
+  const [x, y] = cell.dataset.wordCell!.split(",").map(Number) as [number, number];
+  return { x, y };
+}
+
+async function completeWordSelection(end: GridPoint) {
+  if (!activePuzzle || activePuzzle.kind !== "word-search" || !selectionStart) return false;
+  const word = findWord(activePuzzle, wordPath(selectionStart, end));
+  selectionStart = null;
+  if (word) {
+    await store.update(activePuzzle, (progress) => { if (!progress.foundWordIds.includes(word.id)) progress.foundWordIds.push(word.id); });
+    void cloud.upload();
+  }
+  render();
+  return Boolean(word);
+}
+
+function downloadBackup() {
+  const blob = new Blob([createBackup(store.data)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `wtrack-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function bind() {
   app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => { view = element.dataset.nav as View; activePuzzle = view === "player" ? activePuzzle : null; message = ""; render(); }));
   app.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => element.addEventListener("click", () => void openPuzzle(element.dataset.open!)));
@@ -204,17 +242,45 @@ function bind() {
   app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => render(element.dataset.libraryFilter)));
   app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => { const puzzle = puzzleById(element.dataset.reset!); if (puzzle && confirm("Start this puzzle over?")) { await store.reset(puzzle); selectionStart = null; render(); void cloud.upload(); } }));
 
-  app.querySelectorAll<HTMLButtonElement>("[data-word-cell]").forEach((cell) => cell.addEventListener("click", async () => {
-    if (!activePuzzle || activePuzzle.kind !== "word-search") return;
-    const [x, y] = cell.dataset.wordCell!.split(",").map(Number) as [number, number];
-    if (!selectionStart) { selectionStart = { x, y }; render(); return; }
-    const path = wordPath(selectionStart, { x, y });
-    const word = findWord(activePuzzle, path);
-    selectionStart = null;
-    if (word) await store.update(activePuzzle, (progress) => { if (!progress.foundWordIds.includes(word.id)) progress.foundWordIds.push(word.id); });
-    render();
-    if (word) void cloud.upload();
-  }));
+  app.querySelectorAll<HTMLButtonElement>("[data-word-cell]").forEach((cell) => {
+    cell.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !activePuzzle || activePuzzle.kind !== "word-search") return;
+      dragStart = pointFromCell(cell);
+      cell.classList.add("selected");
+    });
+    cell.addEventListener("pointerup", (event) => {
+      if (!dragStart || !activePuzzle || activePuzzle.kind !== "word-search") return;
+      const start = dragStart;
+      const end = pointFromCell(cell);
+      const dragged = end.x !== start.x || end.y !== start.y;
+      dragStart = null;
+      if (dragged) {
+        suppressWordClick = true;
+        window.setTimeout(() => { suppressWordClick = false; }, 0);
+        event.preventDefault();
+        selectionStart = start;
+        void completeWordSelection(end);
+      }
+    });
+    cell.addEventListener("pointercancel", () => { dragStart = null; });
+    cell.addEventListener("keydown", (event) => {
+      if (!activePuzzle || activePuzzle.kind !== "word-search" || !event.key.startsWith("Arrow")) return;
+      event.preventDefault();
+      const point = pointFromCell(cell);
+      const next = {
+        x: point.x + (event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0),
+        y: point.y + (event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0),
+      };
+      app.querySelector<HTMLButtonElement>(`[data-word-cell="${next.x},${next.y}"]`)?.focus();
+    });
+    cell.addEventListener("click", async () => {
+      if (suppressWordClick) { suppressWordClick = false; return; }
+      if (!activePuzzle || activePuzzle.kind !== "word-search") return;
+      const point = pointFromCell(cell);
+      if (!selectionStart) { selectionStart = point; render(); return; }
+      await completeWordSelection(point);
+    });
+  });
 
   app.querySelectorAll<HTMLButtonElement>("[data-clue]").forEach((button) => button.addEventListener("click", () => { selectedClue = button.dataset.clue!; render(); }));
   app.querySelectorAll<HTMLInputElement>("[data-crossword-cell]").forEach((input) => {
@@ -264,6 +330,25 @@ function bind() {
   });
   app.querySelector<HTMLElement>("[data-sign-out]")?.addEventListener("click", () => void signOutAccount());
   app.querySelector<HTMLElement>("[data-sync]")?.addEventListener("click", () => void cloud.upload());
+  app.querySelector<HTMLElement>("[data-export-backup]")?.addEventListener("click", downloadBackup);
+  app.querySelector<HTMLFormElement>("#import-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = new FormData(event.currentTarget as HTMLFormElement).get("backup");
+    if (!(file instanceof File) || !file.size) return;
+    try {
+      const imported = parseBackup(await file.text());
+      if (!confirm("Replace this device's WTrack progress and preferences with this backup?")) return;
+      await store.replaceData(imported);
+      settingsMessage = `Backup restored: ${Object.keys(imported.progress).length} puzzle record${Object.keys(imported.progress).length === 1 ? "" : "s"}.`;
+      settingsError = false;
+      applyTheme();
+      render();
+    } catch (error) {
+      settingsMessage = error instanceof Error ? error.message : "Could not restore this backup.";
+      settingsError = true;
+      render();
+    }
+  });
 
   app.querySelector<HTMLFormElement>("#word-search-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -290,7 +375,7 @@ function bind() {
 async function boot() {
   await store.load();
   applyTheme();
-  watchAuth((user) => void cloud.setUser(user));
+  void watchAuth((user) => void cloud.setUser(user));
   render();
   if ("serviceWorker" in navigator) void navigator.serviceWorker.register(new URL("./sw.js", document.baseURI));
   const token = ++renderToken;

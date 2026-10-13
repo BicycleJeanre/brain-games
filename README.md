@@ -14,6 +14,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. Bundled 
 - Crossword layout generation through `crossword-layout-generator`.
 - `.puz`, iPUZ, JPZ, and XD parsing foundation through `@xwordly/xword-parser`.
 - Light, dark, and system themes; visible focus; keyboard-first crossword entry; reduced-motion support.
+- Pointer, touch, and keyboard word-search selection plus JSON device backup and restore.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Unit, browser, and Firestore-rules test foundations.
 
@@ -57,6 +58,7 @@ Cloud state is stored only at `users/{uid}/state/app`. Rules restrict reads and 
 - [User guide](docs/USER_GUIDE.md)
 - [Puzzle provenance](docs/PUZZLE_PROVENANCE.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Release status](docs/RELEASE_STATUS.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Licence
