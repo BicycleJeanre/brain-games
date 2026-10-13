@@ -33,6 +33,7 @@ const progressFor = (puzzle: { id: string }) => store.data.progress[puzzle.id];
 const completedCount = () => Object.values(store.data.progress).filter((progress) => progress.completedAt).length;
 
 const cloud = new CloudSync(store, () => render());
+let authReady: ReturnType<typeof watchAuth> | undefined;
 
 function applyTheme() {
   document.documentElement.dataset.theme = store.data.preferences.theme;
@@ -411,6 +412,7 @@ function bind() {
     const form = new FormData(event.currentTarget as HTMLFormElement);
     const email = String(form.get("email") ?? ""), password = String(form.get("password") ?? "");
     try {
+      await authReady;
       if (submitter?.value === "reset") await sendReset(email);
       else await signInAccount(email, password, submitter?.value === "create");
     } catch (error) { cloud.error = error instanceof Error ? error.message : "Account action failed."; render(); }
@@ -482,7 +484,7 @@ async function boot() {
       : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
   }
   applyTheme();
-  await watchAuth((user) => void cloud.setUser(user));
+  authReady = watchAuth((user) => void cloud.setUser(user));
   render();
   if ("serviceWorker" in navigator) void navigator.serviceWorker.register(new URL("./sw.js", document.baseURI));
   const token = ++renderToken;
