@@ -11,7 +11,7 @@ test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   await first.getByLabel("Password").fill(password);
   await first.getByRole("button", { name: "Create account" }).click();
   await expect(first.getByText(`Signed in as ${email}.`)).toBeVisible({ timeout: 15_000 });
-  await first.getByRole("button", { name: "Puzzles" }).click();
+  await first.getByRole("button", { name: "Puzzles", exact: true }).click();
   await first.locator('[data-open="ws-word-craft-001"]').click();
   await first.locator('[data-word-cell="2,0"]').click();
   await first.locator('[data-word-cell="6,4"]').click();
@@ -27,7 +27,7 @@ test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   await second.getByLabel("Password").fill(password);
   await second.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(second.getByText(`Signed in as ${email}.`)).toBeVisible({ timeout: 15_000 });
-  await second.getByRole("button", { name: "Puzzles" }).click();
+  await second.getByRole("button", { name: "Puzzles", exact: true }).click();
   await second.locator('[data-open="ws-word-craft-001"]').click();
   await expect(second.getByText("Found").first()).toBeVisible();
 

@@ -9,6 +9,7 @@ export default defineConfig({
   webServer: { command: "npm run build && npm run preview", url: "http://127.0.0.1:4174", reuseExistingServer: !process.env.CI },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"] } }
   ]
 });

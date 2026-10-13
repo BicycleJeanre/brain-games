@@ -11,6 +11,13 @@ interface CatalogueEnvelope {
 export let puzzles: PuzzleSummary[] = [];
 export let wordSearches: PuzzleSummary[] = [];
 export let crosswords: PuzzleSummary[] = [];
+const localPuzzles = new Map<string, PuzzleSummary>();
+
+function refreshLists(remote: PuzzleSummary[] = puzzles.filter((puzzle) => !localPuzzles.has(puzzle.id))) {
+  puzzles = [...remote, ...localPuzzles.values()];
+  wordSearches = puzzles.filter((puzzle) => puzzle.kind === "word-search");
+  crosswords = puzzles.filter((puzzle) => puzzle.kind === "crossword");
+}
 
 const catalogueUrl = (path: string) => new URL(`catalogue/${path}`, document.baseURI);
 
@@ -19,10 +26,23 @@ export async function loadCatalogue() {
   if (!response.ok) throw new Error(`Catalogue request failed (${response.status}).`);
   const envelope = await response.json() as Partial<CatalogueEnvelope>;
   if (envelope.version !== CATALOGUE_VERSION || !Array.isArray(envelope.puzzles)) throw new Error("The catalogue index is not compatible with this WTrack release.");
-  puzzles = envelope.puzzles;
-  wordSearches = puzzles.filter((puzzle) => puzzle.kind === "word-search");
-  crosswords = puzzles.filter((puzzle) => puzzle.kind === "crossword");
+  refreshLists(envelope.puzzles);
   return puzzles;
+}
+
+export function registerLocalPuzzle(puzzle: Puzzle) {
+  const summary: PuzzleSummary = {
+    id: puzzle.id,
+    kind: puzzle.kind,
+    title: puzzle.title,
+    subtitle: puzzle.subtitle,
+    difficulty: puzzle.difficulty,
+    catalogueVersion: puzzle.catalogueVersion,
+    source: puzzle.source,
+  };
+  localPuzzles.set(puzzle.id, summary);
+  refreshLists();
+  return summary;
 }
 
 export function puzzleById(id: string) {

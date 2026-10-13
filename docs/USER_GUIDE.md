@@ -2,7 +2,9 @@
 
 ## Starting and resuming
 
-Open **Puzzles** to browse the public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its grid and clues and marks it **Available offline**. WTrack saves progress on the device after every found word or entered crossword letter. Started puzzles appear on Home for quick resume.
+Open **Puzzles** to browse the public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its grid and clues and marks it **Available offline**. WTrack saves progress on the device after every found word or entered crossword letter. Home separates active and completed sessions, and each saved session can be deleted without removing its downloaded puzzle.
+
+Home also offers a daily and a weekly challenge in every difficulty. A challenge uses its own saved session, so playing it never overwrites your ordinary attempt at the same puzzle. Challenge selections remain stable for their UTC day or ISO week. The cards show current-period completion, streak, and average completion time.
 
 ## Word searches
 
@@ -22,18 +24,21 @@ Hint selection runs locally with a bundled deterministic library. It needs no ac
 
 ## Creating previews
 
-The Create screen offers two local tools:
+The Create screen offers three local tools:
 
 - enter one word per line to generate a word search;
-- enter `ANSWER | clue` on each line to generate a crossword layout.
+- enter `ANSWER | clue` on each line to generate a crossword layout;
+- open a personal or licensed iPUZ, PUZ, JPZ, or XD crossword file.
 
-Generation happens in the browser. Previews are not added to the public catalogue automatically because answers, clue authorship, layout quality, provenance, and redistribution rights require review.
+Generation and file parsing happen in the browser. Imported puzzles are marked **Unrated** and their payload stays on this device. Progress can synchronize when signed in, but another device needs the same source file before it can play that private puzzle. Previews and imports are not added to the public catalogue automatically because answers, clue authorship, layout quality, provenance, and redistribution rights require review.
 
 ## Offline use
 
 After the production app has loaded once, its shell and catalogue index are cached. WTrack separately stores the ten most recently opened puzzle payloads in IndexedDB. Opening an eleventh removes the least recently opened payload, but never its progress; reconnect and open that puzzle to download it again and resume. Puzzles labelled **Online only** cannot be opened while disconnected.
 
-Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup and restore it later on any WTrack installation.
+Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Device backup** to download a private JSON backup. **Merge backup** adds sessions missing from the current device and preserves existing progress instead of replacing it. Settings also has independent controls for completed sessions, all saved progress, and offline puzzle payloads.
+
+The header reports **Online** or **Offline** independently from the account-sync state. This makes it clear whether an uncached puzzle can be downloaded even when you are using WTrack without an account.
 
 ## Accounts and privacy
 

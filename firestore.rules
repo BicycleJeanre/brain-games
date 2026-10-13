@@ -2,11 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function validId(value) { return value is string && value.size() > 0 && value.size() <= 180; }
+    function validApp() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['version', 'catalogueVersion', 'settingsUpdatedAt', 'preferences', 'progress', 'deletedProgress', 'activePuzzleId'])
+        && d.keys().hasOnly(['version', 'catalogueVersion', 'settingsUpdatedAt', 'preferences', 'progress', 'deletedProgress', 'activePuzzleId'])
+        && d.version == 1
+        && d.catalogueVersion is string && d.catalogueVersion.size() > 0 && d.catalogueVersion.size() <= 40
+        && d.settingsUpdatedAt is number && d.settingsUpdatedAt > 0
+        && d.preferences is map
+        && d.preferences.keys().hasAll(['theme', 'showTimer', 'checkAsYouType'])
+        && d.preferences.keys().hasOnly(['theme', 'showTimer', 'checkAsYouType'])
+        && d.preferences.theme in ['system', 'light', 'dark']
+        && d.preferences.showTimer is bool
+        && d.preferences.checkAsYouType is bool
+        && d.progress is map && d.progress.size() <= 2000
+        && d.deletedProgress is map && d.deletedProgress.size() <= 500
+        && (d.activePuzzleId == null || validId(d.activePuzzleId));
+    }
     match /users/{uid}/state/{documentId} {
       allow read, delete: if isOwner(uid) && documentId == 'app';
       allow create, update: if isOwner(uid)
         && documentId == 'app'
-        && request.resource.data.version == 1;
+        && validApp();
     }
     match /{document=**} { allow read, write: if false; }
   }

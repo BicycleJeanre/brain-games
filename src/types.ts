@@ -1,6 +1,7 @@
 export type PuzzleKind = "word-search" | "crossword";
-export type Difficulty = "Easy" | "Medium" | "Hard" | "Diabolical";
+export type Difficulty = "Easy" | "Medium" | "Hard" | "Diabolical" | "Unrated";
 export type Theme = "system" | "light" | "dark";
+export type ChallengeCadence = "daily" | "weekly";
 
 export interface PuzzleSource {
   name: string;
@@ -66,6 +67,11 @@ export interface PuzzleProgress {
   startedAt: number;
   updatedAt: number;
   completedAt: number | null;
+  challenge?: {
+    cadence: ChallengeCadence;
+    periodKey: string;
+    difficulty: Difficulty;
+  };
 }
 
 export interface Preferences {

@@ -1,17 +1,19 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
-import { crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, wordSearches } from "./catalogue.ts";
+import { crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
+import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { chooseCrosswordHint, chooseWordSearchHint } from "./hints.ts";
 import { findWord, wordPath } from "./puzzles.ts";
 import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
-import type { CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordSearchPuzzle } from "./types.ts";
+import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordSearchPuzzle } from "./types.ts";
 
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const store = new Store();
 let view: View = "home";
 let activePuzzle: Puzzle | null = null;
+let activeSessionId: string | null = null;
 let libraryType: "all" | PuzzleKind = "all";
 let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
@@ -30,6 +32,7 @@ let renderToken = 0;
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 const progressFor = (puzzle: { id: string }) => store.data.progress[puzzle.id];
+const sessionProgress = () => activeSessionId ? store.data.progress[activeSessionId] : undefined;
 const completedCount = () => Object.values(store.data.progress).filter((progress) => progress.completedAt).length;
 
 const cloud = new CloudSync(store, () => render());
@@ -44,6 +47,7 @@ function chrome(content: string) {
   return `
     <header class="app-header">
       <button class="brand" data-nav="home" aria-label="WTrack home"><span class="brand-grid">W</span><span>WTrack</span></button>
+      <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
       <span class="cloud-state">${escapeHtml(cloud.status())}</span>
       <nav aria-label="Primary">
         ${[["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
@@ -53,30 +57,50 @@ function chrome(content: string) {
     <footer class="app-footer"><span>Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/wtrack">Source & provenance</a></footer>`;
 }
 
-function puzzleCard(puzzle: PuzzleSummary) {
-  const progress = progressFor(puzzle);
+function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = false) {
+  const progress = store.data.progress[sessionId];
   const status = progress?.completedAt ? "Complete" : progress ? "Continue" : "Start";
   const cached = cachedPuzzleIds.has(puzzle.id);
   const available = navigator.onLine || cached;
   return `<article class="puzzle-card card">
     <span class="kind-icon" aria-hidden="true">${puzzle.kind === "word-search" ? "WS" : "CW"}</span>
-    <div><span class="eyebrow">${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
-    <button class="secondary compact" data-open="${puzzle.id}" ${available ? "" : "disabled"}>${available ? status : "Online only"}</button>
+    <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
+    <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
   </article>`;
 }
 
+function challengeSection(cadence: ChallengeCadence) {
+  const set = challengeSet(puzzles, cadence);
+  const stats = challengeStats(Object.values(store.data.progress), cadence);
+  return `<section class="section challenge-section">
+    <div class="section-heading"><div><span class="eyebrow">Stable ${cadence === "daily" ? "until midnight UTC" : "for the ISO week"}</span><h2>${cadence === "daily" ? "Daily" : "Weekly"} challenges</h2></div><span class="catalogue-badge">${stats.currentPeriodCompleted}/4 current · ${stats.streak} ${cadence === "daily" ? "day" : "week"} streak</span></div>
+    <div class="challenge-grid">${set.map(({ difficulty, puzzle, periodKey, sessionId }) => {
+      const progress = store.data.progress[sessionId];
+      const cached = cachedPuzzleIds.has(puzzle.id);
+      const available = navigator.onLine || cached;
+      return `<article class="card challenge-card"><span class="eyebrow">${difficulty} · ${puzzle.kind === "word-search" ? "Word search" : "Crossword"}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(periodKey)}${cached ? " · Offline" : ""}</p><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" data-challenge="${cadence}" data-period="${periodKey}" data-difficulty="${difficulty}" ${available ? "" : "disabled"}>${available ? progress?.completedAt ? "Complete" : progress ? "Continue" : "Start challenge" : "Online only"}</button></article>`;
+    }).join("")}</div>
+    <p class="challenge-stats">${stats.completed} completed · ${stats.averageSeconds === null ? "No average yet" : `${formatTime(stats.averageSeconds)} average`}</p>
+  </section>`;
+}
+
 function home() {
-  const active = Object.values(store.data.progress).filter((progress) => !progress.completedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 3);
+  const entries = Object.entries(store.data.progress).sort(([, left], [, right]) => right.updatedAt - left.updatedAt);
+  const active = entries.filter(([, progress]) => !progress.completedAt).slice(0, 4);
+  const completed = entries.filter(([, progress]) => progress.completedAt).slice(0, 4);
   return `<section class="hero card">
     <div><span class="eyebrow">Your quiet word-puzzle desk</span><h1>Find the pattern.<br>Fill the crossing.</h1><p>Browse the growing public catalogue online. Your ten most recently opened puzzles stay ready for offline play.</p></div>
     <button class="primary" data-nav="library">Choose a puzzle<small>${puzzles.length} in the public catalogue</small></button>
   </section>
-  ${active.length ? `<section class="section"><div class="section-heading"><div><span class="eyebrow">Pick up where you left off</span><h2>In progress</h2></div></div><div class="puzzle-list">${active.map((progress) => puzzleById(progress.puzzleId)).filter(Boolean).map((puzzle) => puzzleCard(puzzle!)).join("")}</div></section>` : ""}
+  ${active.length ? `<section class="section active-section"><div class="section-heading"><div><span class="eyebrow">Pick up where you left off</span><h2>Active puzzles</h2></div></div><div class="puzzle-list">${active.map(([sessionId, progress]) => { const puzzle = puzzleById(progress.puzzleId); return puzzle ? puzzleCard(puzzle, sessionId, true) : ""; }).join("")}</div></section>` : ""}
+  ${challengeSection("daily")}
+  ${challengeSection("weekly")}
   <section class="stat-grid">
     <article class="card stat"><b>${wordSearches.length}</b><span>Word searches</span></article>
     <article class="card stat"><b>${crosswords.length}</b><span>Crosswords</span></article>
     <article class="card stat"><b>${completedCount()}</b><span>Completed</span></article>
   </section>
+  ${completed.length ? `<section class="section completed-section"><div class="section-heading"><div><span class="eyebrow">Your recent finishes</span><h2>Completed puzzles</h2></div></div><div class="puzzle-list">${completed.map(([sessionId, progress]) => { const puzzle = puzzleById(progress.puzzleId); return puzzle ? puzzleCard(puzzle, sessionId, true) : ""; }).join("")}</div></section>` : ""}
   <section class="split-feature">
     <article class="card feature"><span class="kind-icon">WS</span><h2>Word searches</h2><p>Trace in eight directions, track every find, and resume on any screen size.</p><button class="text-button" data-filter="word-search">Browse word searches →</button></article>
     <article class="card feature"><span class="kind-icon">CW</span><h2>Crosswords</h2><p>Keyboard-first grids, paired across/down clues, and optional checking as you type.</p><button class="text-button" data-filter="crossword">Browse crosswords →</button></article>
@@ -91,18 +115,18 @@ function library() {
         ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
       </div>
       <div class="filter-tabs difficulty-tabs" role="group" aria-label="Difficulty">
-        ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
+        ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"],["Unrated","Unrated"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
       </div>
     </div>
     ${libraryMessage ? `<p class="status-message ${libraryMessage.startsWith("Could not") ? "error" : ""}" role="status">${escapeHtml(libraryMessage)}</p>` : ""}
     <p class="result-count">Showing ${visible.length} of ${puzzles.length} puzzles · opening a puzzle makes it available offline</p>
-    <div class="puzzle-list">${visible.map(puzzleCard).join("")}</div>`;
+    <div class="puzzle-list">${visible.map((puzzle) => puzzleCard(puzzle)).join("")}</div>`;
 }
 
 function wordSearchPlayer(puzzle: WordSearchPuzzle, progress: PuzzleProgress) {
   const foundCells = new Set(puzzle.words.filter((word) => progress.foundWordIds.includes(word.id)).flatMap((word) => word.path.map(({ x, y }) => `${x}:${y}`)));
   const hintedCells = new Set(progress.hintedCells);
-  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">Word search · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
+  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word search · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
       <div class="board-column">
         <div class="word-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} word search">
@@ -131,7 +155,7 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
   const selected = puzzle.clues.find((clue) => clueKey(clue.number, clue.direction) === selectedClue) ?? puzzle.clues[0];
   selectedClue = selected ? clueKey(selected.number, selected.direction) : "";
   const selectedCells = new Set(selected ? [...selected.answer].map((_, index) => `${selected.row + (selected.direction === "down" ? index : 0)}:${selected.column + (selected.direction === "across" ? index : 0)}`) : []);
-  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">Crossword · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
+  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Crossword · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="crossword-layout">
       <div><div class="crossword-grid card" style="--columns:${puzzle.columns};--rows:${puzzle.rows}" role="grid" aria-label="${escapeHtml(puzzle.title)} crossword">
         ${puzzle.grid.flatMap((row, y) => [...row].map((solution, x) => {
@@ -155,7 +179,7 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
 
 function player() {
   if (!activePuzzle) return `<div class="empty card"><h1>Puzzle not found</h1><button class="primary" data-nav="library">Open the library</button></div>`;
-  const progress = progressFor(activePuzzle);
+  const progress = sessionProgress();
   if (!progress) return `<p class="boot">Preparing puzzle…</p>`;
   return activePuzzle.kind === "word-search" ? wordSearchPlayer(activePuzzle, progress) : crosswordPlayer(activePuzzle, progress);
 }
@@ -165,6 +189,7 @@ function createLab() {
     <div class="split-feature">
       <form class="card create-card" id="word-search-form"><span class="kind-icon">WS</span><h2>Generate a word search</h2><p>Powered locally by <code>@blex41/word-search</code>. Enter one word per line.</p><label>Words<textarea name="words">FOREST\nMOSS\nFERN\nTRAIL\nPINE\nOWL</textarea></label><button class="primary" type="submit">Generate preview</button></form>
       <form class="card create-card" id="crossword-form"><span class="kind-icon">CW</span><h2>Lay out a crossword</h2><p>Powered locally by <code>crossword-layout-generator</code>. Use <code>ANSWER | clue</code> on each line.</p><label>Answers and clues<textarea name="items">FOREST | A large area covered in trees\nFERN | A leafy plant without flowers\nTRAIL | A path through the woods\nPINE | An evergreen tree\nOWL | A nocturnal bird</textarea></label><button class="primary" type="submit">Generate preview</button></form>
+      <form class="card create-card" id="crossword-import-form"><span class="kind-icon">OPEN</span><h2>Open a crossword file</h2><p>Import licensed or personal iPUZ, PUZ, JPZ, or XD files locally through <code>@xwordly/xword-parser</code>. Imports are marked Unrated and are never published automatically.</p><label>Crossword file<input type="file" name="crossword" accept=".ipuz,.puz,.jpz,.xd,application/json,application/octet-stream,text/plain" required /></label><button class="primary" type="submit">Open private puzzle</button></form>
     </div>
     <section id="generator-output" aria-live="polite">${message ? `<div class="generator-output card">${message}</div>` : ""}</section>
     <p class="privacy-note">Generated previews stay on this device. Curated catalogue publication requires provenance and licence review.</p>`;
@@ -185,12 +210,13 @@ function settings() {
         ${cloud.error ? `<p class="error">${escapeHtml(cloud.error)}</p>` : ""}
       </form>
       <section class="card settings-card"><h2>Device backup</h2>
-        <p>Download a private JSON copy of your progress and preferences, or restore one previously exported by WTrack.</p>
+        <p>Download a private JSON copy of your progress and preferences. Restore merges missing sessions without replacing progress already on this device.</p>
         <button class="secondary" type="button" data-export-backup>Download backup</button>
-        <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Restore backup</button></form>
+        <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Merge backup</button></form>
         ${settingsMessage ? `<p class="status-message ${settingsError ? "error" : ""}" role="status">${escapeHtml(settingsMessage)}</p>` : ""}
       </section>
       <section class="card settings-card"><h2>Offline puzzle cache</h2><p><strong>${cachedPuzzleIds.size} of ${MAX_OFFLINE_PUZZLES}</strong> puzzle slots are in use. Opening a puzzle downloads it for offline play. After ten, WTrack removes the least recently opened puzzle payload while keeping all progress.</p></section>
+      <section class="card settings-card"><h2>Local data controls</h2><p>Clear completed sessions, all saved progress, or downloaded puzzle payloads independently. Preferences and your exported backup remain separate.</p><div class="data-actions"><button class="secondary" type="button" data-clear-progress="completed">Clear completed sessions</button><button class="secondary danger-action" type="button" data-clear-progress="all">Clear all progress</button><button class="secondary" type="button" data-clear-cache>Clear offline puzzles</button></div></section>
     </div>`;
 }
 
@@ -201,6 +227,8 @@ function help() {
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
       <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter in the active clue. Hints run locally, work offline, and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
+      <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
+      <article class="card help-card"><h2>Backups & deletion</h2><p>Backup restore is non-destructive: it adds missing sessions and keeps existing ones. Delete one saved session from Home, or use scoped controls in Settings. Signed-in deletions synchronize through private tombstones.</p></article>
       <article class="card help-card"><h2>Puzzle provenance</h2><p>Every published puzzle names its source, generator version, and licence. Imported or generated previews are not published automatically.</p></article>
     </div>`;
 }
@@ -214,7 +242,7 @@ function render() {
   bind();
 }
 
-async function openPuzzle(id: string) {
+async function openPuzzle(id: string, sessionId = id, challenge?: PuzzleProgress["challenge"]) {
   const summary = puzzleById(id);
   if (!summary) return;
   libraryMessage = cachedPuzzleIds.has(id) ? "Opening saved offline puzzle…" : "Downloading puzzle for offline play…";
@@ -235,10 +263,11 @@ async function openPuzzle(id: string) {
     return;
   }
   activePuzzle = puzzle;
+  activeSessionId = sessionId;
   selectionStart = null;
   playerMessage = "";
   selectedClue = puzzle.kind === "crossword" && puzzle.clues[0] ? clueKey(puzzle.clues[0].number, puzzle.clues[0].direction) : "";
-  await store.start(puzzle);
+  await store.start(puzzle, sessionId, challenge);
   view = "player";
   libraryMessage = "";
   render();
@@ -268,7 +297,7 @@ async function completeWordSelection(end: GridPoint) {
   const word = findWord(activePuzzle, wordPath(selectionStart, end));
   selectionStart = null;
   if (word) {
-    await store.update(activePuzzle, (progress) => { if (!progress.foundWordIds.includes(word.id)) progress.foundWordIds.push(word.id); });
+    await store.update(activePuzzle, (progress) => { if (!progress.foundWordIds.includes(word.id)) progress.foundWordIds.push(word.id); }, activeSessionId ?? activePuzzle.id);
     void cloud.upload();
   }
   render();
@@ -286,15 +315,19 @@ function downloadBackup() {
 }
 
 function bind() {
-  app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => { view = element.dataset.nav as View; activePuzzle = view === "player" ? activePuzzle : null; message = ""; render(); }));
-  app.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => element.addEventListener("click", () => void openPuzzle(element.dataset.open!)));
+  app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => { view = element.dataset.nav as View; if (view !== "player") { activePuzzle = null; activeSessionId = null; } message = ""; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => element.addEventListener("click", () => {
+    const cadence = element.dataset.challenge as ChallengeCadence | undefined;
+    const challenge = cadence ? { cadence, periodKey: element.dataset.period!, difficulty: element.dataset.difficulty as Difficulty } : undefined;
+    void openPuzzle(element.dataset.open!, element.dataset.session ?? element.dataset.open!, challenge);
+  }));
   app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as PuzzleKind; view = "library"; render(); }));
   app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as "all" | PuzzleKind; render(); }));
   app.querySelectorAll<HTMLElement>("[data-difficulty-filter]").forEach((element) => element.addEventListener("click", () => { libraryDifficulty = element.dataset.difficultyFilter as "all" | Difficulty; render(); }));
   app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => {
     const puzzle = activePuzzle;
     if (!puzzle || puzzle.id !== element.dataset.reset || !confirm("Start this puzzle over?")) return;
-    await store.reset(puzzle);
+    await store.reset(puzzle, activeSessionId ?? puzzle.id);
     selectionStart = null;
     playerMessage = "";
     render();
@@ -303,14 +336,14 @@ function bind() {
   app.querySelector<HTMLElement>("[data-retry-catalogue]")?.addEventListener("click", () => void reloadCatalogue());
   app.querySelector<HTMLButtonElement>("[data-hint]")?.addEventListener("click", async () => {
     if (!activePuzzle) return;
-    const progress = progressFor(activePuzzle);
+    const progress = sessionProgress();
     if (!progress) return;
     if (activePuzzle.kind === "word-search") {
       const hint = chooseWordSearchHint(activePuzzle, progress);
       if (!hint) {
         playerMessage = "No unused hints remain for this puzzle.";
       } else {
-        await store.update(activePuzzle, (current) => { current.hintedCells.push(hint.cellIndex); });
+        await store.update(activePuzzle, (current) => { current.hintedCells.push(hint.cellIndex); }, activeSessionId ?? activePuzzle.id);
         playerMessage = `A remaining word passes through the highlighted cell at row ${hint.row + 1}, column ${hint.column + 1}.`;
       }
     } else {
@@ -322,7 +355,7 @@ function bind() {
         await store.update(activePuzzle, (current) => {
           current.entries[hint.cellIndex] = hint.letter;
           current.hintedCells.push(hint.cellIndex);
-        });
+        }, activeSessionId ?? activePuzzle.id);
         playerMessage = `Revealed ${hint.letter} at row ${hint.row + 1}, column ${hint.column + 1}.`;
       }
     }
@@ -385,7 +418,7 @@ function bind() {
       const value = input.value.toUpperCase().replace(/[^A-Z]/g, "").slice(-1);
       input.value = value;
       const index = Number(input.dataset.crosswordCell);
-      await store.update(activePuzzle, (progress) => { progress.entries[index] = value; });
+      await store.update(activePuzzle, (progress) => { progress.entries[index] = value; }, activeSessionId ?? activePuzzle.id);
       render();
       const next = nextCrosswordIndex(activePuzzle, index, "next");
       if (value && next !== index) app.querySelector<HTMLInputElement>(`[data-crossword-cell="${next}"]`)?.focus();
@@ -420,15 +453,40 @@ function bind() {
   app.querySelector<HTMLElement>("[data-sign-out]")?.addEventListener("click", () => void signOutAccount());
   app.querySelector<HTMLElement>("[data-sync]")?.addEventListener("click", () => void cloud.upload());
   app.querySelector<HTMLElement>("[data-export-backup]")?.addEventListener("click", downloadBackup);
+  app.querySelectorAll<HTMLElement>("[data-delete-progress]").forEach((element) => element.addEventListener("click", async () => {
+    const sessionId = element.dataset.deleteProgress!;
+    if (!confirm("Delete this saved session? This keeps the downloaded puzzle available offline.")) return;
+    await store.removeProgress(sessionId);
+    if (activeSessionId === sessionId) { activeSessionId = null; activePuzzle = null; view = "home"; }
+    render();
+    void cloud.upload();
+  }));
+  app.querySelectorAll<HTMLElement>("[data-clear-progress]").forEach((element) => element.addEventListener("click", async () => {
+    const scope = element.dataset.clearProgress as "completed" | "all";
+    if (!confirm(scope === "all" ? "Delete all saved puzzle progress on this device?" : "Delete every completed session on this device?")) return;
+    const removed = await store.clearProgress(scope);
+    activeSessionId = null; activePuzzle = null;
+    settingsMessage = `${removed} saved session${removed === 1 ? "" : "s"} removed.`;
+    settingsError = false;
+    render();
+    void cloud.upload();
+  }));
+  app.querySelector<HTMLElement>("[data-clear-cache]")?.addEventListener("click", async () => {
+    if (!confirm("Remove every downloaded offline puzzle payload? Saved progress will remain.")) return;
+    await store.clearPuzzleCache();
+    cachedPuzzleIds = new Set();
+    settingsMessage = "Offline puzzle payloads cleared. Saved progress was kept.";
+    settingsError = false;
+    render();
+  });
   app.querySelector<HTMLFormElement>("#import-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const file = new FormData(event.currentTarget as HTMLFormElement).get("backup");
     if (!(file instanceof File) || !file.size) return;
     try {
       const imported = parseBackup(await file.text());
-      if (!confirm("Replace this device's WTrack progress and preferences with this backup?")) return;
-      await store.replaceData(imported);
-      settingsMessage = `Backup restored: ${Object.keys(imported.progress).length} puzzle record${Object.keys(imported.progress).length === 1 ? "" : "s"}.`;
+      const result = await store.importData(imported);
+      settingsMessage = `Backup merged: ${result.added} session${result.added === 1 ? "" : "s"} added, ${result.skipped} existing session${result.skipped === 1 ? "" : "s"} kept.`;
       settingsError = false;
       applyTheme();
       render();
@@ -459,6 +517,21 @@ function bind() {
     } catch (error) { message = `<p class="error">${escapeHtml(error instanceof Error ? error.message : "Could not generate this puzzle.")}</p>`; }
     render();
   });
+  app.querySelector<HTMLFormElement>("#crossword-import-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = new FormData(event.currentTarget as HTMLFormElement).get("crossword");
+    if (!(file instanceof File) || !file.size) return;
+    try {
+      const { importCrosswordFile } = await import("./external.ts");
+      const puzzle = await importCrosswordFile(await file.arrayBuffer(), file.name);
+      registerLocalPuzzle(puzzle);
+      cachedPuzzleIds = new Set(await store.cachePuzzle(puzzle));
+      await openPuzzle(puzzle.id);
+    } catch (error) {
+      message = `<p class="error">${escapeHtml(error instanceof Error ? error.message : "Could not import this crossword file.")}</p>`;
+      render();
+    }
+  });
 }
 
 async function reloadCatalogue() {
@@ -483,6 +556,7 @@ async function boot() {
       ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
       : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
   }
+  for (const puzzle of await store.cachedPuzzles()) if (puzzle.catalogueVersion === "local-import-1") registerLocalPuzzle(puzzle);
   applyTheme();
   authReady = watchAuth((user) => void cloud.setUser(user));
   render();
@@ -490,7 +564,7 @@ async function boot() {
   const token = ++renderToken;
   window.setInterval(async () => {
     if (token !== renderToken || view !== "player" || !activePuzzle) return;
-    const progress = progressFor(activePuzzle);
+    const progress = sessionProgress();
     if (!progress || progress.completedAt) return;
     progress.elapsedSeconds += 1;
     progress.updatedAt = Date.now();

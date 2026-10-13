@@ -6,7 +6,8 @@ Last updated: 2026-10-13
 
 - Deployed application commit: `main` at `c54d1ad`
 - Latest source pull requests: [#8 — Add expandable catalogue with ten-puzzle offline cache](https://github.com/BicycleJeanre/wtrack/pull/8) and [#9 — Keep WTrack startup non-blocking](https://github.com/BicycleJeanre/wtrack/pull/9)
-- Active release state: live and production-verified
+- Active source candidate: `codex/strack-parity` (awaiting reviewed merge and deployment)
+- Active production state: live and production-verified at the prior release
 
 ## Production deployment
 
@@ -46,12 +47,23 @@ Last updated: 2026-10-13
 - Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
 
+## STrack parity release candidate
+
+- Stable daily and weekly challenges across all four rated difficulty bands, with period-scoped sessions and completion, streak, and average-time statistics.
+- Separate active and completed history, individual session deletion, bounded cloud tombstones, and scoped data controls.
+- Non-destructive backup merge that keeps existing local sessions while adding missing ones.
+- Private browser-local iPUZ, PUZ, JPZ, and XD import, with Unrated classification and no automatic publication or payload sync.
+- Explicit Online/Offline status alongside the independent cloud-sync state.
+- Tightened owner-only Firestore application-document schema and bounded progress/deletion maps.
+- Desktop Chromium, WebKit, mobile Chromium, accessibility, landscape, base-path, ten-puzzle cache, and true server-stop offline coverage.
+- Detailed comparison and intentional domain differences in `docs/STRACK_PARITY.md`.
+
 ## Validation
 
-- `npm run test:unit`: 13 passing, including deterministic hints and ten-puzzle least-recently-opened cache eviction.
+- `npm run test:unit`: 17 passing, including deterministic challenges, private import, non-destructive backup merge, bounded deletion tombstones, hints, and ten-puzzle least-recently-opened cache eviction.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 14 passing across desktop and mobile Chromium, with two intentional project-specific skips. Coverage includes offline restart after 11 puzzle downloads and confirms that only the ten most recently opened payloads remain playable offline.
+- `npm test`: 30 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes accessibility, theme persistence, landscape layout, private import, challenge sessions, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
 - `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
@@ -67,6 +79,6 @@ Last updated: 2026-10-13
 
 ## Next release-one work
 
-1. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-2. Add licensed, provenance-complete puzzle packs through the expandable catalogue pipeline without increasing the ten-puzzle offline cap.
+1. Add licensed, provenance-complete puzzle packs through the expandable catalogue pipeline without increasing the ten-puzzle offline cap.
+2. Add deeper concurrent cloud-merge and long-lived tombstone-compaction coverage.
 3. Collect first-release feedback before expanding or retiring any production surface.
