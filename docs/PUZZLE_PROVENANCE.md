@@ -29,6 +29,14 @@ npm run catalogue:check
 
 Generated entries record the WTrack deterministic catalogue generator, catalogue version, WTrack authorship, repository source, AGPL-3.0-or-later licence, and review status. Every crossword answer is connected through a crossing and every open crossword cell belongs to a declared clue path.
 
+## Private on-demand Wikidata generation
+
+The Create screen can make a private puzzle from an explicit English Wikipedia topic-page title. Only after the player submits the form, it reads the page's linked Wikidata item IDs and requests those items' English labels and descriptions through `wbgetentities`. Labels become normalized answers; for crosswords, English Wikidata descriptions become clues. Wikidata structured data is available under CC0-1.0; the discovery page is attributed under CC BY-SA 4.0.
+
+Each saved result records the selected item QIDs, retrieval timestamp, CC0 licence, WTrack public-data generator version, layout-library name and version, generation seed, and lack of editorial review. The complete payload is validated and kept in the normal ten-puzzle IndexedDB LRU, not published into `catalogue/index.json`. A generated puzzle therefore remains playable offline after creation but can be evicted like any other cached payload. Generated payloads do not synchronize through Firestore.
+
+The four generation profiles are relative settings, not standardized ratings. Easier profiles prefer earlier, shorter search results and simpler directions. Harder profiles prefer longer/lower-ranked terms, more answers, larger grids, more directions, and more reversals. Source-data quality and topic familiarity can still make an individual puzzle easier or harder than its label suggests.
+
 ## Required metadata for future puzzles
 
 - stable puzzle ID and catalogue version;

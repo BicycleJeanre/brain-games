@@ -28,19 +28,27 @@ Settings auto-save as soon as you change them. Choose a light, dark, or system t
 
 Open **Settings** again to return to the screen you came from. When you open it during a puzzle, **Reset current puzzle** is also available under Storage and offline data. Resetting is confirmed first and clears only that puzzle attempt.
 
-## Creating previews
+## Creating and importing puzzles
 
-The Create screen offers three local tools:
+The first Create card can make a complete playable puzzle from a topic:
+
+1. Enter an English Wikipedia topic-page title such as **astronomy**.
+2. Choose **Word search** or **Crossword** and a friendly difficulty profile.
+3. Choose **Create public-data puzzle** while online.
+
+That button requests linked item IDs from the matching English Wikipedia page, then asks Wikidata for the selected items' English CC0 labels and descriptions. WTrack builds the layout in the browser, records the source page, selected QIDs, retrieval time, licences, generator versions, and selection seed, and stores the complete puzzle in the same ten-item offline cache used by catalogue puzzles. Reopening and playing it needs no Wikimedia connection. Difficulty profiles affect term selection, answer count, grid size, directions, and reversals; they are useful relative settings rather than universal ratings.
+
+The Create screen also offers three local tools:
 
 - enter one word per line to generate a word search;
 - enter `ANSWER | clue` on each line to generate a crossword layout;
 - open a personal or licensed iPUZ, PUZ, JPZ, or XD crossword file.
 
-Generation and file parsing happen in the browser. Imported puzzles are marked **Unrated** and their payload stays on this device. Progress can synchronize when signed in, but another device needs the same source file before it can play that private puzzle. Previews and imports are not added to the public catalogue automatically because answers, clue authorship, layout quality, provenance, and redistribution rights require review.
+Generation and file parsing happen in the browser. Imported puzzles are marked **Unrated** and their payload stays on this device. Public-data and imported puzzle payloads do not synchronize: progress can synchronize when signed in, but another device must generate again or use the same source file before it can play that private puzzle. Generated puzzles, previews, and imports are not added to the public catalogue automatically because answers, clue authorship, layout quality, provenance, and redistribution rights require review.
 
 ## Offline use
 
-After the production app has loaded once, its shell and catalogue index are cached. WTrack separately stores the ten most recently opened puzzle payloads in IndexedDB. Opening an eleventh removes the least recently opened payload, but never its progress; reconnect and open that puzzle to download it again and resume. Puzzles labelled **Online only** cannot be opened while disconnected.
+After the production app has loaded once, its shell and catalogue index are cached. WTrack separately stores the ten most recently opened or generated puzzle payloads in IndexedDB. Opening or generating an eleventh removes the least recently opened payload, but never its progress. Catalogue puzzles can be downloaded again; a removed private generated/imported payload must be generated or imported again. Puzzles labelled **Online only** cannot be opened while disconnected.
 
 Your progress and settings are also stored in IndexedDB. Browser storage can be cleared or evicted, so use **Settings → Backup** to download a private JSON backup. **Merge backup** adds sessions missing from the current device and preserves existing progress instead of replacing it. Settings also has independent controls for completed sessions, all saved progress, and offline puzzle payloads.
 

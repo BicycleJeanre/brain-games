@@ -16,6 +16,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Optional Firebase email/password accounts and owner-protected Firestore state.
 - Word-search generation through `@blex41/word-search`.
 - Crossword layout generation through `crossword-layout-generator`.
+- User-triggered, browser-local puzzle generation from English Wikipedia topic links and Wikidata CC0 terms, with Easy through Diabolical profiles and complete provenance saved in the ten-puzzle offline cache.
 - Private `.puz`, iPUZ, JPZ, and XD file import through `@xwordly/xword-parser`; imported payloads remain local and Unrated.
 - Auto-saving STrack-style preferences for light/dark/system themes, timer and hint/help visibility, grid/clue/menu text sizes, four highlight palettes, and crossword correctness feedback.
 - Pointer, touch, and keyboard word-search selection plus non-destructive JSON device backup merge and scoped storage controls.
@@ -23,7 +24,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Chromium, mobile Chromium, and WebKit browser coverage plus unit, catalogue-integrity, real server-stop offline restart, base-path, Firestore-rules, and emulator-backed cloud-journey checks.
 
-The Create screen produces local previews and can open private crossword files. Moving generated or imported material into the public catalogue is deliberately a reviewed process: provenance, clue authorship, redistribution terms, connectivity, and answer correctness must be documented first.
+The Create screen can turn an English Wikipedia topic-page title into a playable private puzzle. Only after the user presses Generate, WTrack discovers linked concepts from that page and fetches their public Wikidata labels and descriptions. It saves the resulting grid, answers, source page, selected QIDs, retrieval time, licences, generator versions, and selection seed locally; later play works offline. It also produces manual local previews and opens private crossword files. Generated and imported puzzle payloads do not sync to other devices or enter the curated catalogue automatically.
 
 ## Local development
 
