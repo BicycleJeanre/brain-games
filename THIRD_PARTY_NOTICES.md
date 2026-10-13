@@ -13,3 +13,5 @@ WTrack depends on the following puzzle libraries. They are installed from npm an
 | `pure-rand` | `^8.4.2` | Deterministic, unbiased offline hint selection | MIT | <https://github.com/dubzzz/pure-rand> |
 
 Complete dependency metadata is recorded in `package-lock.json`. Puzzle content has separate provenance requirements documented in `docs/PUZZLE_PROVENANCE.md`.
+
+When a player explicitly creates a public-data puzzle, WTrack discovers related item IDs from an English Wikipedia topic page and requests those items' terms from Wikidata. Wikidata structured data is provided under [CC0-1.0](https://www.wikidata.org/wiki/Wikidata:Licensing), while the source topic page is attributed under [CC BY-SA 4.0](https://en.wikipedia.org/wiki/Wikipedia:Copyrights); its URL, selected QIDs, and retrieval details are stored with the local puzzle payload. Wikimedia is a data source, not an npm dependency or a service required for ordinary play.

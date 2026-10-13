@@ -1,6 +1,6 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
-import { crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
+import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
 import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { chooseCrosswordHint, chooseWordSearchHint } from "./hints.ts";
@@ -69,16 +69,17 @@ function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = fa
   const progress = store.data.progress[sessionId];
   const status = progress?.completedAt ? "Complete" : progress ? "Continue" : "Start";
   const cached = cachedPuzzleIds.has(puzzle.id);
-  const available = navigator.onLine || cached;
+  const privateLocal = puzzle.catalogueVersion === "local-import-1" || puzzle.catalogueVersion.startsWith("wikidata-live-");
+  const available = cached || (!privateLocal && navigator.onLine);
   return `<article class="puzzle-card card">
     <span class="kind-icon" aria-hidden="true">${puzzle.kind === "word-search" ? "WS" : "CW"}</span>
     <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
-    <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
+    <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : privateLocal ? "Create again" : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
   </article>`;
 }
 
 function challengeSection(cadence: ChallengeCadence) {
-  const set = challengeSet(puzzles, cadence);
+  const set = challengeSet(puzzles.filter((puzzle) => puzzle.catalogueVersion === CATALOGUE_VERSION), cadence);
   const stats = challengeStats(Object.values(store.data.progress), cadence);
   return `<section class="section challenge-section">
     <div class="section-heading"><div><span class="eyebrow">Stable ${cadence === "daily" ? "until midnight UTC" : "for the ISO week"}</span><h2>${cadence === "daily" ? "Daily" : "Weekly"} challenges</h2></div><span class="catalogue-badge">${stats.currentPeriodCompleted}/4 current · ${stats.streak} ${cadence === "daily" ? "day" : "week"} streak</span></div>
@@ -90,6 +91,10 @@ function challengeSection(cadence: ChallengeCadence) {
     }).join("")}</div>
     <p class="challenge-stats">${stats.completed} completed · ${stats.averageSeconds === null ? "No average yet" : `${formatTime(stats.averageSeconds)} average`}</p>
   </section>`;
+}
+
+function puzzleProvenance(puzzle: Puzzle) {
+  return `<details class="puzzle-provenance"><summary>Source & generation details</summary><p><strong>${escapeHtml(puzzle.source.name)}</strong> · ${escapeHtml(puzzle.source.licence)}</p><p>${escapeHtml(puzzle.source.note)}</p>${puzzle.source.url !== "about:blank" ? `<a href="${escapeHtml(puzzle.source.url)}" target="_blank" rel="noreferrer">Open source record</a>` : ""}</details>`;
 }
 
 function home() {
@@ -117,7 +122,7 @@ function home() {
 
 function library() {
   const visible = puzzles.filter((puzzle) => (libraryType === "all" || puzzle.kind === libraryType) && (libraryDifficulty === "all" || puzzle.difficulty === libraryDifficulty));
-  return `<div class="page-heading"><div><span class="eyebrow">Expandable public catalogue</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · ${cachedPuzzleIds.size}/${MAX_OFFLINE_PUZZLES} offline</span></div>
+  return `<div class="page-heading"><div><span class="eyebrow">Public catalogue and your local puzzles</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · ${cachedPuzzleIds.size}/${MAX_OFFLINE_PUZZLES} offline</span></div>
     <div class="filter-row">
       <div class="filter-tabs" role="group" aria-label="Puzzle type">
         ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
@@ -150,6 +155,7 @@ function wordSearchPlayer(puzzle: WordSearchPuzzle, progress: PuzzleProgress) {
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <ul class="word-list">${puzzle.words.map((word) => `<li class="${progress.foundWordIds.includes(word.id) ? "found" : ""}"><span>${escapeHtml(word.label)}</span><span>${progress.foundWordIds.includes(word.id) ? "Found" : `${word.label.length} letters`}</span></li>`).join("")}</ul>
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
+        ${puzzleProvenance(puzzle)}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
       </aside>
     </div>`;
@@ -180,6 +186,7 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         ${(["across","down"] as const).map((direction) => `<section><span class="eyebrow">${direction}</span><ol>${puzzle.clues.filter((clue) => clue.direction === direction).map((clue) => `<li><button class="clue ${selectedClue === clueKey(clue.number, clue.direction) ? "active" : ""}" data-clue="${clueKey(clue.number, clue.direction)}"><b>${clue.number}</b><span>${escapeHtml(clue.clue)}</span></button></li>`).join("")}</ol></section>`).join("")}
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
+        ${puzzleProvenance(puzzle)}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
       </aside>
     </div>`;
@@ -194,13 +201,14 @@ function player() {
 
 function createLab() {
   return `<div class="page-heading"><div><span class="eyebrow">External puzzle tools</span><h1>Create</h1></div></div>
+    <form class="card create-card public-data-card" id="wikidata-form"><span class="kind-icon">LIVE</span><div><span class="eyebrow">Public data, generated on demand</span><h2>Create a playable puzzle from Wikimedia data</h2><p>Enter an English Wikipedia topic-page title. WTrack discovers its linked concepts, fetches their public Wikidata labels and descriptions, builds the puzzle in this browser, and keeps the complete result in the same ten-puzzle offline cache. No account or API key is needed.</p></div><div class="public-data-fields"><label>Topic page<input name="topic" value="astronomy" minlength="3" maxlength="80" required autocomplete="off" /></label><label>Puzzle type<select name="kind"><option value="word-search">Word search</option><option value="crossword">Crossword</option></select></label><label>Difficulty profile<select name="difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option><option>Diabolical</option></select></label></div><button class="primary" type="submit">Create public-data puzzle</button><p class="privacy-note">Requires a connection only while generating. The source topic page, selected Wikidata QIDs, licences, retrieval time, generator versions, and selection seed are saved with the puzzle. Friendly difficulty profiles change term length, count, grid size, and word direction; they are not a universal rating.</p></form>
     <div class="split-feature">
       <form class="card create-card" id="word-search-form"><span class="kind-icon">WS</span><h2>Generate a word search</h2><p>Powered locally by <code>@blex41/word-search</code>. Enter one word per line.</p><label>Words<textarea name="words">FOREST\nMOSS\nFERN\nTRAIL\nPINE\nOWL</textarea></label><button class="primary" type="submit">Generate preview</button></form>
       <form class="card create-card" id="crossword-form"><span class="kind-icon">CW</span><h2>Lay out a crossword</h2><p>Powered locally by <code>crossword-layout-generator</code>. Use <code>ANSWER | clue</code> on each line.</p><label>Answers and clues<textarea name="items">FOREST | A large area covered in trees\nFERN | A leafy plant without flowers\nTRAIL | A path through the woods\nPINE | An evergreen tree\nOWL | A nocturnal bird</textarea></label><button class="primary" type="submit">Generate preview</button></form>
       <form class="card create-card" id="crossword-import-form"><span class="kind-icon">OPEN</span><h2>Open a crossword file</h2><p>Import licensed or personal iPUZ, PUZ, JPZ, or XD files locally through <code>@xwordly/xword-parser</code>. Imports are marked Unrated and are never published automatically.</p><label>Crossword file<input type="file" name="crossword" accept=".ipuz,.puz,.jpz,.xd,application/json,application/octet-stream,text/plain" required /></label><button class="primary" type="submit">Open private puzzle</button></form>
     </div>
     <section id="generator-output" aria-live="polite">${message ? `<div class="generator-output card">${message}</div>` : ""}</section>
-    <p class="privacy-note">Generated previews stay on this device. Curated catalogue publication requires provenance and licence review.</p>`;
+    <p class="privacy-note">Generated puzzles, previews, and imports stay on this device. They are not synchronized as puzzle payloads or added to the curated catalogue automatically.</p>`;
 }
 
 function settingSelect(key: keyof Preferences, title: string, detail: string, value: string, options: Array<[string, string]>) {
@@ -552,6 +560,32 @@ function bind() {
     }
   });
 
+  app.querySelector<HTMLFormElement>("#wikidata-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const values = new FormData(form);
+    const topic = String(values.get("topic") ?? "").trim();
+    const kind = String(values.get("kind") ?? "") as PuzzleKind;
+    const difficulty = String(values.get("difficulty") ?? "") as Exclude<Difficulty, "Unrated">;
+    if (!navigator.onLine) {
+      message = `<p class="error">Reconnect to request new public data. Puzzles already generated on this device remain playable offline.</p>`;
+      render();
+      return;
+    }
+    message = `<p role="status">Requesting public terms and building the puzzle…</p>`;
+    render();
+    try {
+      const { generateWikidataPuzzle } = await import("./wikidata.ts");
+      const puzzle = await generateWikidataPuzzle({ kind, topic, difficulty });
+      registerLocalPuzzle(puzzle);
+      cachedPuzzleIds = new Set(await store.cachePuzzle(puzzle));
+      message = "";
+      await openPuzzle(puzzle.id);
+    } catch (error) {
+      message = `<p class="error">${escapeHtml(error instanceof Error ? error.message : "Could not generate a puzzle from public data.")}</p>`;
+      render();
+    }
+  });
   app.querySelector<HTMLFormElement>("#word-search-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -611,7 +645,7 @@ async function boot() {
       ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
       : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
   }
-  for (const puzzle of await store.cachedPuzzles()) if (puzzle.catalogueVersion === "local-import-1") registerLocalPuzzle(puzzle);
+  for (const puzzle of await store.cachedPuzzles()) if (!puzzleById(puzzle.id)) registerLocalPuzzle(puzzle);
   applyPreferences();
   authReady = watchAuth((user) => void cloud.setUser(user));
   render();

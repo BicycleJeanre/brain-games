@@ -3,14 +3,20 @@ import { generateLayout } from "crossword-layout-generator";
 import { Buffer as PolyfillBuffer } from "buffer";
 import type { CrosswordPuzzle } from "./types.ts";
 
-export function generateWordSearch(words: string[], size = 12) {
+export function generateWordSearch(words: string[], size = 12, options: { disabledDirections?: string[]; backwardsProbability?: number } = {}) {
   const dictionary = words.map((word) => word.trim()).filter(Boolean);
-  const generated = new WordSearch({ rows: size, cols: size, dictionary, maxWords: 20, upperCase: true });
+  const generated = new WordSearch({ rows: size, cols: size, dictionary, maxWords: 20, upperCase: true, disabledDirections: options.disabledDirections, backwardsProbability: options.backwardsProbability });
   return { grid: generated.grid.map((row) => row.join("")), words: generated.words };
 }
 
 export function generateCrossword(items: Array<{ answer: string; clue: string }>) {
-  return generateLayout(items.map((item) => ({ answer: item.answer.toUpperCase().replace(/[^A-Z]/g, ""), clue: item.clue.trim() })));
+  const originalLog = console.log;
+  console.log = () => undefined;
+  try {
+    return generateLayout(items.map((item) => ({ answer: item.answer.toUpperCase().replace(/[^A-Z]/g, ""), clue: item.clue.trim() })));
+  } finally {
+    console.log = originalLog;
+  }
 }
 
 function prepareParserRuntime() {

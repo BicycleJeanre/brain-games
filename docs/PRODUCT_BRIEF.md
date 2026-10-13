@@ -41,10 +41,14 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ### Create and import
 
+- On-demand word-search and crossword generation from user-requested English Wikipedia topic links and their Wikidata CC0 terms, with no live request during startup or ordinary play.
+- Easy, Medium, Hard, and Diabolical generation profiles that vary term rank/length, answer count, grid size, directions, and reversal probability without claiming a universal standard.
+- Complete generated payloads retained by the same ten-puzzle local LRU, including QIDs, retrieval time, licence, generator versions, and seed, so later play is offline.
 - Local word-search generation with `@blex41/word-search`.
 - Local crossword answer layout with `crossword-layout-generator`.
 - Common crossword-file parsing with `@xwordly/xword-parser`, normalized into WTrack's validated local puzzle model.
 - Generated/imported puzzles remain private previews until a human reviews connectivity, clues, answers, provenance, and redistribution rights.
+- Generated/imported puzzle payloads are device-local; progress may synchronize, but another device must generate or import its own playable payload.
 
 ### Accounts and synchronization
 
@@ -72,7 +76,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ## Catalogue and provenance
 
-Catalogue version 2026.10.2 includes 100 WTrack-original puzzles: 50 word searches and 50 crosswords. It preserves the first four demonstration puzzles and adds 96 deterministic puzzles generated from 12 original theme banks. The committed catalogue contains 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical puzzles.
+Catalogue version 2026.10.2 includes 100 WTrack-original puzzles: 50 word searches and 50 crosswords. It preserves the first four demonstration puzzles and adds 96 deterministic puzzles generated from 12 original theme banks. The committed catalogue contains 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical puzzles. Players can additionally create device-local puzzles from public data on demand; those private results are not counted as published catalogue entries.
 
 The committed source is validated at build time, then exported to one lightweight discovery index and one static payload per puzzle. This creates an expandable catalogue without a live third-party feed or a growing application bundle. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
 

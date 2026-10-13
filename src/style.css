@@ -133,6 +133,9 @@ select,input { min-height:42px; padding:8px 10px; }
 textarea { min-height:155px; padding:12px; resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; line-height:1.55; }
 .create-card,.settings-card { display:grid; align-content:start; gap:15px; }
 .create-card h2,.settings-card h2 { margin-bottom:0; }
+.public-data-card { margin-bottom:14px; grid-template-columns:auto minmax(0,1fr); align-items:start; }
+.public-data-card > .public-data-fields,.public-data-card > button,.public-data-card > .privacy-note { grid-column:2; }
+.public-data-fields { display:grid; grid-template-columns:minmax(180px,1.6fr) repeat(2,minmax(150px,1fr)); gap:12px; }
 .toggle { display:flex; align-items:center; gap:10px; padding:10px 0; }
 .toggle input { width:18px; min-height:18px; margin:0; }
 .settings-field { padding-top:14px; border-top:1px solid var(--border); }
@@ -149,6 +152,10 @@ textarea { min-height:155px; padding:12px; resize:vertical; font-family:ui-monos
 .mini-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); width:min(100%,480px); aspect-ratio:1; margin:15px 0; border:2px solid var(--border-strong); }
 .mini-grid span { display:grid; place-items:center; min-width:0; border:1px solid var(--border); background:var(--panel-soft); font-size:clamp(8px,1.8vw,15px); }
 .crossword-preview span.block { background:#091014; }
+.puzzle-provenance { padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); color:var(--muted); font-size:10px; line-height:1.5; }
+.puzzle-provenance summary { cursor:pointer; color:var(--text); font-weight:800; }
+.puzzle-provenance p { margin:8px 0; overflow-wrap:anywhere; }
+.puzzle-provenance a { color:var(--accent); }
 .error { color:var(--danger); }
 code { color:var(--accent); }
 :root[data-grid-text-size="small"] .word-cell { font-size:clamp(10px,1.8vw,20px); }
@@ -166,6 +173,8 @@ code { color:var(--accent); }
   .app-header nav button { flex:1; padding:0 4px; font-size:10px; }
   main { padding:24px 14px 88px; }
   .hero,.split-feature,.settings-grid,.help-grid,.player-layout,.crossword-layout { grid-template-columns:1fr; }
+  .public-data-card,.public-data-fields { grid-template-columns:1fr; }
+  .public-data-card > .public-data-fields,.public-data-card > button,.public-data-card > .privacy-note { grid-column:1; }
   .hero { min-height:0; }
   .puzzle-list { grid-template-columns:1fr; }
   .challenge-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }

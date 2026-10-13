@@ -143,6 +143,35 @@ test("crossword files import privately and open as unrated puzzles", async ({ pa
   await expect(page.getByText("sample").first()).toBeVisible();
 });
 
+test("public Wikimedia terms generate a playable puzzle that survives reload", async ({ page }) => {
+  const labels = ["PLANET", "COMET", "METEOR", "ORBIT", "GALAXY", "NEBULA", "STAR", "SATURN", "EARTH", "MARS", "VENUS", "MOON", "ASTEROID", "COSMOS", "ECLIPSE", "TELESCOPE"];
+  await page.route("https://en.wikipedia.org/w/api.php**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ query: { pages: labels.map((label, index) => ({ title: label, pageprops: { wikibase_item: `Q${index + 1}` } })) } }),
+    });
+  });
+  await page.route("https://www.wikidata.org/w/api.php**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ entities: Object.fromEntries(labels.map((label, index) => [`Q${index + 1}`, { id: `Q${index + 1}`, labels: { en: { value: label } }, descriptions: { en: { value: `Public description for ${label.toLowerCase()}` } } }])) }),
+    });
+  });
+  await page.goto("./");
+  await page.getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("heading", { name: "Create a playable puzzle from Wikimedia data" })).toBeVisible();
+  await page.getByLabel("Topic page").fill("astronomy");
+  await page.getByLabel("Difficulty profile").selectOption("Medium");
+  await page.getByRole("button", { name: "Create public-data puzzle" }).click();
+  await expect(page.getByRole("heading", { name: "Astronomy · Medium" })).toBeVisible();
+  await expect(page.getByText("Source & generation details")).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await expect(page.getByText("Astronomy · Medium").first()).toBeVisible();
+  await expect(page.getByText("Available offline").first()).toBeVisible();
+  await expect(page.locator(".challenge-card").filter({ hasText: "Astronomy · Medium" })).toHaveCount(0);
+});
+
 test("mobile layout keeps primary navigation usable", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
   await page.goto("./");
