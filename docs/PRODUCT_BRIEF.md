@@ -69,11 +69,10 @@ Always show the exact SE value in puzzle details and filters. Never imply the fr
 
 Hints must be progressive and educational:
 
-1. identify the relevant cells/units/candidates visually;
-2. name the technique;
-3. explain the deduction in plain language;
-4. offer a second action to apply the elimination or value;
-5. reveal a solution value only through an explicit fallback action.
+1. name only the logical technique as a minimal first hint;
+2. on request, identify the relevant cells, units, candidates, and links visually and explain the pattern in plain language;
+3. reveal the exact elimination or placement only through a separate explicit action;
+4. offer another action to apply that deduction.
 
 The first release must support at least the techniques necessary for its bundled Easy, Medium, and Hard puzzles. Do not include a puzzle in an advertised band if the local hint engine cannot explain a complete logical path through it. More advanced SE-rated puzzles may be labelled as unsupported for full hints until the relevant techniques exist.
 

@@ -133,6 +133,7 @@ function normalizeGame(game: Game): Game {
   game.future = Array.isArray(game.future) ? game.future.map((item) => normalizeSnapshot(item)) : [];
   game.hintHistory = Array.isArray(game.hintHistory) ? game.hintHistory : [];
   game.hintPath = normalizeHintPath(game.hintPath);
+  if (game.hintStage !== "minimal" && game.hintStage !== "preview") game.hintStage = "none";
   for (let cell = 0; cell < game.values.length; cell++) if (game.values[cell]) {
     game.corner[cell] = [];
     game.centre[cell] = [];
