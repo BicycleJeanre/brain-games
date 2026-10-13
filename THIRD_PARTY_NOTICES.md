@@ -11,6 +11,8 @@ WTrack depends on the following puzzle libraries. They are installed from npm an
 | `firebase` | `^12.19.0` | Optional authentication and Firestore synchronization | Apache-2.0 | <https://github.com/firebase/firebase-js-sdk> |
 | `idb` | `^8.0.3` | IndexedDB promise wrapper | ISC | <https://github.com/jakearchibald/idb> |
 | `pure-rand` | `^8.4.2` | Deterministic, unbiased offline hint selection | MIT | <https://github.com/dubzzz/pure-rand> |
+| `an-array-of-english-words` | `2.0.0` | Build-only Word Grid candidate dictionary | MIT | <https://github.com/words/an-array-of-english-words> |
+| `subtlex-word-frequencies` | `2.0.0` | Build-only spoken-English frequency filter for Word Grid quality | ISC | <https://github.com/words/subtlex-word-frequencies> |
 
 Complete dependency metadata is recorded in `package-lock.json`. Puzzle content has separate provenance requirements documented in `docs/PUZZLE_PROVENANCE.md`.
 

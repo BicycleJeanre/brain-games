@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chooseCrosswordHint, chooseWordSearchHint } from "../src/hints.ts";
-import { crosswords, wordSearches } from "./fixtures.ts";
+import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint } from "../src/hints.ts";
+import { crosswords, wordGrids, wordSearches } from "./fixtures.ts";
 import { newProgress } from "../src/store.ts";
 
 test("word-search hints identify unused cells on unfinished words", () => {
@@ -18,6 +18,17 @@ test("word-search hints identify unused cells on unfinished words", () => {
 
   progress.foundWordIds = puzzle.words.map((word) => word.id);
   assert.equal(chooseWordSearchHint(puzzle, progress), null);
+});
+
+test("Word Grid hints reveal only a remaining word's starting path", () => {
+  const puzzle = wordGrids[0]!;
+  const progress = newProgress(puzzle, 42);
+  const hint = chooseWordGridHint(puzzle, progress);
+  assert.ok(hint);
+  assert.equal(hint.cellIndexes.length, 2);
+  assert.ok(puzzle.words.some((word) => word.path.slice(0, 2).every(({ x, y }, index) => y * puzzle.columns + x === hint.cellIndexes[index])));
+  progress.foundWordIds = puzzle.words.map((word) => word.id);
+  assert.equal(chooseWordGridHint(puzzle, progress), null);
 });
 
 test("crossword hints reveal an unused letter from the active clue", () => {

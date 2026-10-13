@@ -2,7 +2,7 @@
 
 ## Starting and resuming
 
-Open **Puzzles** to browse the public catalogue. Filter by **Word searches** or **Crosswords**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its grid and clues and marks it **Available offline**. WTrack saves progress on the device after every found word or entered crossword letter. Home separates active and completed sessions, and each saved session can be deleted without removing its downloaded puzzle.
+Open **Puzzles** to browse the public catalogue. Filter by **Word searches**, **Crosswords**, or **Word Grids**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its compact payload and marks it **Available offline**. WTrack saves progress after every meaningful move. Home separates active and completed sessions, and each saved session can be deleted without removing its downloaded puzzle.
 
 Home also offers a daily and a weekly challenge in every difficulty. A challenge uses its own saved session, so playing it never overwrites your ordinary attempt at the same puzzle. Challenge selections remain stable for their UTC day or ISO week. The cards show current-period completion, streak, and average completion time.
 
@@ -21,6 +21,12 @@ Select a clue or grid cell and type a letter. The active clue is highlighted. Ar
 Choose **Reveal a letter** to fill one unresolved cell in the active clue. If that clue is already solved, WTrack chooses an unresolved cell elsewhere. Revealed letters have a visible outline, and the hint count is saved with progress.
 
 Hint selection runs locally with a bundled deterministic library. It needs no account, network request, paid service, or third-party puzzle feed.
+
+## Word Grid
+
+Trace through adjacent letters horizontally, vertically, or diagonally. A tile cannot be used twice in one word, and accepted words have at least three letters. You can drag through a path or tap its letters in order, then choose **Submit word**. With a keyboard, use arrow keys to move focus and Enter or Space to add a tile.
+
+Words of 3–4 letters score 1 point, 5 score 2, 6 score 3, 7 score 5, and 8 or more score 11. Reach the displayed target to complete the puzzle; you do not need to find every accepted word. **Show a starting path** highlights the first two tiles of one remaining word and reports its length and value without revealing the answer.
 
 ## Settings and readability
 

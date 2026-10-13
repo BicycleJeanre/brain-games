@@ -4,7 +4,7 @@ const ROOT = new URL("../", import.meta.url);
 const PUZZLES_URL = new URL("src/data/puzzles.json", ROOT);
 const THEMES_URL = new URL("src/data/catalogue-themes.json", ROOT);
 const CORE_IDS = new Set(["ws-word-craft-001", "ws-ocean-001", "cw-puzzle-desk-001", "cw-coast-001"]);
-const CATALOGUE_VERSION = "2026.10.2";
+const CATALOGUE_VERSION = "2026.10.3";
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Diabolical"];
 const ROMAN = ["I", "II", "III", "IV"];
 const WORD_COUNTS = [6, 8, 10, 12];
@@ -234,11 +234,90 @@ function buildCrossword(theme, level) {
   };
 }
 
+const dictionary = JSON.parse(await readFile(new URL("node_modules/an-array-of-english-words/index.json", ROOT), "utf8"))
+  .filter((word) => /^[a-z]{3,10}$/.test(word));
+const subtlex = JSON.parse(await readFile(new URL("node_modules/subtlex-word-frequencies/index.json", ROOT), "utf8"));
+const commonRank = new Map(subtlex
+  .filter(({ word }) => word === word.toLowerCase() && /^[a-z]{3,10}$/.test(word))
+  .slice(0, 20000)
+  .map(({ word }, index) => [word, index]));
+const blockedWords = new Set(["arse", "asses", "bitch", "cunt", "dick", "fag", "fuck", "nigger", "piss", "shit", "slut", "whore"]);
+const wordGridWords = dictionary.filter((word) => commonRank.has(word) && !blockedWords.has(word));
+const wordGridTrie = {};
+for (const word of wordGridWords) {
+  let node = wordGridTrie;
+  for (const letter of word.toUpperCase()) node = node[letter] ??= {};
+  node.$ = word.toUpperCase();
+}
+const LETTER_POOL = "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
+const WORD_GRID_TARGETS = [10, 22, 38, 60];
+const WORD_GRID_TITLES = ["Letter Lab", "Word Wander", "Lexicon Lane", "Tile Tangle"];
+
+function scoreWordGridWord(length) {
+  return length < 5 ? 1 : length === 5 ? 2 : length === 6 ? 3 : length === 7 ? 5 : 11;
+}
+
+function solveWordGrid(grid) {
+  const rows = grid.length, columns = grid[0].length;
+  const found = new Map();
+  function visit(x, y, node, path, used) {
+    const next = node[grid[y][x]];
+    if (!next) return;
+    const point = y * columns + x;
+    const nextPath = [...path, { x, y }];
+    if (next.$ && !found.has(next.$)) found.set(next.$, nextPath);
+    used.add(point);
+    for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
+      const nx = x + dx, ny = y + dy, key = ny * columns + nx;
+      if ((dx || dy) && nx >= 0 && nx < columns && ny >= 0 && ny < rows && !used.has(key)) visit(nx, ny, next, nextPath, used);
+    }
+    used.delete(point);
+  }
+  for (let y = 0; y < rows; y += 1) for (let x = 0; x < columns; x += 1) visit(x, y, wordGridTrie, [], new Set());
+  return [...found].map(([label, path]) => ({ id: label.toLowerCase(), label, path, score: scoreWordGridWord(label.length) }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function buildWordGrid(level, edition) {
+  const size = level === 3 ? 5 : 4;
+  const next = random(hash(`word-grid:${level}:${edition}`));
+  let best = null;
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const grid = Array.from({ length: size }, () => Array.from({ length: size }, () => LETTER_POOL[Math.floor(next() * LETTER_POOL.length)]));
+    const words = solveWordGrid(grid);
+    const total = words.reduce((sum, word) => sum + word.score, 0);
+    const quality = total + words.reduce((sum, word) => sum + Math.max(0, 20000 - commonRank.get(word.label.toLowerCase())) / 2000, 0) + words.filter((word) => word.label.length >= 6).length * 4;
+    if (!best || quality > best.quality) best = { grid, words, total, quality };
+  }
+  if (!best || best.total < WORD_GRID_TARGETS[level]) throw new Error(`Could not generate Word Grid ${level}/${edition}`);
+  return {
+    id: `wg-letter-grid-${level + 1}-${String(edition + 1).padStart(3, "0")}`,
+    kind: "word-grid",
+    title: `${WORD_GRID_TITLES[edition]} ${ROMAN[level]}`,
+    subtitle: `${size}×${size} adjacent-letter grid · target ${WORD_GRID_TARGETS[level]} points`,
+    difficulty: DIFFICULTIES[level],
+    catalogueVersion: CATALOGUE_VERSION,
+    source: {
+      name: "WTrack Word Grid catalogue",
+      url: "https://github.com/words/an-array-of-english-words",
+      licence: "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
+      note: "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used.",
+    },
+    rows: size,
+    columns: size,
+    grid: best.grid.map((row) => row.join("")),
+    minimumLength: 3,
+    targetScore: WORD_GRID_TARGETS[level],
+    words: best.words,
+  };
+}
+
 const current = JSON.parse(await readFile(PUZZLES_URL, "utf8"));
 const core = [...CORE_IDS].map((id) => current.find((puzzle) => puzzle.id === id)).filter(Boolean);
 if (core.length !== CORE_IDS.size) throw new Error("The four original core puzzles are required before catalogue generation.");
 const themes = JSON.parse(await readFile(THEMES_URL, "utf8"));
 const generated = themes.flatMap((theme) => DIFFICULTIES.flatMap((_, level) => [buildWordSearch(theme, level), buildCrossword(theme, level)]));
-const catalogue = [...core, ...generated];
+const wordGridCatalogue = WORD_GRID_TITLES.flatMap((_, edition) => DIFFICULTIES.map((_, level) => buildWordGrid(level, edition)));
+const catalogue = [...core, ...generated, ...wordGridCatalogue];
 await writeFile(PUZZLES_URL, `${JSON.stringify(catalogue, null, 2)}\n`);
-console.log(`Generated ${catalogue.length} puzzles: ${catalogue.filter((puzzle) => puzzle.kind === "word-search").length} word searches and ${catalogue.filter((puzzle) => puzzle.kind === "crossword").length} crosswords.`);
+console.log(`Generated ${catalogue.length} puzzles: ${catalogue.filter((puzzle) => puzzle.kind === "word-search").length} word searches, ${catalogue.filter((puzzle) => puzzle.kind === "crossword").length} crosswords, and ${catalogue.filter((puzzle) => puzzle.kind === "word-grid").length} Word Grids.`);

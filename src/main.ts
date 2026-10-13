@@ -1,12 +1,12 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
-import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
+import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordGrids, wordSearches } from "./catalogue.ts";
 import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
-import { chooseCrosswordHint, chooseWordSearchHint } from "./hints.ts";
-import { findWord, wordPath } from "./puzzles.ts";
+import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint } from "./hints.ts";
+import { findWord, wordGridWordForPath, wordPath } from "./puzzles.ts";
 import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
-import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordSearchPuzzle } from "./types.ts";
+import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -18,6 +18,9 @@ let activeSessionId: string | null = null;
 let libraryType: "all" | PuzzleKind = "all";
 let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
+let wordGridPath: GridPoint[] = [];
+let wordGridDragging = false;
+let wordGridDragStartLength = 0;
 let dragStart: GridPoint | null = null;
 let suppressWordClick = false;
 let selectedClue = "";
@@ -35,6 +38,8 @@ const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padS
 const progressFor = (puzzle: { id: string }) => store.data.progress[puzzle.id];
 const sessionProgress = () => activeSessionId ? store.data.progress[activeSessionId] : undefined;
 const completedCount = () => Object.values(store.data.progress).filter((progress) => progress.completedAt).length;
+const kindLabel = (kind: PuzzleKind) => kind === "word-search" ? "Word search" : kind === "crossword" ? "Crossword" : "Word Grid";
+const kindIcon = (kind: PuzzleKind) => kind === "word-search" ? "WS" : kind === "crossword" ? "CW" : "GRID";
 
 const cloud = new CloudSync(store, () => render());
 let authReady: ReturnType<typeof watchAuth> | undefined;
@@ -72,8 +77,8 @@ function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = fa
   const privateLocal = puzzle.catalogueVersion === "local-import-1" || puzzle.catalogueVersion.startsWith("wikidata-live-");
   const available = cached || (!privateLocal && navigator.onLine);
   return `<article class="puzzle-card card">
-    <span class="kind-icon" aria-hidden="true">${puzzle.kind === "word-search" ? "WS" : "CW"}</span>
-    <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${puzzle.kind === "word-search" ? "Word search" : "Crossword"} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
+    <span class="kind-icon" aria-hidden="true">${kindIcon(puzzle.kind)}</span>
+    <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${kindLabel(puzzle.kind)} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
     <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : privateLocal ? "Create again" : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
   </article>`;
 }
@@ -87,7 +92,7 @@ function challengeSection(cadence: ChallengeCadence) {
       const progress = store.data.progress[sessionId];
       const cached = cachedPuzzleIds.has(puzzle.id);
       const available = navigator.onLine || cached;
-      return `<article class="card challenge-card"><span class="eyebrow">${difficulty} · ${puzzle.kind === "word-search" ? "Word search" : "Crossword"}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(periodKey)}${cached ? " · Offline" : ""}</p><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" data-challenge="${cadence}" data-period="${periodKey}" data-difficulty="${difficulty}" ${available ? "" : "disabled"}>${available ? progress?.completedAt ? "Complete" : progress ? "Continue" : "Start challenge" : "Online only"}</button></article>`;
+      return `<article class="card challenge-card"><span class="eyebrow">${difficulty} · ${kindLabel(puzzle.kind)}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(periodKey)}${cached ? " · Offline" : ""}</p><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" data-challenge="${cadence}" data-period="${periodKey}" data-difficulty="${difficulty}" ${available ? "" : "disabled"}>${available ? progress?.completedAt ? "Complete" : progress ? "Continue" : "Start challenge" : "Online only"}</button></article>`;
     }).join("")}</div>
     <p class="challenge-stats">${stats.completed} completed · ${stats.averageSeconds === null ? "No average yet" : `${formatTime(stats.averageSeconds)} average`}</p>
   </section>`;
@@ -102,7 +107,7 @@ function home() {
   const active = entries.filter(([, progress]) => !progress.completedAt).slice(0, 4);
   const completed = entries.filter(([, progress]) => progress.completedAt).slice(0, 4);
   return `<section class="hero card">
-    <div><span class="eyebrow">Your quiet word-puzzle desk</span><h1>Find the pattern.<br>Fill the crossing.</h1><p>Browse the growing public catalogue online. Your ten most recently opened puzzles stay ready for offline play.</p></div>
+    <div><span class="eyebrow">Your quiet word-puzzle desk</span><h1>Find. Fill. Build.</h1><p>Browse the growing public catalogue online. Your ten most recently opened puzzles stay ready for offline play.</p></div>
     <button class="primary" data-nav="library">Choose a puzzle<small>${puzzles.length} in the public catalogue</small></button>
   </section>
   ${active.length ? `<section class="section active-section"><div class="section-heading"><div><span class="eyebrow">Pick up where you left off</span><h2>Active puzzles</h2></div></div><div class="puzzle-list">${active.map(([sessionId, progress]) => { const puzzle = puzzleById(progress.puzzleId); return puzzle ? puzzleCard(puzzle, sessionId, true) : ""; }).join("")}</div></section>` : ""}
@@ -111,12 +116,14 @@ function home() {
   <section class="stat-grid">
     <article class="card stat"><b>${wordSearches.length}</b><span>Word searches</span></article>
     <article class="card stat"><b>${crosswords.length}</b><span>Crosswords</span></article>
+    <article class="card stat"><b>${wordGrids.length}</b><span>Word Grids</span></article>
     <article class="card stat"><b>${completedCount()}</b><span>Completed</span></article>
   </section>
   ${completed.length ? `<section class="section completed-section"><div class="section-heading"><div><span class="eyebrow">Your recent finishes</span><h2>Completed puzzles</h2></div></div><div class="puzzle-list">${completed.map(([sessionId, progress]) => { const puzzle = puzzleById(progress.puzzleId); return puzzle ? puzzleCard(puzzle, sessionId, true) : ""; }).join("")}</div></section>` : ""}
   <section class="split-feature">
     <article class="card feature"><span class="kind-icon">WS</span><h2>Word searches</h2><p>Trace in eight directions, track every find, and resume on any screen size.</p><button class="text-button" data-filter="word-search">Browse word searches →</button></article>
     <article class="card feature"><span class="kind-icon">CW</span><h2>Crosswords</h2><p>Keyboard-first grids, paired across/down clues, and optional checking as you type.</p><button class="text-button" data-filter="crossword">Browse crosswords →</button></article>
+    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Join adjacent letters without reusing a tile, discover words, and race toward the target score.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
   </section>`;
 }
 
@@ -125,7 +132,7 @@ function library() {
   return `<div class="page-heading"><div><span class="eyebrow">Public catalogue and your local puzzles</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · ${cachedPuzzleIds.size}/${MAX_OFFLINE_PUZZLES} offline</span></div>
     <div class="filter-row">
       <div class="filter-tabs" role="group" aria-label="Puzzle type">
-        ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
+        ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"],["word-grid","Word Grids"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
       </div>
       <div class="filter-tabs difficulty-tabs" role="group" aria-label="Difficulty">
         ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"],["Unrated","Unrated"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
@@ -192,11 +199,39 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
     </div>`;
 }
 
+function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
+  const hinted = new Set(progress.hintedCells);
+  const selected = new Set(wordGridPath.map(({ x, y }) => `${x}:${y}`));
+  const currentWord = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
+  const found = puzzle.words.filter((word) => progress.foundWordIds.includes(word.id));
+  const score = found.reduce((total, word) => total + word.score, 0);
+  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word Grid · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
+    <div class="player-layout">
+      <div class="board-column">
+        <div class="letter-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} Word Grid">
+          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""} ${hinted.has(y * puzzle.columns + x) ? "hinted" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}${hinted.has(y * puzzle.columns + x) ? ", hint highlighted" : ""}">${letter}</button>`)).join("")}
+        </div>
+        ${store.data.preferences.showControlHelp ? `<p class="board-note">Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused. Arrow keys move focus; Enter or Space adds a tile.</p>` : ""}
+      </div>
+      <aside class="controls card">
+        <div class="control-heading"><span class="eyebrow">Score</span><strong>${score} / ${puzzle.targetScore}</strong></div>
+        <div class="current-word" aria-live="polite"><span>${currentWord || "Choose a letter"}</span><small>${currentWord ? `${currentWord.length} letters` : `Minimum ${puzzle.minimumLength}`}</small></div>
+        <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button></div>
+        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a starting path</button><span>${progress.hintedCells.length / 2} used</span></div>` : ""}
+        ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
+        <div><span class="eyebrow">Found words</span>${found.length ? `<ul class="found-grid-words">${found.sort((left, right) => right.score - left.score || left.label.localeCompare(right.label)).map((word) => `<li><span>${escapeHtml(word.label)}</span><b>+${word.score}</b></li>`).join("")}</ul>` : `<p>No words found yet.</p>`}</div>
+        ${progress.completedAt ? `<div class="complete-banner"><strong>Target reached</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
+        ${puzzleProvenance(puzzle)}
+        <button class="secondary" data-reset="${puzzle.id}">Start over</button>
+      </aside>
+    </div>`;
+}
+
 function player() {
   if (!activePuzzle) return `<div class="empty card"><h1>Puzzle not found</h1><button class="primary" data-nav="library">Open the library</button></div>`;
   const progress = sessionProgress();
   if (!progress) return `<p class="boot">Preparing puzzle…</p>`;
-  return activePuzzle.kind === "word-search" ? wordSearchPlayer(activePuzzle, progress) : crosswordPlayer(activePuzzle, progress);
+  return activePuzzle.kind === "word-search" ? wordSearchPlayer(activePuzzle, progress) : activePuzzle.kind === "crossword" ? crosswordPlayer(activePuzzle, progress) : wordGridPlayer(activePuzzle, progress);
 }
 
 function createLab() {
@@ -235,12 +270,12 @@ function settings() {
         <p class="preference-status" data-preferences-status role="status">Preferences save on this device and sync when signed in.</p>
       </section>
       <section class="card settings-card"><span class="eyebrow">Player layout</span><h2>Choose what stays visible</h2>
-        ${settingToggle("showHints", "Show hint controls", "Keep the local word-search and crossword hint actions in the player.", preferences.showHints)}
+        ${settingToggle("showHints", "Show hint controls", "Keep the local hint actions in all three puzzle players.", preferences.showHints)}
         ${settingToggle("showControlHelp", "Show help text", "Keep keyboard, touch, and selection reminders beneath each board.", preferences.showControlHelp)}
       </section>
       <section class="card settings-card"><span class="eyebrow">Readability</span><h2>Type size and highlight</h2><p>Choose from tested presets rather than fine-tuning individual values.</p>
-        ${settingSelect("gridTextSize", "Grid letter size", "Letters inside word-search and crossword cells.", preferences.gridTextSize, sizes)}
-        ${settingSelect("clueTextSize", "Clue and word-list size", "Crossword clues and the word-search target list.", preferences.clueTextSize, sizes)}
+        ${settingSelect("gridTextSize", "Grid letter size", "Letters inside Word Grid, word-search, and crossword cells.", preferences.gridTextSize, sizes)}
+        ${settingSelect("clueTextSize", "Clue and word-list size", "Crossword clues and found or target word lists.", preferences.clueTextSize, sizes)}
         ${settingSelect("menuTextSize", "Menu text size", "Navigation and primary player controls.", preferences.menuTextSize, sizes)}
         ${settingSelect("highlightColour", "Board highlight colour", "Selected cells, active clues, and hint outlines.", preferences.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}
       </section>
@@ -263,7 +298,8 @@ function help() {
     <div class="help-grid">
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
-      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter in the active clue. Hints run locally, work offline, and stay recorded with your progress.</p></article>
+      <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Longer words score more; reach the displayed target to complete the puzzle.</p></article>
+      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints mark the first two tiles of a remaining word. Hints work locally and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
       <article class="card help-card"><h2>Backups & deletion</h2><p>Backup restore is non-destructive: it adds missing sessions and keeps existing ones. Delete one saved session from Home, or use scoped controls in Settings. Signed-in deletions synchronize through private tombstones.</p></article>
@@ -303,12 +339,14 @@ async function openPuzzle(id: string, sessionId = id, challenge?: PuzzleProgress
   activePuzzle = puzzle;
   activeSessionId = sessionId;
   selectionStart = null;
+  wordGridPath = [];
   playerMessage = "";
   selectedClue = puzzle.kind === "crossword" && puzzle.clues[0] ? clueKey(puzzle.clues[0].number, puzzle.clues[0].direction) : "";
   await store.start(puzzle, sessionId, challenge);
   view = "player";
   libraryMessage = "";
   render();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function nextCrosswordIndex(puzzle: CrosswordPuzzle, current: number, key: string) {
@@ -340,6 +378,37 @@ async function completeWordSelection(end: GridPoint) {
   }
   render();
   return Boolean(word);
+}
+
+function wordGridPoint(cell: HTMLElement): GridPoint {
+  const [x, y] = cell.dataset.gridCell!.split(",").map(Number) as [number, number];
+  return { x, y };
+}
+
+function appendWordGridPoint(point: GridPoint) {
+  if (!activePuzzle || activePuzzle.kind !== "word-grid") return false;
+  const previous = wordGridPath.at(-1);
+  if (wordGridPath.some(({ x, y }) => x === point.x && y === point.y)) return false;
+  if (previous && Math.max(Math.abs(previous.x - point.x), Math.abs(previous.y - point.y)) !== 1) return false;
+  wordGridPath.push(point);
+  return true;
+}
+
+async function submitWordGrid() {
+  if (!activePuzzle || activePuzzle.kind !== "word-grid") return;
+  const puzzle = activePuzzle;
+  const word = wordGridWordForPath(puzzle, wordGridPath);
+  const label = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
+  const progress = sessionProgress();
+  if (word && progress?.foundWordIds.includes(word.id)) playerMessage = `${word.label} was already found.`;
+  else if (word) {
+    await store.update(puzzle, (current) => { current.foundWordIds.push(word.id); }, activeSessionId ?? puzzle.id);
+    playerMessage = `${word.label} scores ${word.score} point${word.score === 1 ? "" : "s"}.`;
+    void cloud.upload();
+  } else if (wordGridPath.length < puzzle.minimumLength) playerMessage = `Words need at least ${puzzle.minimumLength} letters.`;
+  else playerMessage = `${label || "That path"} is not in this grid's accepted word list.`;
+  wordGridPath = [];
+  render();
 }
 
 function downloadBackup() {
@@ -377,6 +446,7 @@ function bind() {
     if (!puzzle || puzzle.id !== element.dataset.reset || !confirm("Start this puzzle over?")) return;
     await store.reset(puzzle, activeSessionId ?? puzzle.id);
     selectionStart = null;
+    wordGridPath = [];
     playerMessage = "";
     render();
     void cloud.upload();
@@ -394,7 +464,7 @@ function bind() {
         await store.update(activePuzzle, (current) => { current.hintedCells.push(hint.cellIndex); }, activeSessionId ?? activePuzzle.id);
         playerMessage = `A remaining word passes through the highlighted cell at row ${hint.row + 1}, column ${hint.column + 1}.`;
       }
-    } else {
+    } else if (activePuzzle.kind === "crossword") {
       const activeClue = activePuzzle.clues.find((clue) => clueKey(clue.number, clue.direction) === selectedClue);
       const hint = chooseCrosswordHint(activePuzzle, progress, activeClue);
       if (!hint) {
@@ -405,6 +475,13 @@ function bind() {
           current.hintedCells.push(hint.cellIndex);
         }, activeSessionId ?? activePuzzle.id);
         playerMessage = `Revealed ${hint.letter} at row ${hint.row + 1}, column ${hint.column + 1}.`;
+      }
+    } else {
+      const hint = chooseWordGridHint(activePuzzle, progress);
+      if (!hint) playerMessage = "No unused starting-path hints remain.";
+      else {
+        await store.update(activePuzzle, (current) => { current.hintedCells.push(...hint.cellIndexes.filter((cell) => !current.hintedCells.includes(cell))); }, activeSessionId ?? activePuzzle.id);
+        playerMessage = `A ${hint.wordLength}-letter word worth ${hint.points} point${hint.points === 1 ? "" : "s"} begins along the highlighted tiles.`;
       }
     }
     render();
@@ -450,6 +527,46 @@ function bind() {
       await completeWordSelection(point);
     });
   });
+
+  app.querySelectorAll<HTMLButtonElement>("[data-grid-cell]").forEach((cell) => {
+    cell.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !activePuzzle || activePuzzle.kind !== "word-grid") return;
+      wordGridDragging = true;
+      const point = wordGridPoint(cell);
+      if (!appendWordGridPoint(point)) wordGridPath = [point];
+      wordGridDragStartLength = wordGridPath.length;
+      cell.classList.add("selected");
+      cell.setAttribute("aria-pressed", "true");
+    });
+    cell.addEventListener("pointerenter", () => {
+      if (!wordGridDragging) return;
+      if (appendWordGridPoint(wordGridPoint(cell))) {
+        cell.classList.add("selected");
+        cell.setAttribute("aria-pressed", "true");
+      }
+    });
+    cell.addEventListener("pointerup", () => {
+      if (!wordGridDragging) return;
+      wordGridDragging = false;
+      if (wordGridPath.length > wordGridDragStartLength && wordGridPath.length >= (activePuzzle?.kind === "word-grid" ? activePuzzle.minimumLength : 3)) void submitWordGrid();
+      else render();
+    });
+    cell.addEventListener("keydown", (event) => {
+      if (!activePuzzle || activePuzzle.kind !== "word-grid") return;
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        const point = wordGridPoint(cell);
+        const x = point.x + (event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0);
+        const y = point.y + (event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0);
+        app.querySelector<HTMLButtonElement>(`[data-grid-cell="${x},${y}"]`)?.focus();
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (appendWordGridPoint(wordGridPoint(cell))) render();
+      }
+    });
+  });
+  app.querySelector<HTMLElement>("[data-grid-submit]")?.addEventListener("click", () => void submitWordGrid());
+  app.querySelector<HTMLElement>("[data-grid-clear]")?.addEventListener("click", () => { wordGridPath = []; playerMessage = ""; render(); });
 
   app.querySelectorAll<HTMLButtonElement>("[data-clue]").forEach((button) => button.addEventListener("click", () => { selectedClue = button.dataset.clue!; render(); }));
   app.querySelectorAll<HTMLInputElement>("[data-crossword-cell]").forEach((input) => {
