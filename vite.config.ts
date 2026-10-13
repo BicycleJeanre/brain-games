@@ -37,6 +37,7 @@ self.addEventListener('fetch',event=>{
 
 export default defineConfig({
   base: process.env.BASE_PATH || "./",
+  define: { global: "globalThis" },
   plugins: [offline()],
   server: { host: "127.0.0.1", port: 5174, strictPort: true },
   preview: { host: "127.0.0.1", port: 4174, strictPort: true },

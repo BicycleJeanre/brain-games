@@ -14,12 +14,16 @@ test("new progress has a cell entry for the whole grid", () => {
 });
 
 test("normalization preserves safe preferences and defaults invalid values", () => {
-  const data = normalizeData({ version: 99, preferences: { theme: "neon", showTimer: false }, progress: null });
+  const deletedProgress = Object.fromEntries(Array.from({ length: 502 }, (_, index) => [`session-${index}`, index]));
+  const data = normalizeData({ version: 99, preferences: { theme: "neon", showTimer: false }, progress: null, deletedProgress: { ...deletedProgress, invalid: "never" } });
   assert.equal(data.version, 1);
   assert.equal(data.preferences.theme, "system");
   assert.equal(data.preferences.showTimer, false);
   assert.equal(data.preferences.checkAsYouType, DEFAULT_PREFERENCES.checkAsYouType);
   assert.deepEqual(data.progress, {});
+  assert.equal(Object.keys(data.deletedProgress).length, 500);
+  assert.equal(data.deletedProgress.invalid, undefined);
+  assert.equal(data.deletedProgress["session-501"], 501);
 });
 
 test("normalization adds hint history to older progress records", () => {
@@ -50,4 +54,34 @@ test("puzzle cache keeps only the ten most recently opened payloads", async () =
   assert.equal(ids.length, MAX_OFFLINE_PUZZLES);
   assert.equal(ids.includes(puzzles[0]!.id), false);
   assert.equal(ids.includes(puzzles[MAX_OFFLINE_PUZZLES]!.id), true);
+});
+
+test("challenge sessions, deletion tombstones, and backup merges preserve independent progress", async () => {
+  const puzzle = puzzles[0]!;
+  const store = new Store();
+  await store.load();
+  const sessionId = "challenge:daily:2026-10-13:easy";
+  await store.start(puzzle, sessionId, { cadence: "daily", periodKey: "2026-10-13", difficulty: "Easy" });
+  await store.update(puzzle, (progress) => progress.foundWordIds.push("challenge-word"), sessionId);
+  await store.start(puzzle);
+  const regularWords = [...(store.data.progress[puzzle.id]?.foundWordIds ?? [])];
+  assert.equal(regularWords.includes("challenge-word"), false);
+  assert.deepEqual(store.data.progress[sessionId]?.foundWordIds, ["challenge-word"]);
+
+  const imported = normalizeData({
+    version: 1,
+    preferences: { theme: "light", showTimer: false, checkAsYouType: true },
+    progress: {
+      [puzzle.id]: { ...newProgress(puzzle, 10), foundWordIds: ["should-not-replace"] },
+      imported: newProgress(puzzles[1]!, 11),
+    },
+    deletedProgress: {},
+  });
+  assert.deepEqual(await store.importData(imported), { added: 1, skipped: 1 });
+  assert.deepEqual(store.data.progress[puzzle.id]?.foundWordIds, regularWords);
+  assert.equal(store.data.preferences.theme, "light");
+
+  await store.removeProgress(sessionId, 100);
+  assert.equal(store.data.progress[sessionId], undefined);
+  assert.equal(store.data.deletedProgress[sessionId], 100);
 });

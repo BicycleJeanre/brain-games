@@ -26,6 +26,6 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:base-path
       - run: npm run test:rules
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm test
       - run: npm run test:cloud

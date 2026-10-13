@@ -1,8 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import { extname, resolve } from "node:path";
 
 test("home and catalogue expose both puzzle types", async ({ page }) => {
   await page.goto("./");
   await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Daily challenges" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Weekly challenges" })).toBeVisible();
+  await expect(page.locator("[data-challenge]")).toHaveCount(8);
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await expect(page.getByText("Word craft")).toBeVisible();
   await expect(page.getByText("Puzzle desk")).toBeVisible();
@@ -13,20 +19,20 @@ test("home and catalogue expose both puzzle types", async ({ page }) => {
 
 test("word-search progress survives reload", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="ws-word-craft-001"]').click();
   await page.locator('[data-word-cell="2,0"]').click();
   await page.locator('[data-word-cell="6,4"]').click();
   await expect(page.getByText("Found").first()).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="ws-word-craft-001"]').click();
   await expect(page.getByText("Found").first()).toBeVisible();
 });
 
 test("word search supports pointer drag and keyboard navigation", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="ws-word-craft-001"]').click();
   const start = page.locator('[data-word-cell="2,0"]');
   const end = page.locator('[data-word-cell="6,4"]');
@@ -56,10 +62,13 @@ test("hints persist for word searches and reveal crossword letters", async ({ pa
   await expect(page.locator(".crossword-cell.hinted input")).toHaveValue(/[A-Z]/);
 });
 
-test("settings restore a WTrack JSON backup", async ({ page }) => {
+test("settings merge a WTrack JSON backup without replacing local progress", async ({ page }) => {
   await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await page.locator('[data-word-cell="2,0"]').click();
+  await page.locator('[data-word-cell="6,4"]').click();
   await page.getByRole("button", { name: "Settings" }).click();
-  page.on("dialog", (dialog) => dialog.accept());
   await page.locator('input[name="backup"]').setInputFiles({
     name: "wtrack-backup.json",
     mimeType: "application/json",
@@ -69,9 +78,27 @@ test("settings restore a WTrack JSON backup", async ({ page }) => {
       data: { version: 1, preferences: { theme: "light", showTimer: false, checkAsYouType: true }, progress: {}, deletedProgress: {}, activePuzzleId: null, settingsUpdatedAt: 1, catalogueVersion: "2026.10.1" },
     })),
   });
-  await page.getByRole("button", { name: "Restore backup" }).click();
-  await expect(page.getByRole("status")).toContainText("Backup restored");
+  await page.getByRole("button", { name: "Merge backup" }).click();
+  await expect(page.getByRole("status")).toContainText("Backup merged");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await expect(page.getByText("Found").first()).toBeVisible();
+});
+
+test("challenge sessions are independent and saved history can be deleted", async ({ page }) => {
+  await page.goto("./");
+  const challenge = page.locator('[data-challenge="daily"]').first();
+  const sessionId = await challenge.getAttribute("data-session");
+  await challenge.click();
+  await expect(page.locator(".player-heading .eyebrow")).toContainText("daily challenge");
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  const active = page.locator(`[data-session="${sessionId}"]`).first();
+  await expect(active).toContainText("Continue");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: /Delete saved progress/ }).first().click();
+  await expect(page.locator(`[data-session="${sessionId}"]`)).toHaveCount(1);
+  await expect(page.locator(`[data-session="${sessionId}"]`)).toContainText("Start challenge");
 });
 
 test("crossword accepts keyboard input", async ({ page }) => {
@@ -83,6 +110,23 @@ test("crossword accepts keyboard input", async ({ page }) => {
   await expect(first).toHaveValue("P");
 });
 
+test("crossword files import privately and open as unrated puzzles", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Create" }).click();
+  const sample = {
+    version: "http://ipuz.org/v2", kind: ["http://ipuz.org/crossword#1"], dimensions: { width: 3, height: 3 },
+    puzzle: [[1, 2, 3], [4, 0, 0], [5, 0, 0]], solution: [["C", "A", "T"], ["A", "R", "E"], ["R", "E", "D"]],
+    clues: { Across: [[1, "Feline"], [4, "Exist"], [5, "Colour"]], Down: [[1, "Vehicle"], [2, "Exist"], [3, "Completed an action"]] },
+  };
+  await page.locator('input[name="crossword"]').setInputFiles({ name: "sample.ipuz", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(sample)) });
+  await page.getByRole("button", { name: "Open private puzzle" }).click();
+  await expect(page.getByRole("heading", { name: "sample" })).toBeVisible();
+  await expect(page.locator(".player-heading .eyebrow")).toContainText("Unrated");
+  await page.reload();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await expect(page.getByText("sample").first()).toBeVisible();
+});
+
 test("mobile layout keeps primary navigation usable", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Mobile-only assertion");
   await page.goto("./");
@@ -91,8 +135,33 @@ test("mobile layout keeps primary navigation usable", async ({ page }, testInfo)
   await expect(page.getByRole("heading", { name: "Create", exact: true })).toBeVisible();
 });
 
+test("themes, focus, reduced motion, and landscape layout meet the shared accessibility contract", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./");
+  await expect(page.getByText("Online", { exact: true })).toBeVisible();
+  expect(await page.locator("button").evaluateAll((buttons) => buttons.filter((button) => !(button.textContent || "").trim() && !button.getAttribute("aria-label")).length)).toBe(0);
+
+  const firstChallenge = page.locator("[data-challenge]").first();
+  await firstChallenge.focus();
+  expect(await firstChallenge.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe("none");
+  expect(parseFloat(await firstChallenge.evaluate((element) => getComputedStyle(element).transitionDuration))).toBeLessThan(.02);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Theme").selectOption("light");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole("grid", { name: /word search/ })).toBeVisible();
+});
+
 test("only ten downloaded puzzles remain playable offline", async ({ page, context }, testInfo) => {
-  test.skip(testInfo.project.name.includes("mobile"), "One cache-cap journey is sufficient");
+  test.skip(testInfo.project.name !== "chromium", "One cache-cap journey is sufficient");
   await page.goto("./");
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   const buttons = await page.locator("[data-open]").all();
@@ -125,4 +194,38 @@ test("only ten downloaded puzzles remain playable offline", async ({ page, conte
   await expect(page.locator(`[data-open="${ids[0]}"]`)).toBeDisabled();
   await page.locator(`[data-open="${ids[10]}"]`).click();
   await expect(page.getByRole("button", { name: "← Puzzles" })).toBeVisible();
+});
+
+test("production app relaunches after its server stops with catalogue and cached progress", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "One real service-worker restart journey is sufficient");
+  const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".json": "application/json" };
+  const root = resolve("dist");
+  const server = createServer(async (request, response) => {
+    try {
+      const pathname = new URL(request.url!, "http://local").pathname.replace(/^\/wtrack\/?/, "/");
+      const file = resolve(root, `.${pathname === "/" ? "/index.html" : pathname}`);
+      if (!file.startsWith(`${root}/`)) throw new Error("invalid path");
+      response.setHeader("Content-Type", types[extname(file)] || "application/octet-stream");
+      response.end(await readFile(file));
+    } catch { response.statusCode = 404; response.end(); }
+  });
+  await new Promise<void>((resolveReady) => server.listen(0, "127.0.0.1", resolveReady));
+  const port = (server.address() as { port: number }).port;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(`http://127.0.0.1:${port}/wtrack/`);
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await page.locator('[data-word-cell="2,0"]').click();
+  await page.locator('[data-word-cell="6,4"]').click();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  server.closeAllConnections();
+  await new Promise<void>((resolveClosed) => server.close(() => resolveClosed()));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await expect(page.getByText("Found").first()).toBeVisible();
+  await context.close();
 });

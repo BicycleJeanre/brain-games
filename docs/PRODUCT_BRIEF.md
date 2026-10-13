@@ -18,11 +18,11 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ### Home and library
 
-- Resume active puzzles before discovery content.
+- Resume active puzzles before discovery content, keep completed puzzles in a separate history, and allow either kind of saved session to be deleted individually.
 - Browse the expandable public catalogue and filter by type or by Easy, Medium, Hard, and Diabolical difficulty.
 - Download a puzzle on first open and retain at most ten playable payloads offline using least-recently-opened eviction.
 - Show difficulty, progress, completion, and provenance details.
-- Support deterministic daily/weekly challenges once the catalogue is large enough.
+- Offer deterministic daily and weekly challenges in every rated difficulty, with independent saved sessions and completion, streak, and average-time summaries.
 
 ### Word-search player
 
@@ -37,13 +37,13 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Across/down clue lists, conventional numbering, active clue highlighting, and crossing-aware navigation.
 - Keyboard entry, Backspace behavior, arrow navigation, touch input, optional correctness marking, pause, reset, and completion summary.
 - Offline hints reveal one unresolved letter in the active clue, then fall back to the rest of the grid.
-- Imports for licensed `.puz`, iPUZ, JPZ, and XD puzzles where the parser can preserve required metadata.
+- Private imports for licensed or personal `.puz`, iPUZ, JPZ, and XD puzzles where the parser can preserve the required grid and clue metadata. Imports are Unrated and are not published.
 
 ### Create and import
 
 - Local word-search generation with `@blex41/word-search`.
 - Local crossword answer layout with `crossword-layout-generator`.
-- Common crossword-file parsing with `@xwordly/xword-parser`.
+- Common crossword-file parsing with `@xwordly/xword-parser`, normalized into WTrack's validated local puzzle model.
 - Generated/imported puzzles remain private previews until a human reviews connectivity, clues, answers, provenance, and redistribution rights.
 
 ### Accounts and synchronization
@@ -51,7 +51,8 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Optional Firebase email/password accounts.
 - Store progress and preferences beneath owner-only Firestore paths.
 - Reconcile by `updatedAt` with deletion tombstones; never make core play wait on the network.
-- Provide JSON export/import before relying on cloud sync as the only backup path.
+- Provide JSON export and non-destructive merge import before relying on cloud sync as the only backup path.
+- Provide separate controls for completed progress, all progress, and downloaded puzzle payloads.
 
 ## Technical conventions
 
@@ -73,8 +74,9 @@ The committed source is validated at build time, then exported to one lightweigh
 - Builds and serves correctly from `/wtrack/`.
 - Installs and restarts offline with the shell, help, progress, catalogue index, and no more than ten recently opened playable puzzles.
 - Both game types support keyboard, mouse, and touch on desktop and narrow phones.
+- Daily and weekly challenge selections stay stable for their UTC period and never overwrite ordinary puzzle progress.
 - Progress saves locally on every meaningful move and optionally synchronizes privately through Firestore.
 - Every published puzzle exposes provenance and licence details.
 - Custom generators work locally and make their review boundary explicit.
-- Automated tests cover model validation, persistence, completion, Firestore rules, browser play, offline restart, themes, and base paths.
+- Automated tests cover model validation, persistence, completion, challenge selection, private import, Firestore rules, Chromium/WebKit browser play, true server-stop offline restart, accessibility, responsive layout, themes, and base paths.
 - README, user guide, provenance documentation, architecture notes, and deployment workflow stay aligned with behavior.

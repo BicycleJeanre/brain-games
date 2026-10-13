@@ -10,18 +10,20 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - 100 original public puzzles: 50 word searches and 50 crosswords, exported as individually downloadable static payloads.
 - An IndexedDB least-recently-used cache capped at ten playable offline puzzles; eviction never deletes progress.
 - Easy, Medium, Hard, and Diabolical library filters, with at least 24 puzzles in each tier.
+- Stable daily and weekly challenges in every rated difficulty, with independent sessions, streaks, completion, and average-time summaries.
 - IndexedDB-first progress, completion state, preferences, and timer.
+- Separate active/completed history with individual deletion, synchronized tombstones, and scoped local-data controls.
 - Optional Firebase email/password accounts and owner-protected Firestore state.
 - Word-search generation through `@blex41/word-search`.
 - Crossword layout generation through `crossword-layout-generator`.
-- `.puz`, iPUZ, JPZ, and XD parsing foundation through `@xwordly/xword-parser`.
+- Private `.puz`, iPUZ, JPZ, and XD file import through `@xwordly/xword-parser`; imported payloads remain local and Unrated.
 - Light, dark, and system themes; visible focus; keyboard-first crossword entry; reduced-motion support.
-- Pointer, touch, and keyboard word-search selection plus JSON device backup and restore.
+- Pointer, touch, and keyboard word-search selection plus non-destructive JSON device backup merge.
 - Persistent offline hints: a highlighted path cell for word searches and a revealed active-clue letter for crosswords.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
-- Unit, browser, catalogue-integrity, Firestore-rules, and emulator-backed cloud-journey checks.
+- Chromium, mobile Chromium, and WebKit browser coverage plus unit, catalogue-integrity, real server-stop offline restart, base-path, Firestore-rules, and emulator-backed cloud-journey checks.
 
-The Create screen currently produces local previews. Moving a generated or imported puzzle into the public catalogue is deliberately a reviewed process: provenance, clue authorship, redistribution terms, connectivity, and answer correctness must be documented first.
+The Create screen produces local previews and can open private crossword files. Moving generated or imported material into the public catalogue is deliberately a reviewed process: provenance, clue authorship, redistribution terms, connectivity, and answer correctness must be documented first.
 
 ## Local development
 
@@ -69,6 +71,7 @@ Cloud state is stored only at `users/{uid}/state/app`. Rules restrict reads and 
 - [User guide](docs/USER_GUIDE.md)
 - [Puzzle provenance](docs/PUZZLE_PROVENANCE.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [STrack parity review](docs/STRACK_PARITY.md)
 - [Release status](docs/RELEASE_STATUS.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
