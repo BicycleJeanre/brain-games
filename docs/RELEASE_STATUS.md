@@ -4,8 +4,8 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Deployed application commit: `main` at `86ef0c0`
-- Latest source pull request: [#13 — Add STrack-style settings parity](https://github.com/BicycleJeanre/wtrack/pull/13)
+- Deployed application commit: `main` at `e91821f`
+- Latest source pull request: [#15 — Add on-demand public puzzle generation](https://github.com/BicycleJeanre/wtrack/pull/15)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-13
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `86ef0c02aaee3aa3bc701dcb96bb901bc50006a1`
-- Deployment: [GitHub Pages run 38389782784](https://github.com/BicycleJeanre/wtrack/actions/runs/38389782784)
-- Verification: deployment workflow passed. A cache-busted production browser reload showed the auto-saving Settings badge plus the private sync, appearance, player-layout, readability, assistance, backup, storage, and help sections.
+- Source: `main` at `e91821f`
+- Deployment: [GitHub Pages run 38394541080](https://github.com/BicycleJeanre/wtrack/actions/runs/38394541080)
+- Verification: deployment workflow passed. A cache-busted production browser generated and opened a Hard astronomy word search from live English Wikipedia topic links and Wikidata terms, showing 12 themed answers, offline availability, hints, and source-generation details.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -65,12 +65,21 @@ Last updated: 2026-10-13
 - Older local, backup, and cloud preference objects normalize to current defaults. Firestore rules accept the legacy and expanded schemas during rollout.
 - Backward-compatible production Firestore rules were compiled and deployed before the Pages client, keeping older service-worker clients valid during rollout.
 
+## Public-data generation release
+
+- Explicit, user-triggered topic generation discovers related QIDs from an English Wikipedia page and fetches English labels and descriptions from Wikidata; startup and ordinary play make no Wikimedia requests.
+- Word searches and crosswords are generated in the browser and saved as complete validated payloads in the existing ten-puzzle IndexedDB LRU for offline replay.
+- Relative Easy, Medium, Hard, and Diabolical profiles vary answer length/count, grid size, word directions, and reversal probability without claiming a universal rating.
+- Every generated puzzle records its source page, selected QIDs, retrieval timestamp, licences, WTrack generator version, layout-library version, selection seed, and unreviewed private status.
+- Generated puzzles do not enter daily/weekly challenge selection, the curated public catalogue, or Firestore payload sync. If evicted, the player must generate them again; saved progress remains separate.
+- Both players now expose collapsible source and generation details for catalogue, imported, and generated puzzles.
+
 ## Validation
 
-- `npm run test:unit`: 17 passing, including deterministic challenges, private import, non-destructive backup merge, bounded deletion tombstones, hints, and ten-puzzle least-recently-opened cache eviction.
+- `npm run test:unit`: 21 passing, including deterministic challenges, private import, non-destructive backup merge, bounded deletion tombstones, hints, ten-puzzle least-recently-opened cache eviction, Wikimedia normalization/fetching, and generated payload validation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 33 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes auto-saving settings, contextual puzzle reset, accessibility, theme persistence, landscape layout, private import, challenge sessions, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
+- `npm test`: 36 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes auto-saving settings, contextual puzzle reset, accessibility, theme persistence, landscape layout, private import, public-data generation and reload, challenge isolation, offline restart after 11 puzzle downloads, and a production build restart after its HTTP server stops.
 - `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
@@ -88,9 +97,11 @@ Last updated: 2026-10-13
 - Previous production release: [deployment run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695) passed from merge commit `7b7fb8c`; live browser verification confirmed the parity surfaces.
 - Settings-parity pull-request CI: [run 38389502833](https://github.com/BicycleJeanre/wtrack/actions/runs/38389502833) passed, including Firestore rules and the two-device cloud-sync journey.
 - Settings-parity production release: [deployment run 38389782784](https://github.com/BicycleJeanre/wtrack/actions/runs/38389782784) passed from merge commit `86ef0c0`; live browser verification confirmed the expanded auto-saving Settings surface.
+- Public-data generation pull-request CI: [run 38394209878](https://github.com/BicycleJeanre/wtrack/actions/runs/38394209878) passed, including Firestore rules, WebKit, and the two-device cloud-sync journey.
+- Public-data generation production release: [deployment run 38394541080](https://github.com/BicycleJeanre/wtrack/actions/runs/38394541080) passed from merge commit `e91821f`; a live browser created a Hard astronomy word search directly from Wikimedia data and opened it from the offline payload cache.
 
 ## Next release-one work
 
-1. Add licensed, provenance-complete puzzle packs through the expandable catalogue pipeline without increasing the ten-puzzle offline cap.
+1. Collect feedback on topic-page discovery, generated clue quality, and relative difficulty before adjusting the selection profiles.
 2. Add deeper concurrent cloud-merge and long-lived tombstone-compaction coverage.
-3. Collect first-release feedback before expanding or retiring any production surface.
+3. Decide whether cross-device generated-payload transfer is worth its storage and synchronization cost; progress-only sync remains the current boundary.
