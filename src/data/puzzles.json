@@ -1,0 +1,107 @@
+[
+  {
+    "id": "ws-word-craft-001",
+    "kind": "word-search",
+    "title": "Word craft",
+    "subtitle": "The pieces that make a puzzle work",
+    "difficulty": "Easy",
+    "catalogueVersion": "2026.10.1",
+    "source": {
+      "name": "WTrack original",
+      "url": "https://github.com/BicycleJeanre/wtrack",
+      "licence": "AGPL-3.0-or-later",
+      "note": "Original word list; grid generated with @blex41/word-search 1.2.0 and reviewed before bundling."
+    },
+    "rows": 12,
+    "columns": 12,
+    "grid": ["LQCIVYKBWJTM","KYMALOFFLINE","EISRCVJCOWRU","NKJBQHCROIPU","YCWJENERPOCO","PLAMARDVOJWR","REEHISGPGAEP","SHOTXSNUGRID","TKQCTAVZCXQJ","YOALMEOZPTSH","XMAUZWRLUBAI","ATWETVUEKUZR"],
+    "words": [
+      {"id":"cache","label":"CACHE","path":[{"x":2,"y":0},{"x":3,"y":1},{"x":4,"y":2},{"x":5,"y":3},{"x":6,"y":4}]},
+      {"id":"clue","label":"CLUE","path":[{"x":3,"y":8},{"x":3,"y":9},{"x":3,"y":10},{"x":3,"y":11}]},
+      {"id":"grid","label":"GRID","path":[{"x":8,"y":7},{"x":9,"y":7},{"x":10,"y":7},{"x":11,"y":7}]},
+      {"id":"letter","label":"LETTER","path":[{"x":1,"y":5},{"x":2,"y":6},{"x":3,"y":7},{"x":4,"y":8},{"x":5,"y":9},{"x":6,"y":10}]},
+      {"id":"offline","label":"OFFLINE","path":[{"x":5,"y":1},{"x":6,"y":1},{"x":7,"y":1},{"x":8,"y":1},{"x":9,"y":1},{"x":10,"y":1},{"x":11,"y":1}]},
+      {"id":"puzzle","label":"PUZZLE","path":[{"x":7,"y":6},{"x":7,"y":7},{"x":7,"y":8},{"x":7,"y":9},{"x":7,"y":10},{"x":7,"y":11}]},
+      {"id":"theme","label":"THEME","path":[{"x":0,"y":8},{"x":1,"y":7},{"x":2,"y":6},{"x":3,"y":5},{"x":4,"y":4}]},
+      {"id":"words","label":"WORDS","path":[{"x":9,"y":2},{"x":8,"y":3},{"x":7,"y":4},{"x":6,"y":5},{"x":5,"y":6}]}
+    ]
+  },
+  {
+    "id": "ws-ocean-001",
+    "kind": "word-search",
+    "title": "Ocean life",
+    "subtitle": "Eight words beneath the surface",
+    "difficulty": "Medium",
+    "catalogueVersion": "2026.10.1",
+    "source": {
+      "name": "WTrack original",
+      "url": "https://github.com/BicycleJeanre/wtrack",
+      "licence": "AGPL-3.0-or-later",
+      "note": "Original word list; grid generated with @blex41/word-search 1.2.0 and reviewed before bundling."
+    },
+    "rows": 12,
+    "columns": 12,
+    "grid": ["CKKDHEZXCKMA","DMRECWMMYZEL","ZSNFLJXMMVRA","DAJIHAWYANNR","CZDZHCHWLKWO","AOBSUPRWLPBC","CWVBKELLDFIU","TPWEAKEOYAXZ","IACEVHTSDWTR","DCDPSALVYJEE","ENAECOVZCEEI","HZTAPLDJFMMD"],
+    "words": [
+      {"id":"coral","label":"CORAL","path":[{"x":11,"y":5},{"x":11,"y":4},{"x":11,"y":3},{"x":11,"y":2},{"x":11,"y":1}]},
+      {"id":"dolphin","label":"DOLPHIN","path":[{"x":8,"y":8},{"x":7,"y":7},{"x":6,"y":6},{"x":5,"y":5},{"x":4,"y":4},{"x":3,"y":3},{"x":2,"y":2}]},
+      {"id":"ocean","label":"OCEAN","path":[{"x":5,"y":10},{"x":4,"y":10},{"x":3,"y":10},{"x":2,"y":10},{"x":1,"y":10}]},
+      {"id":"reef","label":"REEF","path":[{"x":11,"y":8},{"x":10,"y":9},{"x":9,"y":10},{"x":8,"y":11}]},
+      {"id":"shell","label":"SHELL","path":[{"x":4,"y":9},{"x":5,"y":8},{"x":6,"y":7},{"x":7,"y":6},{"x":8,"y":5}]},
+      {"id":"tide","label":"TIDE","path":[{"x":0,"y":7},{"x":0,"y":8},{"x":0,"y":9},{"x":0,"y":10}]},
+      {"id":"wave","label":"WAVE","path":[{"x":7,"y":4},{"x":8,"y":3},{"x":9,"y":2},{"x":10,"y":1}]},
+      {"id":"whale","label":"WHALE","path":[{"x":7,"y":5},{"x":6,"y":4},{"x":5,"y":3},{"x":4,"y":2},{"x":3,"y":1}]}
+    ]
+  },
+  {
+    "id": "cw-puzzle-desk-001",
+    "kind": "crossword",
+    "title": "Puzzle desk",
+    "subtitle": "A compact crossword about word play",
+    "difficulty": "Easy",
+    "catalogueVersion": "2026.10.1",
+    "source": {
+      "name": "WTrack original",
+      "url": "https://github.com/BicycleJeanre/wtrack",
+      "licence": "AGPL-3.0-or-later",
+      "note": "Original clues and answers; layout generated with crossword-layout-generator 0.1.1 and reviewed before bundling."
+    },
+    "rows": 6,
+    "columns": 9,
+    "grid": ["#####P###","#W###W###","#O##CACHE","GRID##L##","#D####U##","####THEME"],
+    "clues": [
+      {"number":1,"direction":"across","clue":"Saved locally for fast offline use","answer":"CACHE","row":2,"column":4},
+      {"number":2,"direction":"across","clue":"Rows and columns together","answer":"GRID","row":3,"column":0},
+      {"number":3,"direction":"down","clue":"A prompt pointing to an answer","answer":"CLUE","row":2,"column":6},
+      {"number":4,"direction":"down","clue":"A meaningful group of letters","answer":"WORD","row":1,"column":1},
+      {"number":5,"direction":"across","clue":"A puzzle’s unifying idea","answer":"THEME","row":5,"column":4},
+      {"number":6,"direction":"down","clue":"Installable web app, briefly","answer":"PWA","row":0,"column":5}
+    ]
+  },
+  {
+    "id": "cw-coast-001",
+    "kind": "crossword",
+    "title": "Along the coast",
+    "subtitle": "Seven clues washed ashore",
+    "difficulty": "Medium",
+    "catalogueVersion": "2026.10.1",
+    "source": {
+      "name": "WTrack original",
+      "url": "https://github.com/BicycleJeanre/wtrack",
+      "licence": "AGPL-3.0-or-later",
+      "note": "Original clues and answers; layout generated with crossword-layout-generator 0.1.1 and reviewed before bundling."
+    },
+    "rows": 8,
+    "columns": 9,
+    "grid": ["####S####","####H####","#TIDE####","####L####","CORAL#W##","##E###A##","OCEAN#V##","##F##KELP"],
+    "clues": [
+      {"number":1,"direction":"down","clue":"Coral ecosystem","answer":"REEF","row":4,"column":2},
+      {"number":2,"direction":"across","clue":"Regular rise and fall of the sea","answer":"TIDE","row":2,"column":1},
+      {"number":3,"direction":"down","clue":"Moving ridge of water","answer":"WAVE","row":4,"column":6},
+      {"number":4,"direction":"across","clue":"Vast body of salt water","answer":"OCEAN","row":6,"column":0},
+      {"number":5,"direction":"down","clue":"Hard home carried by some sea creatures","answer":"SHELL","row":0,"column":4},
+      {"number":6,"direction":"across","clue":"Tiny animals building a colourful colony","answer":"CORAL","row":4,"column":0},
+      {"number":7,"direction":"across","clue":"Large brown seaweed","answer":"KELP","row":7,"column":5}
+    ]
+  }
+]
