@@ -3,9 +3,10 @@ import test from "node:test";
 import { crosswords, findWord, isPuzzleComplete, puzzles, wordPath, wordSearches } from "../src/puzzles.ts";
 
 test("catalogue contains validated puzzles of both kinds", () => {
-  assert.equal(puzzles.length, 4);
-  assert.equal(wordSearches.length, 2);
-  assert.equal(crosswords.length, 2);
+  assert.equal(puzzles.length, 100);
+  assert.equal(wordSearches.length, 50);
+  assert.equal(crosswords.length, 50);
+  assert.deepEqual(new Set(puzzles.map((puzzle) => puzzle.difficulty)), new Set(["Easy", "Medium", "Hard", "Diabolical"]));
   assert.ok(puzzles.every((puzzle) => puzzle.source.licence && puzzle.source.note && puzzle.catalogueVersion));
 });
 

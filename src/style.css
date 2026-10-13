@@ -58,9 +58,12 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .feature,.create-card,.settings-card,.help-card { padding:25px; }
 .feature p { min-height:44px; }
 .catalogue-badge { padding:6px 10px; border:1px solid var(--border); border-radius:14px; color:var(--muted); font-size:10px; font-weight:800; }
+.filter-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .filter-tabs { display:inline-grid; grid-template-columns:repeat(3,auto); gap:3px; margin-bottom:16px; padding:3px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
+.difficulty-tabs { grid-template-columns:repeat(5,auto); }
 .filter-tabs button { min-height:34px; padding:5px 12px; border:0; border-radius:6px; background:transparent; color:var(--muted); font-size:11px; font-weight:800; }
 .filter-tabs button[aria-pressed="true"] { background:var(--panel-raised); color:var(--accent); }
+.result-count { margin:0 0 14px; color:var(--faint); font-size:11px; }
 .puzzle-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
 .puzzle-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; min-height:120px; padding:17px; }
 .puzzle-card p { margin:0; font-size:11px; }
@@ -130,5 +133,8 @@ code { color:var(--accent); }
   .player-heading { grid-template-columns:1fr auto; }
   .player-heading .back-button { grid-column:1/-1; }
   .word-cell { font-size:clamp(11px,4vw,18px); }
+  .filter-row,.filter-tabs { width:100%; }
+  .difficulty-tabs { grid-template-columns:repeat(2,1fr); }
+  .filter-tabs:not(.difficulty-tabs) { grid-template-columns:repeat(3,1fr); }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }

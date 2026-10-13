@@ -1,7 +1,7 @@
 import rawPuzzles from "./data/puzzles.json" with { type: "json" };
 import type { CrosswordClue, CrosswordPuzzle, GridPoint, Puzzle, WordSearchPuzzle } from "./types.ts";
 
-export const CATALOGUE_VERSION = "2026.10.1";
+export const CATALOGUE_VERSION = "2026.10.2";
 
 const pointKey = ({ x, y }: GridPoint) => `${x}:${y}`;
 

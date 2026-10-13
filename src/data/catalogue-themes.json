@@ -1,0 +1,230 @@
+[
+  {
+    "id": "forest",
+    "title": "Forest paths",
+    "subtitle": "Trees, trails, and woodland life",
+    "entries": [
+      {"answer":"FOREST","clue":"A large area covered in trees"},
+      {"answer":"TRAIL","clue":"A marked path through the outdoors"},
+      {"answer":"PINE","clue":"An evergreen tree with needles"},
+      {"answer":"MOSS","clue":"A soft green plant forming a carpet"},
+      {"answer":"FERN","clue":"A leafy plant that reproduces by spores"},
+      {"answer":"OWL","clue":"A night bird with a quiet flight"},
+      {"answer":"CEDAR","clue":"An aromatic evergreen tree"},
+      {"answer":"BARK","clue":"The protective outer layer of a tree"},
+      {"answer":"GROVE","clue":"A small group of trees"},
+      {"answer":"ACORN","clue":"The fruit of an oak tree"},
+      {"answer":"CANOPY","clue":"The upper layer of branches in a forest"},
+      {"answer":"MAPLE","clue":"A tree known for syrup and lobed leaves"}
+    ]
+  },
+  {
+    "id": "ocean",
+    "title": "Ocean depths",
+    "subtitle": "Life and motion beneath the waves",
+    "entries": [
+      {"answer":"OCEAN","clue":"A vast body of salt water"},
+      {"answer":"CORAL","clue":"A tiny animal that can build a reef"},
+      {"answer":"REEF","clue":"A ridge beneath the sea surface"},
+      {"answer":"TIDE","clue":"The regular rise and fall of the sea"},
+      {"answer":"WAVE","clue":"A moving ridge across water"},
+      {"answer":"SHELL","clue":"A hard covering carried by some sea life"},
+      {"answer":"KELP","clue":"Large brown seaweed"},
+      {"answer":"SHARK","clue":"A cartilaginous ocean predator"},
+      {"answer":"WHALE","clue":"A very large marine mammal"},
+      {"answer":"DOLPHIN","clue":"A social marine mammal with a beaklike snout"},
+      {"answer":"ANCHOR","clue":"A heavy object that holds a vessel in place"},
+      {"answer":"ISLAND","clue":"Land completely surrounded by water"}
+    ]
+  },
+  {
+    "id": "space",
+    "title": "Deep space",
+    "subtitle": "Worlds, lights, and journeys beyond Earth",
+    "entries": [
+      {"answer":"PLANET","clue":"A large world orbiting a star"},
+      {"answer":"COMET","clue":"An icy visitor that may grow a bright tail"},
+      {"answer":"ORBIT","clue":"The curved path around another body"},
+      {"answer":"STAR","clue":"A distant sphere producing light and heat"},
+      {"answer":"MOON","clue":"A natural satellite"},
+      {"answer":"NEBULA","clue":"A cloud of gas and dust in space"},
+      {"answer":"GALAXY","clue":"A vast collection of stars and matter"},
+      {"answer":"ROCKET","clue":"A vehicle propelled by expanding gases"},
+      {"answer":"METEOR","clue":"A streak of light from space debris"},
+      {"answer":"SATURN","clue":"The ringed planet"},
+      {"answer":"MARS","clue":"The planet often called red"},
+      {"answer":"VENUS","clue":"The bright planet inside Earth's orbit"}
+    ]
+  },
+  {
+    "id": "kitchen",
+    "title": "Kitchen craft",
+    "subtitle": "Tools and ideas used to prepare a meal",
+    "entries": [
+      {"answer":"SPOON","clue":"A utensil with a small rounded bowl"},
+      {"answer":"PLATE","clue":"A flat dish for serving food"},
+      {"answer":"KNIFE","clue":"A cutting tool with a blade"},
+      {"answer":"OVEN","clue":"An enclosed appliance for baking"},
+      {"answer":"WHISK","clue":"A looped tool used for beating ingredients"},
+      {"answer":"PAN","clue":"A shallow metal cooking vessel"},
+      {"answer":"BOWL","clue":"A deep round dish"},
+      {"answer":"KETTLE","clue":"A vessel used to boil water"},
+      {"answer":"APRON","clue":"A protective garment worn while cooking"},
+      {"answer":"RECIPE","clue":"Instructions for preparing a dish"},
+      {"answer":"SPICE","clue":"An aromatic ingredient used for flavour"},
+      {"answer":"LADLE","clue":"A long-handled spoon for serving liquids"}
+    ]
+  },
+  {
+    "id": "music",
+    "title": "Making music",
+    "subtitle": "Sounds, instruments, and musical structure",
+    "entries": [
+      {"answer":"RHYTHM","clue":"The pattern of beats in music"},
+      {"answer":"MELODY","clue":"A sequence of notes forming a tune"},
+      {"answer":"CHORD","clue":"Several notes sounded together"},
+      {"answer":"PIANO","clue":"A keyboard instrument with hammers and strings"},
+      {"answer":"DRUM","clue":"A percussion instrument with a stretched skin"},
+      {"answer":"FLUTE","clue":"A high woodwind played by blowing across a hole"},
+      {"answer":"VIOLIN","clue":"A small bowed string instrument"},
+      {"answer":"TEMPO","clue":"The speed of a musical performance"},
+      {"answer":"NOTE","clue":"A single written or sounded musical pitch"},
+      {"answer":"SCALE","clue":"An ordered series of musical notes"},
+      {"answer":"SONG","clue":"A short musical work with words"},
+      {"answer":"CHOIR","clue":"An organised group of singers"}
+    ]
+  },
+  {
+    "id": "garden",
+    "title": "In the garden",
+    "subtitle": "Flowers, growth, and tending the soil",
+    "entries": [
+      {"answer":"ROSE","clue":"A fragrant flower often bearing thorns"},
+      {"answer":"TULIP","clue":"A spring flower shaped like a cup"},
+      {"answer":"DAISY","clue":"A flower with a yellow centre and ray petals"},
+      {"answer":"SOIL","clue":"The upper earth in which plants grow"},
+      {"answer":"SEED","clue":"A plant embryo in a protective coat"},
+      {"answer":"ROOT","clue":"The plant part that anchors and absorbs water"},
+      {"answer":"STEM","clue":"The main support of a plant"},
+      {"answer":"PETAL","clue":"A colourful segment of a flower"},
+      {"answer":"HERB","clue":"A plant valued for flavour or medicine"},
+      {"answer":"WATER","clue":"The liquid plants need for growth"},
+      {"answer":"BLOOM","clue":"A flower or the act of flowering"},
+      {"answer":"SPADE","clue":"A garden tool for digging"}
+    ]
+  },
+  {
+    "id": "weather",
+    "title": "Changing weather",
+    "subtitle": "Conditions moving through the sky",
+    "entries": [
+      {"answer":"CLOUD","clue":"A visible mass of droplets in the sky"},
+      {"answer":"RAIN","clue":"Water drops falling from clouds"},
+      {"answer":"STORM","clue":"A violent disturbance in the atmosphere"},
+      {"answer":"WIND","clue":"Air moving across the ground"},
+      {"answer":"SNOW","clue":"Ice crystals falling in flakes"},
+      {"answer":"THUNDER","clue":"The sound caused by lightning"},
+      {"answer":"FROST","clue":"A thin deposit of ice crystals"},
+      {"answer":"MIST","clue":"Tiny water droplets suspended near the ground"},
+      {"answer":"HAIL","clue":"Balls of ice falling from a storm cloud"},
+      {"answer":"SUNNY","clue":"Bright with little cloud cover"},
+      {"answer":"BREEZE","clue":"A light and gentle wind"},
+      {"answer":"DRIZZLE","clue":"Very light rain in fine drops"}
+    ]
+  },
+  {
+    "id": "travel",
+    "title": "Ready to travel",
+    "subtitle": "Routes, transport, and life on the move",
+    "entries": [
+      {"answer":"TRAIN","clue":"Rail transport formed from connected carriages"},
+      {"answer":"PLANE","clue":"A powered aircraft with fixed wings"},
+      {"answer":"HOTEL","clue":"A place offering rooms to travellers"},
+      {"answer":"TICKET","clue":"A document granting travel or admission"},
+      {"answer":"MAP","clue":"A drawing showing places and routes"},
+      {"answer":"ROAD","clue":"A prepared route for vehicles"},
+      {"answer":"PORT","clue":"A harbour where ships load and unload"},
+      {"answer":"CABIN","clue":"A small private room on a ship or aircraft"},
+      {"answer":"PASSPORT","clue":"An official document used for international travel"},
+      {"answer":"JOURNEY","clue":"The act of travelling from one place to another"},
+      {"answer":"BAGGAGE","clue":"Bags carried on a journey"},
+      {"answer":"COMPASS","clue":"An instrument that points north"}
+    ]
+  },
+  {
+    "id": "art",
+    "title": "Artist studio",
+    "subtitle": "Materials and choices behind visual art",
+    "entries": [
+      {"answer":"CANVAS","clue":"A strong cloth used as a painting surface"},
+      {"answer":"PAINT","clue":"Coloured liquid applied to a surface"},
+      {"answer":"BRUSH","clue":"A tool with bristles for applying paint"},
+      {"answer":"COLOR","clue":"A visual quality such as red or blue"},
+      {"answer":"FRAME","clue":"A border that supports and displays art"},
+      {"answer":"SKETCH","clue":"A quick or unfinished drawing"},
+      {"answer":"MURAL","clue":"A large painting made directly on a wall"},
+      {"answer":"INK","clue":"A coloured fluid used for writing or drawing"},
+      {"answer":"EASEL","clue":"A stand that holds an artist's work"},
+      {"answer":"PASTEL","clue":"A soft coloured drawing stick"},
+      {"answer":"SHAPE","clue":"The outline or form of an object"},
+      {"answer":"SHADE","clue":"A darker variation of a colour"}
+    ]
+  },
+  {
+    "id": "science",
+    "title": "Science lab",
+    "subtitle": "Ideas and objects used to explain nature",
+    "entries": [
+      {"answer":"ATOM","clue":"A basic unit of a chemical element"},
+      {"answer":"CELL","clue":"The smallest structural unit of living things"},
+      {"answer":"FORCE","clue":"A push or pull that changes motion"},
+      {"answer":"ENERGY","clue":"The capacity to do work"},
+      {"answer":"LIGHT","clue":"Radiation visible to the human eye"},
+      {"answer":"MATTER","clue":"Anything that has mass and occupies space"},
+      {"answer":"LAB","clue":"A room equipped for scientific work"},
+      {"answer":"THEORY","clue":"A tested explanation for observed facts"},
+      {"answer":"MAGNET","clue":"An object producing an attracting field"},
+      {"answer":"CIRCUIT","clue":"A complete path for electric current"},
+      {"answer":"ELEMENT","clue":"A pure substance defined by its atoms"},
+      {"answer":"GRAVITY","clue":"The attraction between masses"}
+    ]
+  },
+  {
+    "id": "sports",
+    "title": "Game day",
+    "subtitle": "Competition, teamwork, and movement",
+    "entries": [
+      {"answer":"BALL","clue":"A round object used in many games"},
+      {"answer":"GOAL","clue":"A scoring target or desired result"},
+      {"answer":"TEAM","clue":"A group competing together"},
+      {"answer":"RACE","clue":"A contest to finish first"},
+      {"answer":"COURT","clue":"A marked area used for games such as tennis"},
+      {"answer":"TRACK","clue":"A prepared course for running"},
+      {"answer":"SCORE","clue":"The points recorded in a contest"},
+      {"answer":"COACH","clue":"A person who trains a team or athlete"},
+      {"answer":"MATCH","clue":"A contest between opponents"},
+      {"answer":"MEDAL","clue":"An award worn or displayed after a victory"},
+      {"answer":"SPRINT","clue":"A short race at top speed"},
+      {"answer":"FIELD","clue":"An outdoor playing area"}
+    ]
+  },
+  {
+    "id": "city",
+    "title": "Around the city",
+    "subtitle": "Places and routes in an urban centre",
+    "entries": [
+      {"answer":"STREET","clue":"A public road lined with buildings"},
+      {"answer":"BRIDGE","clue":"A structure carrying a route over an obstacle"},
+      {"answer":"PARK","clue":"Public green space for recreation"},
+      {"answer":"PLAZA","clue":"An open public square"},
+      {"answer":"TOWER","clue":"A tall narrow building or structure"},
+      {"answer":"METRO","clue":"An urban underground railway"},
+      {"answer":"MARKET","clue":"A place where goods are bought and sold"},
+      {"answer":"LIBRARY","clue":"A public collection of books and information"},
+      {"answer":"CAFE","clue":"A small restaurant serving drinks and light meals"},
+      {"answer":"SCHOOL","clue":"A place organised for teaching"},
+      {"answer":"MUSEUM","clue":"A building displaying objects of interest"},
+      {"answer":"HARBOR","clue":"A sheltered place where vessels can anchor"}
+    ]
+  }
+]

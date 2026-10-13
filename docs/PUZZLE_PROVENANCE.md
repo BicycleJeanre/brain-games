@@ -1,8 +1,17 @@
 # Puzzle provenance
 
-## Bundled catalogue 2026.10.1
+## Bundled catalogue 2026.10.2
 
-All four initial puzzles are WTrack originals created for the repository. They establish the catalogue schema and test the two players; they are not sourced from commercial or newspaper puzzle archives.
+All 100 bundled puzzles are WTrack originals created for this repository. They are not sourced from commercial or newspaper puzzle archives. The catalogue contains 50 word searches and 50 crosswords across four friendly difficulty tiers.
+
+| Difficulty | Puzzle count |
+| --- | ---: |
+| Easy | 26 |
+| Medium | 26 |
+| Hard | 24 |
+| Diabolical | 24 |
+
+The four initial puzzles remain unchanged. The other 96 puzzles are built deterministically from 12 WTrack-authored theme banks—forest, ocean, space, kitchen, music, garden, weather, travel, art, science, sports, and city—with one word search and one crossword at each difficulty.
 
 | Puzzle | Type | Words/clues | Layout | Licence |
 | --- | --- | --- | --- | --- |
@@ -11,7 +20,14 @@ All four initial puzzles are WTrack originals created for the repository. They e
 | Puzzle desk | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
 | Along the coast | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
 
-The generated grids are committed as static catalogue data so offline play is deterministic and does not depend on package behavior changing at runtime.
+The generated grids are committed as static catalogue data so offline play is deterministic and does not depend on package behavior changing at runtime. `scripts/generate-catalogue.mjs` rebuilds the catalogue from `src/data/catalogue-themes.json`; `scripts/check-catalogue.mjs` verifies identifiers, provenance, paths, crossword coverage, type balance, and difficulty distribution.
+
+```sh
+npm run catalogue:generate
+npm run catalogue:check
+```
+
+Generated entries record the WTrack deterministic catalogue generator, catalogue version, WTrack authorship, repository source, AGPL-3.0-or-later licence, and review status. Every crossword answer is connected through a crossing and every open crossword cell belongs to a declared clue path.
 
 ## Required metadata for future puzzles
 

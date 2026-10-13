@@ -3,13 +3,15 @@ import { createBackup, parseBackup } from "./backup.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { crosswords, findWord, puzzleById, puzzles, wordPath, wordSearches } from "./puzzles.ts";
 import { Store } from "./store.ts";
-import type { CrosswordPuzzle, GridPoint, Preferences, Puzzle, PuzzleProgress, WordSearchPuzzle } from "./types.ts";
+import type { CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, WordSearchPuzzle } from "./types.ts";
 
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const store = new Store();
 let view: View = "home";
 let activePuzzle: Puzzle | null = null;
+let libraryType: "all" | PuzzleKind = "all";
+let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
 let dragStart: GridPoint | null = null;
 let suppressWordClick = false;
@@ -72,12 +74,18 @@ function home() {
   </section>`;
 }
 
-function library(filter = "all") {
-  const visible = filter === "all" ? puzzles : puzzles.filter((puzzle) => puzzle.kind === filter);
-  return `<div class="page-heading"><div><span class="eyebrow">Offline catalogue</span><h1>Puzzles</h1></div><span class="catalogue-badge">Catalogue 2026.10.1</span></div>
-    <div class="filter-tabs" role="group" aria-label="Puzzle type">
-      ${[["all","All"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${filter === id}">${label}</button>`).join("")}
+function library() {
+  const visible = puzzles.filter((puzzle) => (libraryType === "all" || puzzle.kind === libraryType) && (libraryDifficulty === "all" || puzzle.difficulty === libraryDifficulty));
+  return `<div class="page-heading"><div><span class="eyebrow">Offline public catalogue</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · Catalogue 2026.10.2</span></div>
+    <div class="filter-row">
+      <div class="filter-tabs" role="group" aria-label="Puzzle type">
+        ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
+      </div>
+      <div class="filter-tabs difficulty-tabs" role="group" aria-label="Difficulty">
+        ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
+      </div>
     </div>
+    <p class="result-count">Showing ${visible.length} of ${puzzles.length} puzzles</p>
     <div class="puzzle-list">${visible.map(puzzleCard).join("")}</div>`;
 }
 
@@ -176,9 +184,9 @@ function help() {
     </div>`;
 }
 
-function render(libraryFilter = "all") {
+function render() {
   applyTheme();
-  const content = view === "home" ? home() : view === "library" ? library(libraryFilter) : view === "create" ? createLab() : view === "settings" ? settings() : view === "help" ? help() : player();
+  const content = view === "home" ? home() : view === "library" ? library() : view === "create" ? createLab() : view === "settings" ? settings() : view === "help" ? help() : player();
   app.innerHTML = chrome(content);
   bind();
 }
@@ -238,8 +246,9 @@ function downloadBackup() {
 function bind() {
   app.querySelectorAll<HTMLElement>("[data-nav]").forEach((element) => element.addEventListener("click", () => { view = element.dataset.nav as View; activePuzzle = view === "player" ? activePuzzle : null; message = ""; render(); }));
   app.querySelectorAll<HTMLElement>("[data-open]").forEach((element) => element.addEventListener("click", () => void openPuzzle(element.dataset.open!)));
-  app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { view = "library"; render(element.dataset.filter); }));
-  app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => render(element.dataset.libraryFilter)));
+  app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as PuzzleKind; view = "library"; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as "all" | PuzzleKind; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-difficulty-filter]").forEach((element) => element.addEventListener("click", () => { libraryDifficulty = element.dataset.difficultyFilter as "all" | Difficulty; render(); }));
   app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => { const puzzle = puzzleById(element.dataset.reset!); if (puzzle && confirm("Start this puzzle over?")) { await store.reset(puzzle); selectionStart = null; render(); void cloud.upload(); } }));
 
   app.querySelectorAll<HTMLButtonElement>("[data-word-cell]").forEach((cell) => {
