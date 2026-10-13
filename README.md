@@ -55,7 +55,7 @@ rebuilding the committed catalogue, then run `npm run catalogue:check` before re
 
 ## Firebase setup
 
-Copy `.env.example` to `.env.local` and add the public Firebase web configuration. Enable Email/Password Authentication and deploy `firestore.rules` and `firestore.indexes.json`. These values identify a Firebase app; they are not server credentials. Never commit service-account credentials. See the [Firebase setup runbook](docs/FIREBASE_SETUP.md) for production provisioning and GitHub Pages configuration.
+Copy `.env.example` to `.env.local` and add the public Firebase web configuration. Enable Email/Password Authentication and deploy `firestore.rules` and `firestore.indexes.json`. These values identify a Firebase app; they are not server credentials. Never commit service-account credentials. Production uses an independent no-cost Spark project with no billing account or Bicycle association; see the [Firebase setup runbook](docs/FIREBASE_SETUP.md) for its guardrails and GitHub Pages configuration.
 
 Cloud state is stored only at `users/{uid}/state/app`. Rules restrict reads and writes to the authenticated owner. Local progress remains authoritative during offline play.
 

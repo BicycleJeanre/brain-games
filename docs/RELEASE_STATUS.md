@@ -37,7 +37,7 @@ Last updated: 2026-10-13
 - Deterministic catalogue generation plus integrity and provenance validation.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
 - GitHub Pages deployment now requires and injects the four public Firebase web identifiers.
-- Production Firebase activation is pending explicit approval to create the isolated cloud project, enable Authentication and Firestore, deploy rules, and add the public identifiers as repository secrets.
+- Production Firebase activation is pending explicit approval to create the independent `wtrack-9d4c7` project on the no-cost Spark plan, with no Bicycle association or billing account, then enable Authentication and Firestore, deploy rules, and add the public identifiers as repository secrets.
 
 ## Validation
 
@@ -53,7 +53,7 @@ Last updated: 2026-10-13
 
 ## Next release-one work
 
-1. Provision the isolated production Firebase project after owner approval and add its public web configuration to GitHub Actions.
+1. Provision the independent Spark-plan Firebase project after explicit owner approval, verify that billing is not linked, and add its public web configuration to GitHub Actions.
 2. Open and validate the release pull request, then merge and deploy GitHub Pages.
 3. Verify production account creation and cross-browser progress restoration.
 4. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
