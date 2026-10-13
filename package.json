@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "test": "playwright test",
     "test:unit": "npm run vendor:build && node --experimental-strip-types --test tests/*.test.ts",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-strack \"node --test tests/rules.test.mjs\"",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-strack \"node --experimental-strip-types --test tests/rules.test.mjs\"",
     "test:cloud": "firebase emulators:exec --only auth,firestore --project demo-strack \"playwright test --config playwright.cloud.config.ts\"",
     "test:base-path": "BASE_PATH=/strack/ npm run build && node scripts/check-base-path.mjs",
     "catalogue:build": "node scripts/build-catalogue.mjs",

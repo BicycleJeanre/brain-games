@@ -86,7 +86,11 @@ test("deleted puzzles stay deleted when a stale cloud game arrives", async () =>
 });
 
 test("cloud encoding preserves multiple colours and line annotations without nested arrays", async () => {
-  const { decodeCloudGame, encodeCloudGame } = await import("../src/cloud.ts");
+  const { decodeCloudGame, encodeCloudGame, encodeCloudSettings } = await import("../src/cloud.ts");
+  const { emptyData } = await import("../src/store.ts");
+  const gameWithoutHints = createGame(puzzle, 699);
+  const encodedWithoutHints = encodeCloudGame(gameWithoutHints);
+  assert.equal("hintPath" in encodedWithoutHints, false, "absent hint paths are omitted instead of sent as undefined");
   const game = createGame(puzzle, 700);
   game.challenge = { cadence: "daily", periodKey: "2026-10-10" };
   game.colours[0] = ["cyan", "amber", "indigo"];
@@ -106,4 +110,12 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   assert.deepEqual(decoded?.lines, [{ from: 0, to: 10, colour: "rose" }]);
   assert.deepEqual(decoded?.challenge, { cadence: "daily", periodKey: "2026-10-10" });
   assert.deepEqual(decoded?.hintPath, game.hintPath, "cached logical paths sync with the puzzle session");
+  game.hintPath.engine = "x".repeat(200_001);
+  assert.equal("hintPath" in encodeCloudGame(game), false, "oversized regenerable hint paths cannot block puzzle progress sync");
+
+  const settingsData = emptyData();
+  settingsData.settingsUpdatedAt = 702;
+  const settings = encodeCloudSettings(settingsData);
+  assert.deepEqual(settings.preferences, settingsData.preferences, "the rules test can use the exact expanded settings payload");
+  assert.equal(settings.updatedAt, 702);
 });

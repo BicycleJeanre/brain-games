@@ -10,7 +10,7 @@ service cloud.firestore {
     function validGame(id) {
       let d = request.resource.data;
       return d.keys().hasAll(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId'])
-        && d.keys().hasOnly(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId', 'challenge'])
+        && d.keys().hasOnly(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId', 'challenge'])
         && d.version == 1
         && d.id == id && validId(id)
         && d.puzzle is map && validId(d.puzzle.id)
@@ -28,6 +28,7 @@ service cloud.firestore {
         && d.history is list && d.history.size() <= 80
         && d.future is list && d.future.size() <= 80
         && (!('hintHistory' in d) || (d.hintHistory is list && d.hintHistory.size() <= 40))
+        && (!('hintPath' in d) || (d.hintPath is string && d.hintPath.size() <= 200000))
         && d.elapsed is int && d.elapsed >= 0 && d.elapsed <= 315576000
         && d.startedAt is number && d.startedAt > 0
         && d.updatedAt is number && d.updatedAt >= d.startedAt
@@ -84,14 +85,27 @@ service cloud.firestore {
         && d.version == 1
         && d.preferences is map
         && d.preferences.keys().hasAll(['theme', 'showTimer', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes'])
-        && d.preferences.keys().hasOnly(['theme', 'showTimer', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes'])
+        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
         && d.preferences.theme in ['system', 'light', 'dark']
+        && (!('noteStyle' in d.preferences) || d.preferences.noteStyle in ['simple', 'advanced'])
         && d.preferences.showTimer is bool
+        && (!('showColours' in d.preferences) || d.preferences.showColours is bool)
+        && (!('showLines' in d.preferences) || d.preferences.showLines is bool)
+        && (!('showValueSelection' in d.preferences) || d.preferences.showValueSelection is bool)
+        && (!('showCandidateCalculation' in d.preferences) || d.preferences.showCandidateCalculation is bool)
+        && (!('showControlHelp' in d.preferences) || d.preferences.showControlHelp is bool)
         && d.preferences.autoCandidates is bool
         && d.preferences.cleanCandidates is bool
         && d.preferences.highlightPeers is bool
         && d.preferences.highlightMatches is bool
         && d.preferences.showMistakes is bool
+        && (!('noteSize' in d.preferences) || d.preferences.noteSize in ['small', 'medium', 'large'])
+        && (!('menuSize' in d.preferences) || d.preferences.menuSize in ['small', 'medium', 'large'])
+        && (!('digitSize' in d.preferences) || d.preferences.digitSize in ['small', 'medium', 'large'])
+        && (!('noteColour' in d.preferences) || d.preferences.noteColour in ['classic', 'mono', 'cyan', 'amber'])
+        && (!('menuColour' in d.preferences) || d.preferences.menuColour in ['standard', 'bright', 'cyan', 'amber'])
+        && (!('digitColour' in d.preferences) || d.preferences.digitColour in ['cyan', 'mono', 'amber'])
+        && (!('highlightColour' in d.preferences) || d.preferences.highlightColour in ['cyan', 'amber', 'violet', 'green'])
         && (!('deletedGames' in d) || (d.deletedGames is map && d.deletedGames.size() <= 500))
         && (!('trainingProgress' in d) || validTrainingProgress(d.trainingProgress))
         && (d.activeGameId == null || validId(d.activeGameId))
