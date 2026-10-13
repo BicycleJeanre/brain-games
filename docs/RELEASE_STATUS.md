@@ -7,7 +7,7 @@ Last updated: 2026-10-13
 - Production branch: `main` at `19dc61f`
 - Active release branch: `codex/catalogue-firestore`
 - Active pull request: [#3 — Expand public catalogue and complete Firestore release path](https://github.com/BicycleJeanre/wtrack/pull/3)
-- Active release state: implementation and CI complete; cloud provisioning pending
+- Active release state: implementation, CI, and independent Spark backend complete; merge and Pages deployment pending
 
 ## Production deployment
 
@@ -37,7 +37,10 @@ Last updated: 2026-10-13
 - Deterministic catalogue generation plus integrity and provenance validation.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
 - GitHub Pages deployment now requires and injects the four public Firebase web identifiers.
-- Production Firebase activation is pending explicit approval to create the independent `wtrack-9d4c7` project on the no-cost Spark plan, with no Bicycle association or billing account, then enable Authentication and Firestore, deploy rules, and add the public identifiers as repository secrets.
+- Production Firebase project: `wtrack-9d4c7` (independent Spark plan, `$0/month`, no billing account linked).
+- Firestore: Standard default database in `nam5`, `freeTier: true`, deletion protection enabled; owner-only rules and indexes deployed.
+- Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized; no phone provider or paid service enabled.
+- Firebase Web app: `1:283171656458:web:d26cce81a969ee907e60f3`; all four public identifiers are present as GitHub Actions secrets.
 
 ## Validation
 
@@ -53,8 +56,7 @@ Last updated: 2026-10-13
 
 ## Next release-one work
 
-1. Provision the independent Spark-plan Firebase project after explicit owner approval, verify that billing is not linked, and add its public web configuration to GitHub Actions.
-2. Open and validate the release pull request, then merge and deploy GitHub Pages.
-3. Verify production account creation and cross-browser progress restoration.
-4. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-5. Collect first-release feedback before expanding or retiring any production surface.
+1. Merge the validated release pull request and deploy GitHub Pages.
+2. Verify production account creation and cross-browser progress restoration.
+3. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
+4. Collect first-release feedback before expanding or retiring any production surface.
