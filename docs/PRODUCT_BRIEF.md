@@ -29,11 +29,13 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Pointer drag, tap endpoint, and keyboard selection modes.
 - Persistent found-word highlighting and a textual Found state.
 - Optional timer, pause, reset, and completion summary.
+- Offline hints identify a useful cell on an unfinished word without completing it.
 
 ### Crossword player
 
 - Across/down clue lists, conventional numbering, active clue highlighting, and crossing-aware navigation.
 - Keyboard entry, Backspace behavior, arrow navigation, touch input, optional correctness marking, pause, reset, and completion summary.
+- Offline hints reveal one unresolved letter in the active clue, then fall back to the rest of the grid.
 - Imports for licensed `.puz`, iPUZ, JPZ, and XD puzzles where the parser can preserve required metadata.
 
 ### Create and import
@@ -54,6 +56,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 - Vite + strict TypeScript, static GitHub Pages build at `/wtrack/`.
 - IndexedDB through `idb`; versioned service-worker app-shell and catalogue cache.
+- Deterministic hint selection through the bundled MIT-licensed `pure-rand` library; no live hint API.
 - Firebase modular Web SDK with persistent multi-tab Firestore cache.
 - Deterministic Node unit tests and Chromium/WebKit Playwright coverage.
 - Manual production deployment workflow after checks pass.

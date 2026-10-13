@@ -1,6 +1,7 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
+import { chooseCrosswordHint, chooseWordSearchHint } from "./hints.ts";
 import { crosswords, findWord, puzzleById, puzzles, wordPath, wordSearches } from "./puzzles.ts";
 import { Store } from "./store.ts";
 import type { CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, WordSearchPuzzle } from "./types.ts";
@@ -17,6 +18,7 @@ let dragStart: GridPoint | null = null;
 let suppressWordClick = false;
 let selectedClue = "";
 let message = "";
+let playerMessage = "";
 let settingsMessage = "";
 let settingsError = false;
 let renderToken = 0;
@@ -91,15 +93,21 @@ function library() {
 
 function wordSearchPlayer(puzzle: WordSearchPuzzle, progress: PuzzleProgress) {
   const foundCells = new Set(puzzle.words.filter((word) => progress.foundWordIds.includes(word.id)).flatMap((word) => word.path.map(({ x, y }) => `${x}:${y}`)));
+  const hintedCells = new Set(progress.hintedCells);
   return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">Word search · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
       <div class="board-column">
         <div class="word-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} word search">
-          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="word-cell ${foundCells.has(`${x}:${y}`) ? "found" : ""} ${selectionStart?.x === x && selectionStart?.y === y ? "selected" : ""}" data-word-cell="${x},${y}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}">${letter}</button>`)).join("")}
+          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => {
+            const hinted = hintedCells.has(y * puzzle.columns + x);
+            return `<button role="gridcell" class="word-cell ${foundCells.has(`${x}:${y}`) ? "found" : ""} ${hinted ? "hinted" : ""} ${selectionStart?.x === x && selectionStart?.y === y ? "selected" : ""}" data-word-cell="${x},${y}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}${hinted ? ", hint highlighted" : ""}">${letter}</button>`;
+          })).join("")}
         </div>
         <p class="board-note">Drag across a word, or select its first and last letters. With a keyboard, use the arrow keys to move and Enter or Space to select.</p>
       </div>
       <aside class="controls card"><div class="control-heading"><span class="eyebrow">Find these words</span><strong>${progress.foundWordIds.length} / ${puzzle.words.length}</strong></div>
+        <div class="hint-actions"><button class="secondary" data-hint>Give me a hint</button><span>${progress.hintedCells.length} used</span></div>
+        ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <ul class="word-list">${puzzle.words.map((word) => `<li class="${progress.foundWordIds.includes(word.id) ? "found" : ""}"><span>${escapeHtml(word.label)}</span><span>${progress.foundWordIds.includes(word.id) ? "Found" : `${word.label.length} letters`}</span></li>`).join("")}</ul>
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
@@ -123,10 +131,13 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
           const index = y * puzzle.columns + x;
           const value = progress.entries[index] ?? "";
           const wrong = store.data.preferences.checkAsYouType && value && value !== solution;
-          return `<label class="crossword-cell ${selectedCells.has(`${y}:${x}`) ? "active" : ""} ${wrong ? "wrong" : ""}">${numberAt.has(`${y}:${x}`) ? `<span>${numberAt.get(`${y}:${x}`)}</span>` : ""}<input maxlength="1" autocomplete="off" autocapitalize="characters" data-crossword-cell="${index}" data-row="${y}" data-column="${x}" value="${escapeHtml(value)}" aria-label="Row ${y + 1}, column ${x + 1}" /></label>`;
+          const hinted = progress.hintedCells.includes(index);
+          return `<label class="crossword-cell ${selectedCells.has(`${y}:${x}`) ? "active" : ""} ${wrong ? "wrong" : ""} ${hinted ? "hinted" : ""}">${numberAt.has(`${y}:${x}`) ? `<span>${numberAt.get(`${y}:${x}`)}</span>` : ""}<input maxlength="1" autocomplete="off" autocapitalize="characters" data-crossword-cell="${index}" data-row="${y}" data-column="${x}" value="${escapeHtml(value)}" aria-label="Row ${y + 1}, column ${x + 1}${hinted ? ", letter revealed by hint" : ""}" /></label>`;
         })).join("")}
       </div><p class="board-note">Type a letter to move through the active clue. Use arrow keys to navigate the grid.</p></div>
       <aside class="clue-panel card">
+        <div class="hint-actions"><button class="secondary" data-hint>Reveal a letter</button><span>${progress.hintedCells.length} used</span></div>
+        ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         ${(["across","down"] as const).map((direction) => `<section><span class="eyebrow">${direction}</span><ol>${puzzle.clues.filter((clue) => clue.direction === direction).map((clue) => `<li><button class="clue ${selectedClue === clueKey(clue.number, clue.direction) ? "active" : ""}" data-clue="${clueKey(clue.number, clue.direction)}"><b>${clue.number}</b><span>${escapeHtml(clue.clue)}</span></button></li>`).join("")}</ol></section>`).join("")}
         ${progress.completedAt ? `<div class="complete-banner"><strong>Puzzle complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
@@ -179,6 +190,7 @@ function help() {
     <div class="help-grid">
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
+      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter in the active clue. Hints run locally, work offline, and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell and bundled catalogue are cached for offline use. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Puzzle provenance</h2><p>Every bundled puzzle names its source, generator version, and licence. Imported or generated previews are not published automatically.</p></article>
     </div>`;
@@ -196,6 +208,7 @@ async function openPuzzle(id: string) {
   if (!puzzle) return;
   activePuzzle = puzzle;
   selectionStart = null;
+  playerMessage = "";
   selectedClue = puzzle.kind === "crossword" && puzzle.clues[0] ? clueKey(puzzle.clues[0].number, puzzle.clues[0].direction) : "";
   await store.start(puzzle);
   view = "player";
@@ -249,7 +262,35 @@ function bind() {
   app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as PuzzleKind; view = "library"; render(); }));
   app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as "all" | PuzzleKind; render(); }));
   app.querySelectorAll<HTMLElement>("[data-difficulty-filter]").forEach((element) => element.addEventListener("click", () => { libraryDifficulty = element.dataset.difficultyFilter as "all" | Difficulty; render(); }));
-  app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => { const puzzle = puzzleById(element.dataset.reset!); if (puzzle && confirm("Start this puzzle over?")) { await store.reset(puzzle); selectionStart = null; render(); void cloud.upload(); } }));
+  app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => { const puzzle = puzzleById(element.dataset.reset!); if (puzzle && confirm("Start this puzzle over?")) { await store.reset(puzzle); selectionStart = null; playerMessage = ""; render(); void cloud.upload(); } }));
+  app.querySelector<HTMLButtonElement>("[data-hint]")?.addEventListener("click", async () => {
+    if (!activePuzzle) return;
+    const progress = progressFor(activePuzzle);
+    if (!progress) return;
+    if (activePuzzle.kind === "word-search") {
+      const hint = chooseWordSearchHint(activePuzzle, progress);
+      if (!hint) {
+        playerMessage = "No unused hints remain for this puzzle.";
+      } else {
+        await store.update(activePuzzle, (current) => { current.hintedCells.push(hint.cellIndex); });
+        playerMessage = `A remaining word passes through the highlighted cell at row ${hint.row + 1}, column ${hint.column + 1}.`;
+      }
+    } else {
+      const activeClue = activePuzzle.clues.find((clue) => clueKey(clue.number, clue.direction) === selectedClue);
+      const hint = chooseCrosswordHint(activePuzzle, progress, activeClue);
+      if (!hint) {
+        playerMessage = "No unused letters remain to reveal.";
+      } else {
+        await store.update(activePuzzle, (current) => {
+          current.entries[hint.cellIndex] = hint.letter;
+          current.hintedCells.push(hint.cellIndex);
+        });
+        playerMessage = `Revealed ${hint.letter} at row ${hint.row + 1}, column ${hint.column + 1}.`;
+      }
+    }
+    render();
+    void cloud.upload();
+  });
 
   app.querySelectorAll<HTMLButtonElement>("[data-word-cell]").forEach((cell) => {
     cell.addEventListener("pointerdown", (event) => {

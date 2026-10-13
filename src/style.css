@@ -75,6 +75,8 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .word-cell { min-width:0; min-height:0; padding:0; border:1px solid color-mix(in srgb,var(--border) 60%,transparent); background:var(--panel-soft); color:var(--text); font-size:clamp(12px,2.3vw,25px); font-weight:750; }
 .word-cell:hover,.word-cell.selected { background:var(--accent-soft); color:var(--accent); }
 .word-cell.found { background:color-mix(in srgb,var(--success) 26%,var(--panel)); color:var(--text); box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--success) 65%,transparent); }
+.word-cell.hinted { position:relative; box-shadow:inset 0 0 0 3px var(--accent); }
+.word-cell.hinted:after { content:"?"; position:absolute; right:3px; top:1px; color:var(--accent); font-size:9px; font-weight:950; }
 .board-note,.privacy-note { margin:10px 0 0; color:var(--faint); font-size:10px; }
 .controls,.clue-panel { display:grid; gap:14px; padding:18px; }
 .control-heading { display:flex; align-items:center; justify-content:space-between; }
@@ -83,11 +85,16 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .word-list li span:last-child { color:var(--faint); font-size:9px; }
 .word-list li.found { color:var(--success); text-decoration:line-through; }
 .complete-banner { display:flex; justify-content:space-between; padding:13px; border:1px solid color-mix(in srgb,var(--success) 50%,var(--border)); border-radius:9px; background:color-mix(in srgb,var(--success) 10%,var(--panel)); color:var(--success); font-size:12px; }
+.hint-actions { display:flex; align-items:center; gap:10px; }
+.hint-actions .secondary { flex:1; }
+.hint-actions span { color:var(--faint); font-size:10px; font-weight:800; white-space:nowrap; }
+.hint-message { margin:0; padding:10px 12px; border-left:3px solid var(--accent); background:var(--accent-soft); color:var(--text); font-size:11px; }
 .crossword-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); grid-template-rows:repeat(var(--rows),1fr); width:min(100%,720px); aspect-ratio:var(--columns)/var(--rows); overflow:hidden; border:3px solid var(--border-strong); border-radius:8px; background:#0c1215; box-shadow:var(--shadow); }
 .crossword-block { background:#0c1215; }
 .crossword-cell { position:relative; min-width:0; min-height:0; border:1px solid #58686d; background:#edf5f5; }
 .crossword-cell.active { background:#d7f4f7; }
 .crossword-cell.wrong { background:#ffdce1; }
+.crossword-cell.hinted { box-shadow:inset 0 0 0 3px #008ba0; }
 .crossword-cell > span { position:absolute; z-index:1; top:2px; left:3px; color:#26373c; font-size:clamp(7px,1vw,10px); font-weight:850; pointer-events:none; }
 .crossword-cell input { width:100%; height:100%; margin:0; padding:12% 0 0; border:0; border-radius:0; outline:0; background:transparent; color:#122126; font-size:clamp(16px,3vw,34px); font-weight:750; text-align:center; text-transform:uppercase; }
 .clue-panel { max-height:min(720px,70dvh); overflow:auto; }

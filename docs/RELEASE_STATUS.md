@@ -4,7 +4,7 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Production branch: `main` at `4896167`
+- Production branch: `main` at `d4f5bd6`
 - Source pull request: [#3 — Expand public catalogue and complete Firestore release path](https://github.com/BicycleJeanre/wtrack/pull/3)
 - Active release state: live and production-verified
 
@@ -44,10 +44,10 @@ Last updated: 2026-10-13
 
 ## Validation
 
-- `npm run test:unit`: 9 passing.
+- `npm run test:unit`: 12 passing, including deterministic word-search and crossword hint selection.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 11 passing across desktop and mobile Chromium, with one intentional desktop skip for a mobile-only assertion.
+- `npm test`: 13 passing across desktop and mobile Chromium, with one intentional desktop skip for a mobile-only assertion. The hint journey covers persistent word-search markers and crossword letter reveals.
 - `npm run catalogue:check`: passing for 100 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
@@ -59,4 +59,4 @@ Last updated: 2026-10-13
 ## Next release-one work
 
 1. Add tombstone compaction and a non-destructive backup/cloud conflict flow.
-2. Collect first-release feedback before expanding or retiring any production surface.
+2. Release the local hint system from `codex/hint-system`, then collect first-release feedback before expanding or retiring any production surface.

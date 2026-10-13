@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("home and catalogue expose both puzzle types", async ({ page }) => {
   await page.goto("./");
   await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
-  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await expect(page.getByText("Word craft")).toBeVisible();
   await expect(page.getByText("Puzzle desk")).toBeVisible();
   await expect(page.locator(".catalogue-badge")).toContainText("100 puzzles");
@@ -35,6 +35,25 @@ test("word search supports pointer drag and keyboard navigation", async ({ page 
   await start.focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.locator('[data-word-cell="3,0"]')).toBeFocused();
+});
+
+test("hints persist for word searches and reveal crossword letters", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await page.getByRole("button", { name: "Give me a hint" }).click();
+  await expect(page.getByRole("status")).toContainText("highlighted cell");
+  await expect(page.locator(".word-cell.hinted")).toHaveCount(1);
+  await page.reload();
+  await page.getByRole("button", { name: "Puzzles" }).click();
+  await page.locator('[data-open="ws-word-craft-001"]').click();
+  await expect(page.locator(".word-cell.hinted")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="cw-puzzle-desk-001"]').click();
+  await page.getByRole("button", { name: "Reveal a letter" }).click();
+  await expect(page.getByRole("status")).toContainText("Revealed");
+  await expect(page.locator(".crossword-cell.hinted input")).toHaveValue(/[A-Z]/);
 });
 
 test("settings restore a WTrack JSON backup", async ({ page }) => {
