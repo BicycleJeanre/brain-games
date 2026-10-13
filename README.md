@@ -69,7 +69,7 @@ When `firestore.rules` changes, deploy it separately with `npx firebase deploy -
 
 ## Local data and privacy
 
-STrack always stores preferences, training progress, active boards, elapsed time, notation, colours, undo history, and completions in IndexedDB first. Signed-in users also synchronize that state into private Firestore documents. Imports merge only missing game IDs and never replace an existing game. Browser storage can be cleared or evicted; a downloaded JSON export remains the independent backup and the only backup for device-only play.
+STrack always stores preferences, training progress, active boards, elapsed time, notation, colours, undo history, and completions in IndexedDB first. Signed-in users also synchronize that state into private Firestore documents. The current board and completion are always preserved; if a heavily annotated puzzle would exceed Firestore's document limit, only regenerable hint data and the oldest cloud undo/redo entries are omitted while the full local session remains unchanged. Imports merge only missing game IDs and never replace an existing game. Browser storage can be cleared or evicted; a downloaded JSON export remains the independent backup and the only backup for device-only play.
 
 Share links contain the 81-character givens in the URL and do not upload a puzzle. Imported puzzles are solved and validated locally, labelled `Unrated`, and never assigned a fabricated SE value.
 

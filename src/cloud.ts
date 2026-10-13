@@ -82,6 +82,9 @@ type CloudGame = Omit<Game, "corner" | "centre" | "colours" | "eliminated" | "hi
 };
 
 const MAX_SYNCED_HINT_PATH_LENGTH = 200_000;
+export const MAX_SYNCED_GAME_BYTES = 700_000;
+
+const encodedByteLength = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
 
 const encodeMarks = (marks: number[][]) => marks.map((digits) => [...digits].sort().join(""));
 const decodeMarks = (marks: string[]) => marks.map((digits) => [...digits].map(Number).filter((digit) => digit >= 1 && digit <= 9));
@@ -106,7 +109,7 @@ function decodeSnapshot(value: string): BoardSnapshot | null {
 export function encodeCloudGame(game: Game): CloudGame {
   const hintPath = game.hintPath ? JSON.stringify(game.hintPath) : "";
   const { hintPath: _hintPath, ...cloudGame } = game;
-  return {
+  const encoded: CloudGame = {
     ...cloudGame,
     version: 1,
     corner: encodeMarks(game.corner),
@@ -118,6 +121,20 @@ export function encodeCloudGame(game: Game): CloudGame {
     hintHistory: game.hintHistory.slice(-40).map((hint) => JSON.stringify(hint)),
     ...(hintPath && hintPath.length <= MAX_SYNCED_HINT_PATH_LENGTH ? { hintPath } : {}),
   };
+
+  // Firestore rejects documents above its per-document limit. A heavily
+  // annotated board can make 80 serialized undo snapshots larger than the
+  // current board itself. Keep the authoritative state, and shed regenerable
+  // or oldest history only from the cloud representation until it is safe.
+  if (encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) delete encoded.hintPath;
+  while (encoded.hintHistory.length && encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) encoded.hintHistory.shift();
+  while ((encoded.history.length || encoded.future.length) && encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) {
+    const historyBytes = encoded.history[0]?.length || 0;
+    const futureBytes = encoded.future[0]?.length || 0;
+    if (historyBytes >= futureBytes) encoded.history.shift();
+    else encoded.future.shift();
+  }
+  return encoded;
 }
 
 export function decodeCloudGame(value: unknown): Game | null {
@@ -276,6 +293,8 @@ export class CloudSync {
     console.error("STrack cloud sync failed", cause);
     this.error = code.includes("permission-denied")
       ? "Cloud permissions rejected this sync. Update STrack, then retry from Settings; your latest changes remain saved on this device."
+      : code.includes("failed-precondition")
+        ? "Cloud rejected a saved session. Update STrack, then retry from Settings; your complete puzzle remains saved on this device."
       : code.includes("unavailable") || code.includes("network")
         ? "Cloud sync is temporarily unavailable. Your latest changes remain saved on this device; reconnect and retry from Settings."
         : "Sync failed. Your latest changes remain saved on this device; retry from Settings.";
