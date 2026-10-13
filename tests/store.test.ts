@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createGame } from "../src/game.ts";
-import type { Puzzle } from "../src/types.ts";
+import type { AnnotationColour, BoardSnapshot, Puzzle } from "../src/types.ts";
 
 const puzzle: Puzzle = { id: "store-test", givens: "0".repeat(81), solution: "123456789".repeat(9), source: "Imported", sourceUrl: "", provenance: "test", licence: "test", seRating: null, ratingEngine: "Not rated", ratingVersion: "Not rated", difficulty: "Unrated", catalogueVersion: "test", fullHints: false };
 
@@ -86,7 +86,7 @@ test("deleted puzzles stay deleted when a stale cloud game arrives", async () =>
 });
 
 test("cloud encoding preserves multiple colours and line annotations without nested arrays", async () => {
-  const { decodeCloudGame, encodeCloudGame, encodeCloudSettings } = await import("../src/cloud.ts");
+  const { decodeCloudGame, encodeCloudGame, encodeCloudSettings, MAX_SYNCED_GAME_BYTES } = await import("../src/cloud.ts");
   const { emptyData } = await import("../src/store.ts");
   const gameWithoutHints = createGame(puzzle, 699);
   const encodedWithoutHints = encodeCloudGame(gameWithoutHints);
@@ -118,4 +118,24 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   const settings = encodeCloudSettings(settingsData);
   assert.deepEqual(settings.preferences, settingsData.preferences, "the rules test can use the exact expanded settings payload");
   assert.equal(settings.updatedAt, 702);
+
+  const largeGame = createGame(puzzle, 703);
+  const allColours: AnnotationColour[] = ["cyan", "amber", "violet", "green", "rose", "slate", "lime", "orange", "indigo"];
+  const largeSnapshot: BoardSnapshot = {
+    values: [...largeGame.values],
+    corner: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    centre: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    colours: Array.from({ length: 81 }, () => [...allColours]),
+    lines: Array.from({ length: 160 }, (_, index) => ({ from: index % 80, to: index % 80 + 1, colour: "cyan" as const })),
+    eliminated: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+  };
+  largeGame.history = Array.from({ length: 80 }, () => structuredClone(largeSnapshot));
+  largeGame.completedAt = 704;
+  largeGame.updatedAt = 704;
+  const budgeted = encodeCloudGame(largeGame);
+  assert.ok(new TextEncoder().encode(JSON.stringify(budgeted)).byteLength <= MAX_SYNCED_GAME_BYTES, "cloud games stay below the conservative Firestore document budget");
+  assert.ok(budgeted.history.length < 80, "only the oldest cloud undo snapshots are trimmed when necessary");
+  const budgetedRoundTrip = decodeCloudGame(budgeted);
+  assert.deepEqual(budgetedRoundTrip?.values, largeGame.values, "the current board survives cloud budgeting");
+  assert.equal(budgetedRoundTrip?.completedAt, 704, "completion survives cloud budgeting");
 });
