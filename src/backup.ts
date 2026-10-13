@@ -16,7 +16,7 @@ function hasValidProgress(value: unknown) {
   return Object.values(value).every((item) => {
     if (!isRecord(item)) return false;
     return typeof item.puzzleId === "string"
-      && (item.kind === "word-search" || item.kind === "crossword")
+      && (item.kind === "word-search" || item.kind === "crossword" || item.kind === "word-grid")
       && Array.isArray(item.foundWordIds) && item.foundWordIds.every((id) => typeof id === "string")
       && Array.isArray(item.entries) && item.entries.every((entry) => typeof entry === "string")
       && (item.hintedCells === undefined || (Array.isArray(item.hintedCells) && item.hintedCells.every((entry) => Number.isInteger(entry) && entry >= 0)))

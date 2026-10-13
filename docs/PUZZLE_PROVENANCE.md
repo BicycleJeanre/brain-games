@@ -1,15 +1,15 @@
 # Puzzle provenance
 
-## Public catalogue 2026.10.2
+## Public catalogue 2026.10.3
 
-All 100 published puzzles are WTrack originals created for this repository. They are not sourced from commercial or newspaper puzzle archives. The catalogue contains 50 word searches and 50 crosswords across four friendly difficulty tiers.
+The 116 published puzzles are not sourced from commercial or newspaper archives. The catalogue contains 50 WTrack-original word searches, 50 WTrack-original crosswords, and 16 deterministically generated Word Grids across four friendly difficulty tiers.
 
 | Difficulty | Puzzle count |
 | --- | ---: |
-| Easy | 26 |
-| Medium | 26 |
-| Hard | 24 |
-| Diabolical | 24 |
+| Easy | 30 |
+| Medium | 30 |
+| Hard | 28 |
+| Diabolical | 28 |
 
 The four initial puzzles remain unchanged. The other 96 puzzles are built deterministically from 12 WTrack-authored theme banks—forest, ocean, space, kitchen, music, garden, weather, travel, art, science, sports, and city—with one word search and one crossword at each difficulty.
 
@@ -19,6 +19,7 @@ The four initial puzzles remain unchanged. The other 96 puzzles are built determ
 | Ocean life | Word search | WTrack original | `@blex41/word-search` 1.2.0, reviewed and frozen | AGPL-3.0-or-later |
 | Puzzle desk | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
 | Along the coast | Crossword | WTrack original | `crossword-layout-generator` 0.1.1, reviewed and frozen | AGPL-3.0-or-later |
+| Letter Lab / Word Wander / Lexicon Lane / Tile Tangle | Word Grid | `an-array-of-english-words` 2.0.0, filtered by `subtlex-word-frequencies` 2.0.0 | WTrack deterministic Word Grid generator 1.0, frozen paths and scores | MIT + ISC inputs; AGPL-3.0-or-later payload |
 
 The generated grids are committed as static catalogue source so reviewed content does not depend on package behavior changing at runtime. `scripts/generate-catalogue.mjs` rebuilds the source from `src/data/catalogue-themes.json`; `scripts/check-catalogue.mjs` verifies identifiers, provenance, paths, crossword coverage, type balance, and difficulty distribution; and `scripts/export-catalogue.mjs` prepares individually downloadable same-origin payloads. Up to ten opened payloads are retained offline.
 
@@ -27,7 +28,7 @@ npm run catalogue:generate
 npm run catalogue:check
 ```
 
-Generated entries record the WTrack deterministic catalogue generator, catalogue version, WTrack authorship, repository source, AGPL-3.0-or-later licence, and review status. Every crossword answer is connected through a crossing and every open crossword cell belongs to a declared clue path.
+Generated entries record the generator, catalogue version, repository source, licences, and review status. Every crossword answer is connected through a crossing and every open crossword cell belongs to a declared clue path. Every Word Grid word has a validated, adjacent, non-repeating canonical path and fixed length score. The two source word datasets are build-only development dependencies; only the accepted words and paths for one opened puzzle are downloaded.
 
 ## Private on-demand Wikidata generation
 

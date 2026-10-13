@@ -22,7 +22,7 @@ Last updated: 2026-10-13
 
 ## Completed foundation
 
-- Offline-first word-search and crossword players with four original demonstration puzzles.
+- Offline-first word-search, crossword, and Word Grid players.
 - IndexedDB progress and preferences, optional owner-protected Firebase synchronization, and service-worker caching.
 - Pointer-drag, endpoint, and keyboard word-search selection.
 - Keyboard crossword entry and optional correctness feedback.
@@ -32,8 +32,8 @@ Last updated: 2026-10-13
 
 ## Catalogue, Firestore, and hints
 
-- 100 published original puzzles: 50 word searches and 50 crosswords, exported as a metadata-only index plus individual on-demand payloads.
-- Difficulty filters and distribution: 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical.
+- 116 published puzzles: 50 word searches, 50 crosswords, and 16 Word Grids, exported as a metadata-only index plus individual on-demand payloads.
+- Difficulty filters and distribution: 30 Easy, 30 Medium, 28 Hard, and 28 Diabolical.
 - Deterministic catalogue generation plus integrity and provenance validation.
 - IndexedDB retains no more than ten puzzle payloads by least-recently-opened order while progress remains stored independently.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
@@ -43,7 +43,13 @@ Last updated: 2026-10-13
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized; no phone provider or paid service enabled.
 - Firebase Web app: `1:283171656458:web:d26cce81a969ee907e60f3`; all four public identifiers are present as GitHub Actions secrets.
 - Persistent offline hint history is part of each local/cloud progress record and remains backward compatible with existing version-one data.
-- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter.
+- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter; Word Grid hints mark a remaining word's first two tiles.
+
+## Word Grid release candidate
+
+- Original adjacent-letter game mode with 4×4 and 5×5 grids, non-repeating eight-direction paths, length-based scoring, and difficulty-specific completion targets.
+- Pointer-drag, touch-by-tile, and keyboard play; found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
+- Sixteen deterministic grids use build-only `an-array-of-english-words` 2.0.0 (MIT), quality-filtered with `subtlex-word-frequencies` 2.0.0 (ISC). Only compact pre-solved payloads ship.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
 
 ## STrack parity release

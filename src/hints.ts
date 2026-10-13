@@ -1,6 +1,6 @@
 import { uniformInt } from "pure-rand/distribution/uniformInt";
 import { xoroshiro128plus } from "pure-rand/generator/xoroshiro128plus";
-import type { CrosswordClue, CrosswordPuzzle, PuzzleProgress, WordSearchPuzzle } from "./types.ts";
+import type { CrosswordClue, CrosswordPuzzle, PuzzleProgress, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
 export interface WordSearchHint {
   kind: "word-search";
@@ -17,7 +17,14 @@ export interface CrosswordHint {
   column: number;
 }
 
-export type PuzzleHint = WordSearchHint | CrosswordHint;
+export interface WordGridHint {
+  kind: "word-grid";
+  cellIndexes: number[];
+  wordLength: number;
+  points: number;
+}
+
+export type PuzzleHint = WordSearchHint | CrosswordHint | WordGridHint;
 
 function seedFor(value: string) {
   let hash = 0x811c9dc5;
@@ -74,4 +81,15 @@ export function chooseCrosswordHint(puzzle: CrosswordPuzzle, progress: PuzzlePro
   const rng = xoroshiro128plus(seedFor(`${puzzle.id}:crossword:${progress.hintedCells.length}`));
   const selected = candidates[uniformInt(rng, 0, candidates.length - 1)]!;
   return { kind: "crossword", ...selected };
+}
+
+export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgress): WordGridHint | null {
+  const hinted = new Set(progress.hintedCells);
+  const candidates = puzzle.words
+    .filter((word) => !progress.foundWordIds.includes(word.id))
+    .map((word) => ({ word, cells: word.path.slice(0, 2).map(({ x, y }) => y * puzzle.columns + x) }))
+    .filter(({ cells }) => cells.some((cell) => !hinted.has(cell)))
+    .sort((left, right) => right.word.score - left.word.score || right.word.label.length - left.word.label.length || left.word.label.localeCompare(right.word.label));
+  const selected = candidates[0];
+  return selected ? { kind: "word-grid", cellIndexes: selected.cells, wordLength: selected.word.label.length, points: selected.word.score } : null;
 }

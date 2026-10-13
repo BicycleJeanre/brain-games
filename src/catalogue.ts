@@ -1,7 +1,7 @@
 import { validatePuzzle } from "./puzzles.ts";
 import type { Puzzle, PuzzleSummary } from "./types.ts";
 
-export const CATALOGUE_VERSION = "2026.10.2";
+export const CATALOGUE_VERSION = "2026.10.3";
 
 interface CatalogueEnvelope {
   version: string;
@@ -11,12 +11,14 @@ interface CatalogueEnvelope {
 export let puzzles: PuzzleSummary[] = [];
 export let wordSearches: PuzzleSummary[] = [];
 export let crosswords: PuzzleSummary[] = [];
+export let wordGrids: PuzzleSummary[] = [];
 const localPuzzles = new Map<string, PuzzleSummary>();
 
 function refreshLists(remote: PuzzleSummary[] = puzzles.filter((puzzle) => !localPuzzles.has(puzzle.id))) {
   puzzles = [...remote, ...localPuzzles.values()];
   wordSearches = puzzles.filter((puzzle) => puzzle.kind === "word-search");
   crosswords = puzzles.filter((puzzle) => puzzle.kind === "crossword");
+  wordGrids = puzzles.filter((puzzle) => puzzle.kind === "word-grid");
 }
 
 const catalogueUrl = (path: string) => new URL(`catalogue/${path}`, document.baseURI);

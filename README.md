@@ -1,13 +1,13 @@
 # WTrack
 
-WTrack is a local-first word-search and crossword PWA in the FTrack/GTrack/STrack visual family. It provides one focused puzzle desk, responsive keyboard and touch play, transparent puzzle provenance, a ten-puzzle offline cache, and optional private Firebase synchronization.
+WTrack is a local-first word-search, crossword, and adjacent-letter Word Grid PWA in the FTrack/GTrack/STrack visual family. It provides one focused puzzle desk, responsive keyboard and touch play, transparent puzzle provenance, a ten-puzzle offline cache, and optional private Firebase synchronization.
 
 The production build targets `https://bicyclejeanre.github.io/wtrack/`. The catalogue is hosted with the static app rather than fetched from a third-party puzzle API. Browsing metadata and the ten most recently opened puzzles remain available offline.
 
 ## Current foundation
 
 - Original Vite + strict TypeScript app with no UI framework.
-- 100 original public puzzles: 50 word searches and 50 crosswords, exported as individually downloadable static payloads.
+- 116 public puzzles: 50 word searches, 50 crosswords, and 16 generated Word Grids, exported as individually downloadable static payloads.
 - An IndexedDB least-recently-used cache capped at ten playable offline puzzles; eviction never deletes progress.
 - Easy, Medium, Hard, and Diabolical library filters, with at least 24 puzzles in each tier.
 - Stable daily and weekly challenges in every rated difficulty, with independent sessions, streaks, completion, and average-time summaries.
@@ -16,11 +16,12 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Optional Firebase email/password accounts and owner-protected Firestore state.
 - Word-search generation through `@blex41/word-search`.
 - Crossword layout generation through `crossword-layout-generator`.
+- Build-time Word Grid vocabulary from `an-array-of-english-words`, quality-filtered with `subtlex-word-frequencies`; neither dataset ships in the browser bundle.
 - User-triggered, browser-local puzzle generation from English Wikipedia topic links and Wikidata CC0 terms, with Easy through Diabolical profiles and complete provenance saved in the ten-puzzle offline cache.
 - Private `.puz`, iPUZ, JPZ, and XD file import through `@xwordly/xword-parser`; imported payloads remain local and Unrated.
 - Auto-saving STrack-style preferences for light/dark/system themes, timer and hint/help visibility, grid/clue/menu text sizes, four highlight palettes, and crossword correctness feedback.
-- Pointer, touch, and keyboard word-search selection plus non-destructive JSON device backup merge and scoped storage controls.
-- Persistent offline hints: a highlighted path cell for word searches and a revealed active-clue letter for crosswords.
+- Pointer, touch, and keyboard play across all three game types plus non-destructive JSON device backup merge and scoped storage controls.
+- Persistent offline hints: a highlighted path cell for word searches, a revealed active-clue letter for crosswords, and a two-tile starting path for Word Grid.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Chromium, mobile Chromium, and WebKit browser coverage plus unit, catalogue-integrity, real server-stop offline restart, base-path, Firestore-rules, and emulator-backed cloud-journey checks.
 

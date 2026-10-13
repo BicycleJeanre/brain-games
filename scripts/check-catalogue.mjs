@@ -7,6 +7,7 @@ assert.ok(puzzles.length >= 100, "release catalogue must contain at least 100 pu
 assert.equal(new Set(puzzles.map((puzzle) => puzzle.id)).size, puzzles.length, "puzzle IDs must be unique");
 assert.ok(puzzles.filter((puzzle) => puzzle.kind === "word-search").length >= 50, "catalogue must contain at least 50 word searches");
 assert.ok(puzzles.filter((puzzle) => puzzle.kind === "crossword").length >= 50, "catalogue must contain at least 50 crosswords");
+assert.ok(puzzles.filter((puzzle) => puzzle.kind === "word-grid").length >= 16, "catalogue must contain at least 16 Word Grids");
 
 for (const difficulty of difficulties) {
   assert.ok(puzzles.filter((puzzle) => puzzle.difficulty === difficulty).length >= 20, `${difficulty} needs at least 20 puzzles`);
@@ -23,7 +24,7 @@ for (const puzzle of puzzles) {
       const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
       assert.equal(actual, word.label, `${puzzle.id}/${word.id} has an invalid word path`);
     }
-  } else {
+  } else if (puzzle.kind === "crossword") {
     assert.ok(puzzle.clues.length >= 4, `${puzzle.id} needs at least four clues`);
     const used = new Set();
     for (const clue of puzzle.clues) {
@@ -37,6 +38,17 @@ for (const puzzle of puzzles) {
     }
     const openCells = puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => letter === "#" ? null : `${y}:${x}`)).filter(Boolean);
     assert.ok(openCells.every((cell) => used.has(cell)), `${puzzle.id} contains an unclued cell`);
+  } else {
+    assert.ok(puzzle.words.length >= 10, `${puzzle.id} needs at least ten accepted words`);
+    assert.ok(puzzle.targetScore > 0, `${puzzle.id} needs a target score`);
+    const available = puzzle.words.reduce((total, word) => total + word.score, 0);
+    assert.ok(available >= puzzle.targetScore, `${puzzle.id} target is unreachable`);
+    for (const word of puzzle.words) {
+      const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
+      assert.equal(actual, word.label, `${puzzle.id}/${word.id} has an invalid path`);
+      assert.equal(new Set(word.path.map(({ x, y }) => `${x}:${y}`)).size, word.path.length, `${puzzle.id}/${word.id} reuses a cell`);
+      assert.ok(word.path.slice(1).every((point, index) => Math.max(Math.abs(point.x - word.path[index].x), Math.abs(point.y - word.path[index].y)) === 1), `${puzzle.id}/${word.id} has non-adjacent cells`);
+    }
   }
 }
 

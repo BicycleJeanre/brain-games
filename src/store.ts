@@ -66,10 +66,10 @@ export function normalizeData(value: unknown): AppData {
     ? Object.fromEntries(Object.entries(raw.progress).flatMap(([id, item]) => {
       if (!item || typeof item !== "object") return [];
       const candidate = item as Partial<PuzzleProgress>;
-      if (typeof candidate.puzzleId !== "string" || (candidate.kind !== "word-search" && candidate.kind !== "crossword")) return [];
+      if (typeof candidate.puzzleId !== "string" || !["word-search", "crossword", "word-grid"].includes(candidate.kind as string)) return [];
       return [[id, {
         puzzleId: candidate.puzzleId,
-        kind: candidate.kind,
+        kind: candidate.kind as PuzzleProgress["kind"],
         foundWordIds: Array.isArray(candidate.foundWordIds) ? candidate.foundWordIds.filter((entry): entry is string => typeof entry === "string") : [],
         entries: Array.isArray(candidate.entries) ? candidate.entries.map((entry) => typeof entry === "string" ? entry : "") : [],
         hintedCells: Array.isArray(candidate.hintedCells) ? [...new Set(candidate.hintedCells.filter((entry): entry is number => Number.isInteger(entry) && entry >= 0))] : [],

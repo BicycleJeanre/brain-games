@@ -64,12 +64,13 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .hero .primary { z-index:1; flex-direction:column; min-height:72px; }
 .section { margin-bottom:38px; }
 .section-heading,.page-heading,.player-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; }
-.stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:38px; }
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:38px; }
 .stat { padding:20px; }
 .stat b,.stat span { display:block; }
 .stat b { color:var(--accent); font-size:27px; }
 .stat span { color:var(--muted); font-size:11px; font-weight:750; }
-.split-feature,.settings-grid,.help-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.split-feature { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.settings-grid,.help-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .feature,.create-card,.settings-card,.help-card { padding:25px; }
 .feature p { min-height:44px; }
 .catalogue-badge { padding:6px 10px; border:1px solid var(--border); border-radius:14px; color:var(--muted); font-size:10px; font-weight:800; }
@@ -80,7 +81,7 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .challenge-card .secondary { align-self:end; margin-top:auto; }
 .challenge-stats { margin:10px 0 0; }
 .filter-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.filter-tabs { display:inline-grid; grid-template-columns:repeat(3,auto); gap:3px; margin-bottom:16px; padding:3px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
+.filter-tabs { display:inline-grid; grid-template-columns:repeat(4,auto); gap:3px; margin-bottom:16px; padding:3px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
 .difficulty-tabs { grid-template-columns:repeat(6,auto); }
 .filter-tabs button { min-height:34px; padding:5px 12px; border:0; border-radius:6px; background:transparent; color:var(--muted); font-size:11px; font-weight:800; }
 .filter-tabs button[aria-pressed="true"] { background:var(--panel-raised); color:var(--accent); }
@@ -102,6 +103,17 @@ button:disabled { cursor:not-allowed; opacity:.55; }
 .word-cell.found { background:color-mix(in srgb,var(--success) 26%,var(--panel)); color:var(--text); box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--success) 65%,transparent); }
 .word-cell.hinted { position:relative; box-shadow:inset 0 0 0 3px var(--highlight); }
 .word-cell.hinted:after { content:"?"; position:absolute; right:3px; top:1px; color:var(--highlight); font-size:9px; font-weight:950; }
+.letter-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); width:min(100%,680px); aspect-ratio:1; gap:clamp(6px,1.2vw,12px); padding:clamp(10px,2vw,20px); background:var(--panel-soft); box-shadow:var(--shadow); user-select:none; touch-action:none; }
+.grid-letter { position:relative; min-width:0; min-height:0; border:1px solid var(--border-strong); border-radius:clamp(8px,1.5vw,14px); background:linear-gradient(145deg,var(--panel-raised),var(--panel)); color:var(--text); font-size:clamp(24px,5vw,48px); font-weight:900; box-shadow:0 5px 10px #0003; }
+.grid-letter:hover,.grid-letter.selected { border-color:var(--highlight); background:var(--highlight-soft); color:var(--highlight); transform:translateY(-1px); }
+.grid-letter.hinted { box-shadow:inset 0 0 0 3px var(--highlight),0 5px 10px #0003; }
+.grid-letter.hinted:after { content:"·"; position:absolute; right:8px; top:0; color:var(--highlight); font-size:18px; }
+.current-word { display:flex; min-height:58px; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
+.current-word span { overflow:hidden; font-size:18px; font-weight:900; letter-spacing:2px; text-overflow:ellipsis; }
+.current-word small { color:var(--faint); font-size:9px; white-space:nowrap; }
+.found-grid-words { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin:8px 0 0; padding:0; list-style:none; }
+.found-grid-words li { display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:6px; background:var(--panel-soft); color:var(--text); font-size:10px; }
+.found-grid-words b { color:var(--success); }
 .board-note,.privacy-note { margin:10px 0 0; color:var(--faint); font-size:10px; }
 .controls,.clue-panel { display:grid; gap:14px; padding:18px; }
 .control-heading { display:flex; align-items:center; justify-content:space-between; }
@@ -160,6 +172,8 @@ textarea { min-height:155px; padding:12px; resize:vertical; font-family:ui-monos
 code { color:var(--accent); }
 :root[data-grid-text-size="small"] .word-cell { font-size:clamp(10px,1.8vw,20px); }
 :root[data-grid-text-size="large"] .word-cell { font-size:clamp(14px,2.8vw,30px); }
+:root[data-grid-text-size="small"] .grid-letter { font-size:clamp(20px,4vw,38px); }
+:root[data-grid-text-size="large"] .grid-letter { font-size:clamp(28px,6vw,56px); }
 :root[data-grid-text-size="small"] .crossword-cell input { font-size:clamp(13px,2.5vw,28px); }
 :root[data-grid-text-size="large"] .crossword-cell input { font-size:clamp(18px,3.5vw,40px); }
 :root[data-clue-text-size="small"] .clue,:root[data-clue-text-size="small"] .word-list li { font-size:10px; }
@@ -183,7 +197,7 @@ code { color:var(--accent); }
   .word-grid,.crossword-grid { width:100%; }
 }
 @media (max-width:520px) {
-  .stat-grid { grid-template-columns:1fr 1fr 1fr; gap:7px; }
+  .stat-grid { grid-template-columns:1fr 1fr; gap:7px; }
   .stat { padding:14px 10px; }
   .puzzle-card { grid-template-columns:auto minmax(0,1fr); }
   .puzzle-card .card-actions { grid-column:1/-1; }
@@ -192,7 +206,7 @@ code { color:var(--accent); }
   .word-cell { font-size:clamp(11px,4vw,18px); }
   .filter-row,.filter-tabs { width:100%; }
   .difficulty-tabs { grid-template-columns:repeat(2,1fr); }
-  .filter-tabs:not(.difficulty-tabs) { grid-template-columns:repeat(3,1fr); }
+  .filter-tabs:not(.difficulty-tabs) { grid-template-columns:repeat(2,1fr); }
   .challenge-grid { grid-template-columns:1fr; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }

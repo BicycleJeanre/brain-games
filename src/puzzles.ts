@@ -1,4 +1,4 @@
-import type { CrosswordClue, GridPoint, Puzzle, WordSearchPuzzle } from "./types.ts";
+import type { CrosswordClue, GridPoint, Puzzle, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
 const pointKey = ({ x, y }: GridPoint) => `${x}:${y}`;
 
@@ -20,6 +20,28 @@ export function findWord(puzzle: WordSearchPuzzle, path: GridPoint[]) {
   }) ?? null;
 }
 
+export function wordGridScore(length: number) {
+  return length < 3 ? 0 : length < 5 ? 1 : length === 5 ? 2 : length === 6 ? 3 : length === 7 ? 5 : 11;
+}
+
+export function isWordGridPath(path: GridPoint[]) {
+  const seen = new Set<string>();
+  return path.every((point, index) => {
+    const key = pointKey(point);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    if (!index) return true;
+    const previous = path[index - 1]!;
+    return Math.max(Math.abs(point.x - previous.x), Math.abs(point.y - previous.y)) === 1;
+  });
+}
+
+export function wordGridWordForPath(puzzle: WordGridPuzzle, path: GridPoint[]) {
+  if (path.length < puzzle.minimumLength || !isWordGridPath(path)) return null;
+  const label = path.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
+  return puzzle.words.find((word) => word.label === label) ?? null;
+}
+
 export function crosswordCells(clue: CrosswordClue): number[] {
   return [...clue.answer].map((_, offset) => clue.direction === "across"
     ? clue.row * 100 + clue.column + offset
@@ -28,6 +50,7 @@ export function crosswordCells(clue: CrosswordClue): number[] {
 
 export function isPuzzleComplete(puzzle: Puzzle, foundWordIds: string[], entries: string[]) {
   if (puzzle.kind === "word-search") return puzzle.words.every((word) => foundWordIds.includes(word.id));
+  if (puzzle.kind === "word-grid") return puzzle.words.filter((word) => foundWordIds.includes(word.id)).reduce((total, word) => total + word.score, 0) >= puzzle.targetScore;
   return puzzle.grid.every((row, y) => [...row].every((letter, x) => letter === "#" || entries[y * puzzle.columns + x] === letter));
 }
 
@@ -38,6 +61,14 @@ export function validatePuzzle(puzzle: Puzzle) {
       const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
       if (actual !== word.label) throw new Error(`Invalid word path for ${puzzle.id}/${word.id}`);
     }
+  } else if (puzzle.kind === "word-grid") {
+    if (puzzle.minimumLength < 3 || puzzle.targetScore < 1) throw new Error(`Invalid Word Grid rules for ${puzzle.id}`);
+    for (const word of puzzle.words) {
+      const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
+      if (actual !== word.label || !isWordGridPath(word.path) || word.score !== wordGridScore(word.label.length)) throw new Error(`Invalid Word Grid path for ${puzzle.id}/${word.id}`);
+    }
+    const available = puzzle.words.reduce((total, word) => total + word.score, 0);
+    if (puzzle.targetScore > available) throw new Error(`Unreachable Word Grid target for ${puzzle.id}`);
   } else {
     for (const clue of puzzle.clues) {
       const actual = [...clue.answer].map((_, offset) => puzzle.grid[clue.row + (clue.direction === "down" ? offset : 0)]?.[clue.column + (clue.direction === "across" ? offset : 0)]).join("");

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a polished word-puzzle application in the FTrack/GTrack/STrack family. WTrack combines two complementary game types—word searches and crosswords—in one installable, offline-first PWA with optional private account sync.
+Build a polished word-puzzle application in the FTrack/GTrack/STrack family. WTrack combines word searches, crosswords, and adjacent-letter Word Grids in one installable, offline-first PWA with optional private account sync.
 
 The puzzle board remains the visual centre of gravity. The interface uses the family’s charcoal/cyan palette, disciplined spacing, compact controls, rounded panels, clear hierarchy, practical empty/error/offline states, and responsive phone/desktop layouts.
 
@@ -38,6 +38,13 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Keyboard entry, Backspace behavior, arrow navigation, touch input, optional correctness marking, pause, reset, and completion summary.
 - Offline hints reveal one unresolved letter in the active clue, then fall back to the rest of the grid.
 - Private imports for licensed or personal `.puz`, iPUZ, JPZ, and XD puzzles where the parser can preserve the required grid and clue metadata. Imports are Unrated and are not published.
+
+### Word Grid player
+
+- Trace horizontal, vertical, or diagonal adjacent letters without reusing a tile; accept words of three or more letters from the puzzle's frozen solution set.
+- Score by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11) and complete the puzzle by reaching its difficulty-specific target.
+- Support pointer drag, touch-by-tile, keyboard focus/selection, saved found words, reset, timer, and offline completion.
+- Offline hints reveal only the first two tiles and length/value of a remaining word.
 
 ### Create and import
 
@@ -76,7 +83,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ## Catalogue and provenance
 
-Catalogue version 2026.10.2 includes 100 WTrack-original puzzles: 50 word searches and 50 crosswords. It preserves the first four demonstration puzzles and adds 96 deterministic puzzles generated from 12 original theme banks. The committed catalogue contains 26 Easy, 26 Medium, 24 Hard, and 24 Diabolical puzzles. Players can additionally create device-local puzzles from public data on demand; those private results are not counted as published catalogue entries.
+Catalogue version 2026.10.3 includes 116 puzzles: 50 word searches, 50 crosswords, and 16 deterministic Word Grids. It preserves the first four demonstrations, includes 96 puzzles generated from 12 original theme banks, and adds four Word Grids per difficulty. The committed catalogue contains 30 Easy, 30 Medium, 28 Hard, and 28 Diabolical puzzles. Word Grid candidate words are drawn at build time from `an-array-of-english-words` 2.0.0 and filtered through `subtlex-word-frequencies` 2.0.0; only each compact solved payload ships. Players can additionally create device-local puzzles from public data on demand.
 
 The committed source is validated at build time, then exported to one lightweight discovery index and one static payload per puzzle. This creates an expandable catalogue without a live third-party feed or a growing application bundle. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
 
@@ -84,7 +91,7 @@ The committed source is validated at build time, then exported to one lightweigh
 
 - Builds and serves correctly from `/wtrack/`.
 - Installs and restarts offline with the shell, help, progress, catalogue index, and no more than ten recently opened playable puzzles.
-- Both game types support keyboard, mouse, and touch on desktop and narrow phones.
+- All three game types support keyboard, mouse, and touch on desktop and narrow phones.
 - Daily and weekly challenge selections stay stable for their UTC period and never overwrite ordinary puzzle progress.
 - Progress saves locally on every meaningful move and optionally synchronizes privately through Firestore.
 - Every published puzzle exposes provenance and licence details.

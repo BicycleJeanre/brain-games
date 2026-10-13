@@ -1,4 +1,4 @@
-export type PuzzleKind = "word-search" | "crossword";
+export type PuzzleKind = "word-search" | "crossword" | "word-grid";
 export type Difficulty = "Easy" | "Medium" | "Hard" | "Diabolical" | "Unrated";
 export type Theme = "system" | "light" | "dark";
 export type ChallengeCadence = "daily" | "weekly";
@@ -57,7 +57,24 @@ export interface CrosswordPuzzle extends PuzzleBase {
   clues: CrosswordClue[];
 }
 
-export type Puzzle = WordSearchPuzzle | CrosswordPuzzle;
+export interface WordGridWord {
+  id: string;
+  label: string;
+  path: GridPoint[];
+  score: number;
+}
+
+export interface WordGridPuzzle extends PuzzleBase {
+  kind: "word-grid";
+  rows: number;
+  columns: number;
+  grid: string[];
+  minimumLength: number;
+  targetScore: number;
+  words: WordGridWord[];
+}
+
+export type Puzzle = WordSearchPuzzle | CrosswordPuzzle | WordGridPuzzle;
 
 export interface PuzzleProgress {
   puzzleId: string;

@@ -3,18 +3,36 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve } from "node:path";
 
-test("home and catalogue expose both puzzle types", async ({ page }) => {
+test("home and catalogue expose all puzzle types", async ({ page }) => {
   await page.goto("./");
-  await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Find\. Fill\. Build\./ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Daily challenges" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Weekly challenges" })).toBeVisible();
   await expect(page.locator("[data-challenge]")).toHaveCount(8);
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await expect(page.getByText("Word craft")).toBeVisible();
   await expect(page.getByText("Puzzle desk")).toBeVisible();
-  await expect(page.locator(".catalogue-badge")).toContainText("100 puzzles");
+  await expect(page.getByRole("heading", { name: "Letter Lab I", exact: true })).toBeVisible();
+  await expect(page.locator(".catalogue-badge")).toContainText("116 puzzles");
   await page.getByRole("button", { name: "Diabolical", exact: true }).click();
-  await expect(page.getByText("Showing 24 of 100 puzzles")).toBeVisible();
+  await expect(page.getByText("Showing 28 of 116 puzzles")).toBeVisible();
+});
+
+test("Word Grid accepts adjacent paths, scores words, and persists hints", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="wg-letter-grid-1-001"]').click();
+  for (const point of [[0,0],[0,1],[1,1]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
+  await page.getByRole("button", { name: "Submit word" }).click();
+  await expect(page.getByRole("status")).toContainText("AID scores 1 point");
+  await expect(page.getByText("AID", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show a starting path" }).click();
+  await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
+  await page.reload();
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="wg-letter-grid-1-001"]').click();
+  await expect(page.getByText("AID", { exact: true })).toBeVisible();
+  await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
 });
 
 test("word-search progress survives reload", async ({ page }) => {
@@ -205,7 +223,7 @@ test("themes, focus, reduced motion, and landscape layout meet the shared access
   await expect(page.locator("html")).toHaveAttribute("data-menu-text-size", "large");
   await expect(page.locator("html")).toHaveAttribute("data-highlight-colour", "amber");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Find\. Fill\. Build\./ })).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
@@ -284,7 +302,7 @@ test("production app relaunches after its server stops with catalogue and cached
   server.closeAllConnections();
   await new Promise<void>((resolveClosed) => server.close(() => resolveClosed()));
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: /Find the pattern/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Find\. Fill\. Build\./ })).toBeVisible();
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="ws-word-craft-001"]').click();
   await expect(page.getByText("Found").first()).toBeVisible();
