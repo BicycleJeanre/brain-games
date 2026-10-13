@@ -4,7 +4,7 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Production branch: `main` at `bfb0316`
+- Deployed application commit: `main` at `bfb0316`
 - Latest source pull request: [#5 — Add persistent offline puzzle hints](https://github.com/BicycleJeanre/wtrack/pull/5)
 - Active release state: live and production-verified
 
