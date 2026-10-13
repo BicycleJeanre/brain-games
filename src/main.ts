@@ -482,7 +482,7 @@ async function boot() {
       : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
   }
   applyTheme();
-  void watchAuth((user) => void cloud.setUser(user));
+  await watchAuth((user) => void cloud.setUser(user));
   render();
   if ("serviceWorker" in navigator) void navigator.serviceWorker.register(new URL("./sw.js", document.baseURI));
   const token = ++renderToken;
