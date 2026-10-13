@@ -4,18 +4,18 @@ Last updated: 2026-10-13
 
 ## Current lane
 
-- Deployed application commit: `main` at `7b7fb8c`
-- Latest source pull request: [#11 — Bring WTrack closer to STrack parity](https://github.com/BicycleJeanre/wtrack/pull/11)
-- Active release state: settings-parity release candidate on `codex/strack-settings-parity`; current production remains verified
+- Deployed application commit: `main` at `86ef0c0`
+- Latest source pull request: [#13 — Add STrack-style settings parity](https://github.com/BicycleJeanre/wtrack/pull/13)
+- Active release state: live and production-verified
 
 ## Production deployment
 
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `7b7fb8cb7711c9740f2877642beb9126fa853b6d`
-- Deployment: [GitHub Pages run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695)
-- Verification: deployment workflow passed. A cache-busted production browser reload showed the explicit Online state, active-session deletion, four daily and four weekly challenges, private crossword-file import, non-destructive backup merge, and separate completed-progress, all-progress, and offline-payload controls.
+- Source: `main` at `86ef0c02aaee3aa3bc701dcb96bb901bc50006a1`
+- Deployment: [GitHub Pages run 38389782784](https://github.com/BicycleJeanre/wtrack/actions/runs/38389782784)
+- Verification: deployment workflow passed. A cache-busted production browser reload showed the auto-saving Settings badge plus the private sync, appearance, player-layout, readability, assistance, backup, storage, and help sections.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -57,12 +57,13 @@ Last updated: 2026-10-13
 - Desktop Chromium, WebKit, mobile Chromium, accessibility, landscape, base-path, ten-puzzle cache, and true server-stop offline coverage.
 - Detailed comparison and intentional domain differences in `docs/STRACK_PARITY.md`.
 
-## Settings-parity release candidate
+## Settings-parity release
 
 - Auto-saving appearance, player-visibility, readability, assistance, backup, storage, and help settings aligned with STrack's relevant controls.
 - Small, medium, and large grid, clue, and menu text presets plus cyan, amber, violet, and green board-highlight palettes.
 - Settings preserves the active player and toggles back to its originating screen; a confirmed current-puzzle reset is available from that context.
 - Older local, backup, and cloud preference objects normalize to current defaults. Firestore rules accept the legacy and expanded schemas during rollout.
+- Backward-compatible production Firestore rules were compiled and deployed before the Pages client, keeping older service-worker clients valid during rollout.
 
 ## Validation
 
@@ -84,7 +85,9 @@ Last updated: 2026-10-13
 - Previous production release: [deployment run 38384205022](https://github.com/BicycleJeanre/wtrack/actions/runs/38384205022) passed from merge commit `c54d1ad`; endpoint and fresh-profile browser smoke tests passed.
 - STrack parity pull-request CI: [run 38386771834](https://github.com/BicycleJeanre/wtrack/actions/runs/38386771834) passed, including WebKit, Firestore rules, and the two-device sync journey.
 - STrack parity merged-main CI: [run 38387042269](https://github.com/BicycleJeanre/wtrack/actions/runs/38387042269) passed from merge commit `7b7fb8c`.
-- Current production release: [deployment run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695) passed from merge commit `7b7fb8c`; live browser verification confirmed the parity surfaces.
+- Previous production release: [deployment run 38387390695](https://github.com/BicycleJeanre/wtrack/actions/runs/38387390695) passed from merge commit `7b7fb8c`; live browser verification confirmed the parity surfaces.
+- Settings-parity pull-request CI: [run 38389502833](https://github.com/BicycleJeanre/wtrack/actions/runs/38389502833) passed, including Firestore rules and the two-device cloud-sync journey.
+- Settings-parity production release: [deployment run 38389782784](https://github.com/BicycleJeanre/wtrack/actions/runs/38389782784) passed from merge commit `86ef0c0`; live browser verification confirmed the expanded auto-saving Settings surface.
 
 ## Next release-one work
 
