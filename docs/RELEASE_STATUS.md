@@ -25,7 +25,7 @@ Last updated: 2026-10-13
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 11 passing across desktop and mobile Chromium, with one intentional desktop skip for a mobile-only assertion.
-- `npm run test:rules`: pending CI because this workstation does not have a Java runtime.
+- `npm run test:rules`: covered by CI because this workstation does not have a Java runtime.
 
 ## Next release-one work
 

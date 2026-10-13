@@ -15,10 +15,13 @@ after(async () => environment?.cleanup());
 test("owners can write their app state and other users cannot read it", async () => {
   const owner = environment.authenticatedContext("owner").firestore();
   const other = environment.authenticatedContext("other").firestore();
+  const anonymous = environment.unauthenticatedContext().firestore();
   const reference = owner.doc("users/owner/state/app");
   await assertSucceeds(reference.set({ version: 1, progress: {}, preferences: {} }));
   await assertFails(other.doc("users/owner/state/app").get());
+  await assertFails(anonymous.doc("users/owner/state/app").get());
   assert.equal((await reference.get()).data().version, 1);
+  await assertSucceeds(reference.delete());
 });
 
 test("rules reject unknown state documents and schema versions", async () => {
