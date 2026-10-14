@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `3f8efe3`
-- Latest source pull request: [#27 — Add progressive Word Grid path hints](https://github.com/BicycleJeanre/wtrack/pull/27)
+- Deployed application commit: `main` at `3313a96`
+- Latest source pull request: [#29 — Reveal Word Grid hints in round words](https://github.com/BicycleJeanre/wtrack/pull/29)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `3f8efe3`
-- Deployment: [GitHub Pages run 38544166216](https://github.com/BicycleJeanre/wtrack/actions/runs/38544166216)
-- Verification: deployment workflow passed. A production reload confirmed Letter Lab II exposes the progressive path-hint control, retains all ten verified round targets, and preserves existing bonus-word and hint progress.
+- Source: `main` at `3313a96`
+- Deployment: [GitHub Pages run 38546805045](https://github.com/BicycleJeanre/wtrack/actions/runs/38546805045)
+- Verification: deployment workflow passed. A production PWA reload confirmed Letter Lab II reveals saved hints inside round-word slots, shows no grid hint markers, and preserves existing bonus-word and puzzle progress.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -43,7 +43,7 @@ Last updated: 2026-10-14
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized; no phone provider or paid service enabled.
 - Firebase Web app: `1:283171656458:web:d26cce81a969ee907e60f3`; all four public identifiers are present as GitHub Actions secrets.
 - Persistent offline hint history is part of each local/cloud progress record and remains backward compatible with existing version-one data.
-- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter; Word Grid hints reveal two ordered target-path letters initially and then extend that same path one tile per use.
+- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter; Word Grid hints reveal one letter per use inside a hidden round-word entry without marking the board.
 
 ## Word Grid release candidate
 
@@ -83,7 +83,7 @@ Last updated: 2026-10-14
 
 ## Validation
 
-- `npm run test:unit`: 26 passing, including all-catalogue Word Grid target-path verification, progressive hints, clue-aware crossword navigation, fixed-target completion, stale-completion migration, deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
+- `npm run test:unit`: 27 passing, including all-catalogue Word Grid target-path verification, round-word letter hints, legacy hint migration, clue-aware crossword navigation, fixed-target completion, stale-completion migration, deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
@@ -122,6 +122,9 @@ Last updated: 2026-10-14
 - Progressive Word Grid hint pull-request CI: [run 38543529695](https://github.com/BicycleJeanre/wtrack/actions/runs/38543529695) passed in full, including Firestore rules and the two-device cloud journey.
 - Progressive Word Grid hint post-merge CI: [run 38543921840](https://github.com/BicycleJeanre/wtrack/actions/runs/38543921840) passed in full.
 - Progressive Word Grid hint production release: [deployment run 38544166216](https://github.com/BicycleJeanre/wtrack/actions/runs/38544166216) passed from merge commit `3f8efe3`; the deployed asset and a production PWA reload confirmed the new control and preserved Letter Lab II progress.
+- Round-word letter hint pull-request CI: [run 38546092171](https://github.com/BicycleJeanre/wtrack/actions/runs/38546092171) passed in full, including Firestore rules and the two-device cloud journey.
+- Round-word letter hint post-merge CI: [run 38546431192](https://github.com/BicycleJeanre/wtrack/actions/runs/38546431192) passed in full.
+- Round-word letter hint production release: [deployment run 38546805045](https://github.com/BicycleJeanre/wtrack/actions/runs/38546805045) passed from merge commit `3313a96`; a production reload confirmed three prior grid hints migrated to three revealed round-word letters with zero board markers.
 
 ## Next release-one work
 
