@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `b4a5218`
-- Latest source pull request: [#23 — Score valid Word Grid extras as bonus words](https://github.com/BicycleJeanre/wtrack/pull/23)
+- Deployed application commit: `main` at `0138d84`
+- Latest source pull request: [#25 — Skip filled cells during crossword entry](https://github.com/BicycleJeanre/wtrack/pull/25)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `b4a5218`
-- Deployment: [GitHub Pages run 38531486088](https://github.com/BicycleJeanre/wtrack/actions/runs/38531486088)
-- Verification: deployment workflow passed. A fresh production browser confirmed a valid non-target word awards one bonus point, appears in the persisted Bonus words section, leaves the fixed target counter unchanged, and cannot score twice.
+- Source: `main` at `0138d84`
+- Deployment: [GitHub Pages run 38533750963](https://github.com/BicycleJeanre/wtrack/actions/runs/38533750963)
+- Verification: deployment workflow passed. A fresh production browser confirmed crossword typing preserved a filled crossing cell and moved focus directly to the next empty cell within the active clue.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -83,7 +83,7 @@ Last updated: 2026-10-14
 
 ## Validation
 
-- `npm run test:unit`: 24 passing, including Word Grid adjacency, fixed-target completion, stale-completion migration, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
+- `npm run test:unit`: 25 passing, including clue-aware crossword navigation, Word Grid adjacency, fixed-target completion, stale-completion migration, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
@@ -116,6 +116,9 @@ Last updated: 2026-10-14
 - Word Grid bonus-word pull-request CI: [run 38531192507](https://github.com/BicycleJeanre/wtrack/actions/runs/38531192507) passed before merge, including Firestore rules and the two-device cloud journey.
 - Word Grid bonus-word production release: [deployment run 38531486088](https://github.com/BicycleJeanre/wtrack/actions/runs/38531486088) passed from merge commit `b4a5218`; fresh-browser verification confirmed first-award scoring, visible bonus history, unchanged target progress, and duplicate prevention.
 - Word Grid bonus-word post-merge CI: [run 38531457149](https://github.com/BicycleJeanre/wtrack/actions/runs/38531457149) passed in full.
+- Crossword skip-filled-cell pull-request CI: [run 38532968076](https://github.com/BicycleJeanre/wtrack/actions/runs/38532968076) passed in full on rerun after an initial transient synthetic Firebase sign-in timeout.
+- Crossword skip-filled-cell production release: [deployment run 38533750963](https://github.com/BicycleJeanre/wtrack/actions/runs/38533750963) passed from merge commit `0138d84`; fresh-browser verification confirmed a filled crossing at cell 23 was preserved and focus advanced from cell 22 to cell 24.
+- Crossword skip-filled-cell post-merge CI: [run 38533718950](https://github.com/BicycleJeanre/wtrack/actions/runs/38533718950) passed in full on rerun after the same transient emulator sign-in timeout.
 
 ## Next release-one work
 
