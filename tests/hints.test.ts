@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint } from "../src/hints.ts";
+import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint, recordWordGridHint, wordGridHintCount } from "../src/hints.ts";
 import { crosswords, wordGrids, wordSearches } from "./fixtures.ts";
 import { newProgress } from "../src/store.ts";
 
@@ -20,27 +20,45 @@ test("word-search hints identify unused cells on unfinished words", () => {
   assert.equal(chooseWordSearchHint(puzzle, progress), null);
 });
 
-test("Word Grid hints progressively reveal one verified target path", () => {
+test("Word Grid hints progressively reveal letters in one verified target", () => {
   const puzzle = wordGrids[0]!;
   const progress = newProgress(puzzle, 42);
   const first = chooseWordGridHint(puzzle, progress);
   assert.ok(first);
-  assert.equal(first.revealedCount, 2);
-  assert.equal(first.cellIndexes.length, 2);
+  assert.equal(first.revealedCount, 1);
   const target = puzzle.words.find((word) => word.id === first.wordId);
   assert.ok(target);
   assert.ok(puzzle.roundWordIds.includes(target.id));
-  assert.equal(first.pattern, [...target.label].map((letter, index) => index < 2 ? letter : "_").join(" "));
+  assert.equal(first.letter, target.label[0]);
 
-  progress.hintedCells.push(...first.cellIndexes);
+  recordWordGridHint(puzzle, progress, first);
+  assert.equal(wordGridHintCount(puzzle, progress, target.id), 1);
   const second = chooseWordGridHint(puzzle, progress);
   assert.ok(second);
   assert.equal(second.wordId, target.id);
-  assert.equal(second.revealedCount, 3);
-  assert.deepEqual(second.cellIndexes.slice(0, 2), first.cellIndexes);
-  assert.equal(second.cellIndexes[2], target.path[2]!.y * puzzle.columns + target.path[2]!.x);
+  assert.equal(second.revealedCount, 2);
+  assert.equal(second.letter, target.label[1]);
+  recordWordGridHint(puzzle, progress, second);
+  assert.equal(wordGridHintCount(puzzle, progress, target.id), 2);
   progress.foundWordIds = [...puzzle.roundWordIds];
   assert.equal(chooseWordGridHint(puzzle, progress), null);
+});
+
+test("Word Grid letter hints migrate an earlier two-tile path hint", () => {
+  const puzzle = wordGrids[0]!;
+  const progress = newProgress(puzzle, 42);
+  const target = [...puzzle.words]
+    .filter((word) => puzzle.roundWordIds.includes(word.id))
+    .sort((left, right) => right.score - left.score || right.label.length - left.label.length || left.label.localeCompare(right.label))[0]!;
+  progress.hintedCells.push(...target.path.slice(0, 2).map(({ x, y }) => y * puzzle.columns + x));
+  assert.equal(wordGridHintCount(puzzle, progress, target.id), 2);
+  const hint = chooseWordGridHint(puzzle, progress);
+  assert.ok(hint);
+  assert.equal(hint.wordId, target.id);
+  assert.equal(hint.revealedCount, 3);
+  recordWordGridHint(puzzle, progress, hint);
+  assert.equal(wordGridHintCount(puzzle, progress, target.id), 3);
+  assert.ok(progress.hintedCells.every((token) => token >= puzzle.rows * puzzle.columns));
 });
 
 test("crossword hints reveal an unused letter from the active clue", () => {

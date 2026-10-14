@@ -40,18 +40,21 @@ test("Word Grid accepts adjacent paths, scores words, and persists hints", async
   await expect(page.getByText("AIN", { exact: true })).toBeVisible();
   await expect(page.locator('[data-round-word="ain"] .answer-slot')).toHaveCount(0);
   await expect(page.locator(".controls > .control-heading strong").first()).toHaveText("2 points");
-  await page.getByRole("button", { name: "Show a path hint" }).click();
-  await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
-  await expect(page.getByRole("status")).toContainText("Path hint 2 of");
-  await page.getByRole("button", { name: "Show a path hint" }).click();
-  await expect(page.locator(".grid-letter.hinted")).toHaveCount(3);
-  await expect(page.getByRole("status")).toContainText("Path hint 3 of");
+  await page.getByRole("button", { name: "Reveal a round-word letter" }).click();
+  await expect(page.locator(".grid-letter.hinted")).toHaveCount(0);
+  await expect(page.locator(".round-word-item .answer-slot.hinted")).toHaveCount(1);
+  await expect(page.getByRole("status")).toContainText("as letter 1 of");
+  await page.getByRole("button", { name: "Reveal a round-word letter" }).click();
+  await expect(page.locator(".grid-letter.hinted")).toHaveCount(0);
+  await expect(page.locator(".round-word-item .answer-slot.hinted")).toHaveCount(2);
+  await expect(page.getByRole("status")).toContainText("as letter 2 of");
   await page.reload();
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="wg-letter-grid-1-001"]').click();
   await expect(page.getByText("AIN", { exact: true })).toBeVisible();
   await expect(page.locator(".bonus-word")).toContainText("AID");
-  await expect(page.locator(".grid-letter.hinted")).toHaveCount(3);
+  await expect(page.locator(".grid-letter.hinted")).toHaveCount(0);
+  await expect(page.locator(".round-word-item .answer-slot.hinted")).toHaveCount(2);
 });
 
 test("word-search progress survives reload", async ({ page }) => {

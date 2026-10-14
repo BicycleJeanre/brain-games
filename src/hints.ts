@@ -19,12 +19,12 @@ export interface CrosswordHint {
 
 export interface WordGridHint {
   kind: "word-grid";
-  cellIndexes: number[];
   wordId: string;
   wordLength: number;
   points: number;
   revealedCount: number;
-  pattern: string;
+  letter: string;
+  token: number;
 }
 
 export type PuzzleHint = WordSearchHint | CrosswordHint | WordGridHint;
@@ -86,21 +86,66 @@ export function chooseCrosswordHint(puzzle: CrosswordPuzzle, progress: PuzzlePro
   return { kind: "crossword", ...selected };
 }
 
-export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgress): WordGridHint | null {
-  const hinted = new Set(progress.hintedCells);
+const WORD_GRID_HINT_STRIDE = 100;
+
+export function wordGridHintCounts(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
+  const counts = new Map<string, number>();
+  const gridSize = puzzle.rows * puzzle.columns;
+  for (const token of progress.hintedCells) {
+    if (token < gridSize) continue;
+    const encoded = token - gridSize;
+    const targetIndex = Math.floor(encoded / WORD_GRID_HINT_STRIDE);
+    const revealedCount = encoded % WORD_GRID_HINT_STRIDE;
+    const wordId = puzzle.roundWordIds[targetIndex];
+    const word = wordId ? puzzle.words.find((candidate) => candidate.id === wordId) : undefined;
+    if (word && revealedCount > 0 && revealedCount <= word.label.length) counts.set(wordId!, Math.max(counts.get(wordId!) ?? 0, revealedCount));
+  }
+  if (counts.size) return counts;
+
+  // Migrate the earlier grid-cell hint format into the most likely target.
+  const legacyCells = new Set(progress.hintedCells.filter((cell) => cell < gridSize));
   const targets = new Set(puzzle.roundWordIds);
-  const candidates = puzzle.words
+  const legacy = puzzle.words
     .filter((word) => targets.has(word.id) && !progress.foundWordIds.includes(word.id))
     .map((word) => {
       const cells = word.path.map(({ x, y }) => y * puzzle.columns + x);
       let revealedCount = 0;
-      while (revealedCount < cells.length && hinted.has(cells[revealedCount]!)) revealedCount += 1;
-      return { word, cells, revealedCount };
+      while (revealedCount < cells.length && legacyCells.has(cells[revealedCount]!)) revealedCount += 1;
+      return { word, revealedCount };
     })
-    .filter(({ cells, revealedCount }) => revealedCount < cells.length)
+    .filter(({ revealedCount }) => revealedCount >= 2)
+    .sort((left, right) => right.revealedCount - left.revealedCount
+      || right.word.score - left.word.score
+      || right.word.label.length - left.word.label.length
+      || left.word.label.localeCompare(right.word.label))[0];
+  if (legacy) counts.set(legacy.word.id, legacy.revealedCount);
+  return counts;
+}
+
+export function wordGridHintCount(puzzle: WordGridPuzzle, progress: PuzzleProgress, wordId: string) {
+  return wordGridHintCounts(puzzle, progress).get(wordId) ?? 0;
+}
+
+export function recordWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgress, hint: WordGridHint) {
+  const gridSize = puzzle.rows * puzzle.columns;
+  const targetIndex = puzzle.roundWordIds.indexOf(hint.wordId);
+  progress.hintedCells = progress.hintedCells.filter((token) => {
+    if (token < gridSize) return false;
+    return Math.floor((token - gridSize) / WORD_GRID_HINT_STRIDE) !== targetIndex;
+  });
+  progress.hintedCells.push(hint.token);
+}
+
+export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgress): WordGridHint | null {
+  const hinted = wordGridHintCounts(puzzle, progress);
+  const targets = new Set(puzzle.roundWordIds);
+  const candidates = puzzle.words
+    .filter((word) => targets.has(word.id) && !progress.foundWordIds.includes(word.id))
+    .map((word) => ({ word, revealedCount: hinted.get(word.id) ?? 0 }))
+    .filter(({ word, revealedCount }) => revealedCount < word.label.length)
     .sort((left, right) => {
-      const leftInProgress = left.revealedCount >= 2 ? 1 : 0;
-      const rightInProgress = right.revealedCount >= 2 ? 1 : 0;
+      const leftInProgress = left.revealedCount > 0 ? 1 : 0;
+      const rightInProgress = right.revealedCount > 0 ? 1 : 0;
       return rightInProgress - leftInProgress
         || right.revealedCount - left.revealedCount
         || right.word.score - left.word.score
@@ -110,17 +155,15 @@ export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgr
   const selected = candidates[0];
   if (!selected) return null;
 
-  const revealedCount = Math.min(selected.cells.length, selected.revealedCount >= 2 ? selected.revealedCount + 1 : 2);
-  const pattern = [...selected.word.label]
-    .map((letter, index) => index < revealedCount ? letter : "_")
-    .join(" ");
+  const revealedCount = selected.revealedCount + 1;
+  const targetIndex = puzzle.roundWordIds.indexOf(selected.word.id);
   return {
     kind: "word-grid",
-    cellIndexes: selected.cells.slice(0, revealedCount),
     wordId: selected.word.id,
     wordLength: selected.word.label.length,
     points: selected.word.score,
     revealedCount,
-    pattern,
+    letter: selected.word.label[revealedCount - 1]!,
+    token: puzzle.rows * puzzle.columns + targetIndex * WORD_GRID_HINT_STRIDE + revealedCount,
   };
 }

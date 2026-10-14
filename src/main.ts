@@ -3,7 +3,7 @@ import { createBackup, parseBackup } from "./backup.ts";
 import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordGrids, wordSearches } from "./catalogue.ts";
 import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
-import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint } from "./hints.ts";
+import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint, recordWordGridHint, wordGridHintCount, wordGridHintCounts } from "./hints.ts";
 import { findWord, nextEmptyCrosswordIndex, wordGridWordForPath, wordPath } from "./puzzles.ts";
 import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
 import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
@@ -200,7 +200,6 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
 }
 
 function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
-  const hinted = new Set(progress.hintedCells);
   const selected = new Set(wordGridPath.map(({ x, y }) => `${x}:${y}`));
   const currentWord = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
   const targetIds = new Set(puzzle.roundWordIds);
@@ -209,12 +208,13 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
   const foundIds = new Set(progress.foundWordIds);
   const bonusWords = puzzle.words.filter((word) => !targetIds.has(word.id) && foundIds.has(word.id));
   const wordLengths = [...new Set(roundWords.map((word) => word.label.length))].sort((left, right) => left - right);
+  const hintedLetterCount = [...wordGridHintCounts(puzzle, progress).values()].reduce((total, count) => total + count, 0);
   const score = puzzle.words.filter((word) => foundIds.has(word.id)).reduce((total, word) => total + word.score, 0);
   return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word Grid · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
       <div class="board-column">
         <div class="letter-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} Word Grid">
-          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""} ${hinted.has(y * puzzle.columns + x) ? "hinted" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}${hinted.has(y * puzzle.columns + x) ? ", hint highlighted" : ""}">${letter}</button>`)).join("")}
+          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}">${letter}</button>`)).join("")}
         </div>
         ${store.data.preferences.showControlHelp ? `<p class="board-note">Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused. Arrow keys move focus; Enter or Space adds a tile.</p>` : ""}
       </div>
@@ -222,14 +222,16 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
         <div class="control-heading"><span class="eyebrow">Score</span><strong>${score} point${score === 1 ? "" : "s"}</strong></div>
         <div class="current-word" aria-live="polite"><span>${currentWord || "Choose a letter"}</span><small>${currentWord ? `${currentWord.length} letters` : `Minimum ${puzzle.minimumLength}`}</small></div>
         <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button></div>
-        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a path hint</button><span>${progress.hintedCells.length} tile${progress.hintedCells.length === 1 ? "" : "s"} revealed</span></div>` : ""}
+        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Reveal a round-word letter</button><span>${hintedLetterCount} letter${hintedLetterCount === 1 ? "" : "s"} shown</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <section class="round-words" aria-labelledby="round-words-heading">
           <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${roundWords.length}</strong></div>
           <p class="round-words-note">These are the fixed target words for this grid. Blank slots show each word's length; its letters stay hidden until you find it. Find every listed word to finish the round; other valid words score as bonuses.</p>
           <div class="round-word-scroll">${wordLengths.map((length) => `<section class="word-length-group" aria-label="${length}-letter words"><h3>${length} letters</h3><ul>${roundWords.filter((word) => word.label.length === length).sort((left, right) => left.label.localeCompare(right.label)).map((word) => {
             const isFound = foundIds.has(word.id);
-            return `<li class="round-word-item ${isFound ? "found" : ""}" data-round-word="${word.id}"><span class="visually-hidden">${isFound ? `${word.label}, found` : `Unfound ${length}-letter word`}</span><span class="round-word-answer" aria-hidden="true">${isFound ? escapeHtml(word.label) : [...word.label].map(() => `<i class="answer-slot">_</i>`).join("")}</span><b>+${word.score}</b></li>`;
+            const hintedCount = isFound ? 0 : wordGridHintCount(puzzle, progress, word.id);
+            const accessibleLabel = isFound ? `${word.label}, found` : hintedCount ? `${hintedCount} of ${length} letters revealed in an unfound word` : `Unfound ${length}-letter word`;
+            return `<li class="round-word-item ${isFound ? "found" : hintedCount ? "has-hint" : ""}" data-round-word="${word.id}"><span class="visually-hidden">${accessibleLabel}</span><span class="round-word-answer" aria-hidden="true">${isFound ? escapeHtml(word.label) : [...word.label].map((letter, index) => `<i class="answer-slot ${index < hintedCount ? "hinted" : ""}">${index < hintedCount ? letter : "_"}</i>`).join("")}</span><b>+${word.score}</b></li>`;
           }).join("")}</ul></section>`).join("")}</div>
         </section>
         ${bonusWords.length ? `<section class="bonus-words" aria-labelledby="bonus-words-heading"><div class="control-heading"><span class="eyebrow" id="bonus-words-heading">Bonus words</span><strong>${bonusWords.length}</strong></div><ul>${bonusWords.sort((left, right) => left.label.localeCompare(right.label)).map((word) => `<li class="bonus-word"><span>${escapeHtml(word.label)}</span><b>+${word.score}</b></li>`).join("")}</ul></section>` : ""}
@@ -312,7 +314,7 @@ function help() {
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
       <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Each round has a fixed hidden target list; find every listed word to complete the puzzle. Other valid words earn bonus points.</p></article>
-      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints start with two ordered letters of a target, then extend the same path one tile at a time. Hints work locally and stay recorded with your progress.</p></article>
+      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints reveal one letter at a time inside a hidden round-word entry without marking any grid tile. Hints work locally and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
       <article class="card help-card"><h2>Backups & deletion</h2><p>Backup restore is non-destructive: it adds missing sessions and keeps existing ones. Delete one saved session from Home, or use scoped controls in Settings. Signed-in deletions synchronize through private tombstones.</p></article>
@@ -494,11 +496,12 @@ function bind() {
         playerMessage = `Revealed ${hint.letter} at row ${hint.row + 1}, column ${hint.column + 1}.`;
       }
     } else {
-      const hint = chooseWordGridHint(activePuzzle, progress);
-      if (!hint) playerMessage = "Every remaining target path is already fully hinted.";
+      const puzzle = activePuzzle;
+      const hint = chooseWordGridHint(puzzle, progress);
+      if (!hint) playerMessage = "Every remaining round word is already fully revealed by hints.";
       else {
-        await store.update(activePuzzle, (current) => { current.hintedCells.push(...hint.cellIndexes.filter((cell) => !current.hintedCells.includes(cell))); }, activeSessionId ?? activePuzzle.id);
-        playerMessage = `Path hint ${hint.revealedCount} of ${hint.wordLength}: ${hint.pattern}. This target is worth ${hint.points} point${hint.points === 1 ? "" : "s"}; follow the highlighted letters in that order.`;
+        await store.update(puzzle, (current) => { recordWordGridHint(puzzle, current, hint); }, activeSessionId ?? puzzle.id);
+        playerMessage = `Revealed ${hint.letter} as letter ${hint.revealedCount} of ${hint.wordLength} in a round word worth ${hint.points} point${hint.points === 1 ? "" : "s"}.`;
       }
     }
     render();
