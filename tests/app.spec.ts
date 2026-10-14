@@ -27,18 +27,26 @@ test("Word Grid accepts adjacent paths, scores words, and persists hints", async
   await expect(page.locator('[data-round-word="ain"]')).not.toContainText("AIN");
   for (const point of [[0,0],[0,1],[1,1]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
   await page.getByRole("button", { name: "Submit word" }).click();
-  await expect(page.getByRole("status")).toContainText("AID is valid in this grid, but it is not one of this round's target words");
+  await expect(page.getByRole("status")).toContainText("AID is a bonus word worth 1 point");
+  await expect(page.locator(".bonus-word")).toContainText("AID");
+  await expect(page.locator(".controls > .control-heading strong").first()).toHaveText("1 point");
+  for (const point of [[0,0],[0,1],[1,1]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
+  await page.getByRole("button", { name: "Submit word" }).click();
+  await expect(page.getByRole("status")).toContainText("AID was already found");
+  await expect(page.locator(".controls > .control-heading strong").first()).toHaveText("1 point");
   for (const point of [[1,2],[2,2],[1,3]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
   await page.getByRole("button", { name: "Submit word" }).click();
   await expect(page.getByRole("status")).toContainText("AIN scores 1 point");
   await expect(page.getByText("AIN", { exact: true })).toBeVisible();
   await expect(page.locator('[data-round-word="ain"] .answer-slot')).toHaveCount(0);
+  await expect(page.locator(".controls > .control-heading strong").first()).toHaveText("2 points");
   await page.getByRole("button", { name: "Show a starting path" }).click();
   await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
   await page.reload();
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="wg-letter-grid-1-001"]').click();
   await expect(page.getByText("AIN", { exact: true })).toBeVisible();
+  await expect(page.locator(".bonus-word")).toContainText("AID");
   await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
 });
 
