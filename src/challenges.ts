@@ -52,6 +52,36 @@ export function challengeSet(catalogue: Puzzle[], cadence: ChallengeCadence, now
   return CHALLENGE_BANDS.map((band) => challengePuzzle(catalogue, band, cadence, now));
 }
 
+function challengePeriodDate(cadence: ChallengeCadence, periodKey: string): Date | null {
+  if (cadence === "daily") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(periodKey)) return null;
+    const date = new Date(`${periodKey}T12:00:00Z`);
+    return Number.isFinite(date.getTime()) && challengePeriodKey(cadence, date) === periodKey ? date : null;
+  }
+
+  const match = /^(\d{4})-W(\d{2})$/.exec(periodKey);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  if (week < 1 || week > 53) return null;
+  const januaryFourth = new Date(Date.UTC(year, 0, 4, 12));
+  const monday = new Date(januaryFourth);
+  monday.setUTCDate(januaryFourth.getUTCDate() - ((januaryFourth.getUTCDay() || 7) - 1) + (week - 1) * 7);
+  return challengePeriodKey(cadence, monday) === periodKey ? monday : null;
+}
+
+export function challengeSetForPeriod(catalogue: Puzzle[], cadence: ChallengeCadence, periodKey: string): Puzzle[] {
+  const date = challengePeriodDate(cadence, periodKey);
+  return date ? challengeSet(catalogue, cadence, date) : [];
+}
+
+export function nextChallengePuzzle(catalogue: Puzzle[], game: Game): Puzzle | null {
+  if (!game.challenge) return null;
+  const set = challengeSetForPeriod(catalogue, game.challenge.cadence, game.challenge.periodKey);
+  const current = set.findIndex((puzzle) => puzzle.id === game.puzzle.id);
+  return current >= 0 ? set[current + 1] || null : null;
+}
+
 export function currentChallengePuzzleIds(catalogue: Puzzle[], now = new Date()): Set<string> {
   return new Set((["daily", "weekly"] as ChallengeCadence[])
     .flatMap((cadence) => challengeSet(catalogue, cadence, now))

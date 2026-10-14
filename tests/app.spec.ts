@@ -35,6 +35,42 @@ test("home, library and puzzle details expose the offline catalogue and SE prove
   await expect(page.getByRole("dialog")).toContainText("not a universal or official difficulty scale");
 });
 
+test("a completed challenge continues to the next difficulty in the same period", async ({ page }) => {
+  await page.locator("[data-challenge-puzzle]").first().click();
+  const original = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readwrite");
+    const store = transaction.objectStore("state");
+    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = data.games[data.activeGameId];
+    const challenge = { ...game.challenge };
+    game.values = [...game.puzzle.solution];
+    game.completedAt = Date.now();
+    game.updatedAt = game.completedAt;
+    store.put(data, "app");
+    await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
+    db.close();
+    return challenge;
+  });
+
+  await page.reload();
+  await page.getByRole("button", { name: /Review puzzle/ }).click();
+  await expect(page.getByRole("button", { name: "Next: Medium" })).toBeVisible();
+  await page.getByRole("button", { name: "Next: Medium" }).click();
+  await expect(page.locator(".player-meta .difficulty")).toHaveText("Medium");
+  const next = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = data.games[data.activeGameId];
+    db.close();
+    return { challenge: game.challenge, difficulty: game.puzzle.difficulty };
+  });
+  expect(next).toEqual({ challenge: original, difficulty: "Medium" });
+});
+
 test("training teaches a pattern before revealing its deduction and retains completion", async ({ page }) => {
   await page.getByRole("button", { name: "Train", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Technique lessons" })).toBeVisible();
