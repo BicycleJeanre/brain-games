@@ -26,8 +26,8 @@ test("Word Grid hints reveal only a remaining word's starting path", () => {
   const hint = chooseWordGridHint(puzzle, progress);
   assert.ok(hint);
   assert.equal(hint.cellIndexes.length, 2);
-  assert.ok(puzzle.words.some((word) => word.path.slice(0, 2).every(({ x, y }, index) => y * puzzle.columns + x === hint.cellIndexes[index])));
-  progress.foundWordIds = puzzle.words.map((word) => word.id);
+  assert.ok(puzzle.words.some((word) => puzzle.roundWordIds.includes(word.id) && word.path.slice(0, 2).every(({ x, y }, index) => y * puzzle.columns + x === hint.cellIndexes[index])));
+  progress.foundWordIds = [...puzzle.roundWordIds];
   assert.equal(chooseWordGridHint(puzzle, progress), null);
 });
 

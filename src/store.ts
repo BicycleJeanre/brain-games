@@ -162,6 +162,10 @@ export class Store {
   async start(puzzle: Puzzle, sessionId = puzzle.id, challenge?: PuzzleProgress["challenge"]) {
     const existing = this.data.progress[sessionId];
     if (!existing) this.data.progress[sessionId] = newProgress(puzzle, Date.now(), challenge);
+    else if (existing.completedAt && !isPuzzleComplete(puzzle, existing.foundWordIds, existing.entries)) {
+      existing.completedAt = null;
+      existing.updatedAt = Date.now();
+    }
     delete this.data.deletedProgress[sessionId];
     this.data.activePuzzleId = sessionId;
     await this.save();

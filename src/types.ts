@@ -71,6 +71,7 @@ export interface WordGridPuzzle extends PuzzleBase {
   grid: string[];
   minimumLength: number;
   targetScore: number;
+  roundWordIds: string[];
   words: WordGridWord[];
 }
 

@@ -4,7 +4,7 @@ const ROOT = new URL("../", import.meta.url);
 const PUZZLES_URL = new URL("src/data/puzzles.json", ROOT);
 const THEMES_URL = new URL("src/data/catalogue-themes.json", ROOT);
 const CORE_IDS = new Set(["ws-word-craft-001", "ws-ocean-001", "cw-puzzle-desk-001", "cw-coast-001"]);
-const CATALOGUE_VERSION = "2026.10.3";
+const CATALOGUE_VERSION = "2026.10.4";
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Diabolical"];
 const ROMAN = ["I", "II", "III", "IV"];
 const WORD_COUNTS = [6, 8, 10, 12];
@@ -250,7 +250,12 @@ for (const word of wordGridWords) {
   node.$ = word.toUpperCase();
 }
 const LETTER_POOL = "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
-const WORD_GRID_TARGETS = [10, 22, 38, 60];
+const WORD_GRID_LENGTH_PROFILES = [
+  [3, 3, 3, 4, 4, 4, 5, 5],
+  [3, 3, 4, 4, 4, 5, 5, 5, 6, 6],
+  [3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7],
+  [3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 8, 8],
+];
 const WORD_GRID_TITLES = ["Letter Lab", "Word Wander", "Lexicon Lane", "Tile Tangle"];
 
 function scoreWordGridWord(length) {
@@ -278,6 +283,22 @@ function solveWordGrid(grid) {
     .sort((left, right) => left.label.localeCompare(right.label));
 }
 
+function selectRoundWords(words, level) {
+  const selected = [];
+  const remaining = new Set(words.map((word) => word.id));
+  for (const preferredLength of WORD_GRID_LENGTH_PROFILES[level]) {
+    const word = words
+      .filter((candidate) => remaining.has(candidate.id))
+      .sort((left, right) => Math.abs(left.label.length - preferredLength) - Math.abs(right.label.length - preferredLength)
+        || (commonRank.get(left.id) ?? 20000) - (commonRank.get(right.id) ?? 20000)
+        || left.label.localeCompare(right.label))[0];
+    if (!word) throw new Error(`Not enough Word Grid words for difficulty ${level}`);
+    selected.push(word);
+    remaining.delete(word.id);
+  }
+  return selected.sort((left, right) => left.label.length - right.label.length || left.label.localeCompare(right.label));
+}
+
 function buildWordGrid(level, edition) {
   const size = level === 3 ? 5 : 4;
   const next = random(hash(`word-grid:${level}:${edition}`));
@@ -289,25 +310,28 @@ function buildWordGrid(level, edition) {
     const quality = total + words.reduce((sum, word) => sum + Math.max(0, 20000 - commonRank.get(word.label.toLowerCase())) / 2000, 0) + words.filter((word) => word.label.length >= 6).length * 4;
     if (!best || quality > best.quality) best = { grid, words, total, quality };
   }
-  if (!best || best.total < WORD_GRID_TARGETS[level]) throw new Error(`Could not generate Word Grid ${level}/${edition}`);
+  if (!best || best.words.length < WORD_GRID_LENGTH_PROFILES[level].length) throw new Error(`Could not generate Word Grid ${level}/${edition}`);
+  const roundWords = selectRoundWords(best.words, level);
+  const targetScore = roundWords.reduce((sum, word) => sum + word.score, 0);
   return {
     id: `wg-letter-grid-${level + 1}-${String(edition + 1).padStart(3, "0")}`,
     kind: "word-grid",
     title: `${WORD_GRID_TITLES[edition]} ${ROMAN[level]}`,
-    subtitle: `${size}×${size} adjacent-letter grid · target ${WORD_GRID_TARGETS[level]} points`,
+    subtitle: `${size}×${size} adjacent-letter grid · ${roundWords.length} target words`,
     difficulty: DIFFICULTIES[level],
     catalogueVersion: CATALOGUE_VERSION,
     source: {
       name: "WTrack Word Grid catalogue",
       url: "https://github.com/words/an-array-of-english-words",
       licence: "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      note: "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used.",
+      note: "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used.",
     },
     rows: size,
     columns: size,
     grid: best.grid.map((row) => row.join("")),
     minimumLength: 3,
-    targetScore: WORD_GRID_TARGETS[level],
+    targetScore,
+    roundWordIds: roundWords.map((word) => word.id),
     words: best.words,
   };
 }

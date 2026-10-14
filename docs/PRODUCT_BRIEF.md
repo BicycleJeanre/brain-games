@@ -42,9 +42,9 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ### Word Grid player
 
 - Trace horizontal, vertical, or diagonal adjacent letters without reusing a tile; accept words of three or more letters from the puzzle's frozen solution set.
-- Score by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11) and complete the puzzle by reaching its difficulty-specific target.
+- Score the fixed round targets by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11) and complete the puzzle by finding every target.
 - Support pointer drag, touch-by-tile, keyboard focus/selection, saved found words, reset, timer, and offline completion.
-- Show every accepted round word as length-matched blank character slots, revealing its letters only after it is found; retain unfinished slots for optional bonus play after the target is reached.
+- Select a verified fixed target set from the grid—8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words—and show only those targets as length-matched blank character slots, revealing letters only after each word is found.
 - Offline hints reveal only the first two tiles and length/value of a remaining word.
 
 ### Create and import
@@ -84,7 +84,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 
 ## Catalogue and provenance
 
-Catalogue version 2026.10.3 includes 116 puzzles: 50 word searches, 50 crosswords, and 16 deterministic Word Grids. It preserves the first four demonstrations, includes 96 puzzles generated from 12 original theme banks, and adds four Word Grids per difficulty. The committed catalogue contains 30 Easy, 30 Medium, 28 Hard, and 28 Diabolical puzzles. Word Grid candidate words are drawn at build time from `an-array-of-english-words` 2.0.0 and filtered through `subtlex-word-frequencies` 2.0.0; only each compact solved payload ships. Players can additionally create device-local puzzles from public data on demand.
+Catalogue version 2026.10.4 includes 116 puzzles: 50 word searches, 50 crosswords, and 16 deterministic Word Grids. It preserves the first four demonstrations, includes 96 puzzles generated from 12 original theme banks, and adds four Word Grids per difficulty. The committed catalogue contains 30 Easy, 30 Medium, 28 Hard, and 28 Diabolical puzzles. Word Grid candidate words are drawn at build time from `an-array-of-english-words` 2.0.0 and filtered through `subtlex-word-frequencies` 2.0.0; each compact solved payload records the full validation pool plus a fixed, verified round target set. Players can additionally create device-local puzzles from public data on demand.
 
 The committed source is validated at build time, then exported to one lightweight discovery index and one static payload per puzzle. This creates an expandable catalogue without a live third-party feed or a growing application bundle. Difficulty labels are intentionally friendly editorial classifications rather than standardized ratings.
 

@@ -85,8 +85,9 @@ export function chooseCrosswordHint(puzzle: CrosswordPuzzle, progress: PuzzlePro
 
 export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgress): WordGridHint | null {
   const hinted = new Set(progress.hintedCells);
+  const targets = new Set(puzzle.roundWordIds);
   const candidates = puzzle.words
-    .filter((word) => !progress.foundWordIds.includes(word.id))
+    .filter((word) => targets.has(word.id) && !progress.foundWordIds.includes(word.id))
     .map((word) => ({ word, cells: word.path.slice(0, 2).map(({ x, y }) => y * puzzle.columns + x) }))
     .filter(({ cells }) => cells.some((cell) => !hinted.has(cell)))
     .sort((left, right) => right.word.score - left.word.score || right.word.label.length - left.word.label.length || left.word.label.localeCompare(right.word.label));
