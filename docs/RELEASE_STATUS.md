@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `3313a96`
-- Latest source pull request: [#29 — Reveal Word Grid hints in round words](https://github.com/BicycleJeanre/wtrack/pull/29)
+- Deployed application commit: `main` at `b8e1ae5`
+- Latest source pull request: [#31 — Add free-order Letter Mix game](https://github.com/BicycleJeanre/wtrack/pull/31)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `3313a96`
-- Deployment: [GitHub Pages run 38546805045](https://github.com/BicycleJeanre/wtrack/actions/runs/38546805045)
-- Verification: deployment workflow passed. A production PWA reload confirmed Letter Lab II reveals saved hints inside round-word slots, shows no grid hint markers, and preserves existing bonus-word and puzzle progress.
+- Source: `main` at `b8e1ae5`
+- Deployment: [GitHub Pages run 38550288430](https://github.com/BicycleJeanre/wtrack/actions/runs/38550288430)
+- Verification: deployment workflow passed. A production PWA reload exposed all 32 Word Grid-family rounds; the published index contains 132 puzzles, and the live Letter Mix I payload reports catalogue version `2026.10.5`, shuffle mode, 147 accepted words, and 8 fixed targets.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -32,8 +32,8 @@ Last updated: 2026-10-14
 
 ## Catalogue, Firestore, and hints
 
-- 116 published puzzles: 50 word searches, 50 crosswords, and 16 Word Grids, exported as a metadata-only index plus individual on-demand payloads.
-- Difficulty filters and distribution: 30 Easy, 30 Medium, 28 Hard, and 28 Diabolical.
+- 132 published puzzles: 50 word searches, 50 crosswords, 16 connected Word Grids, and 16 free-order Letter Mix trays, exported as a metadata-only index plus individual on-demand payloads.
+- Difficulty filters and distribution: 34 Easy, 34 Medium, 32 Hard, and 32 Diabolical.
 - Deterministic catalogue generation plus integrity and provenance validation.
 - IndexedDB retains no more than ten puzzle payloads by least-recently-opened order while progress remains stored independently.
 - Emulator-backed browser journey that creates an account, saves puzzle progress to Firestore, signs in from a second browser, and restores that progress.
@@ -52,6 +52,13 @@ Last updated: 2026-10-14
 - Pointer-drag, touch-by-tile, and keyboard play; found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
 - Sixteen deterministic grids use build-only `an-array-of-english-words` 2.0.0 (MIT), quality-filtered with `subtlex-word-frequencies` 2.0.0 (ISC). Only compact pre-solved payloads ship.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
+
+## Letter Mix release
+
+- Free-order eight-letter trays accept any non-repeating tile sequence from a frozen verified solution set; letters do not need to be adjacent.
+- **Shuffle letters** changes only the visible tile arrangement and clears the word currently being built. It preserves the tray's accepted words, targets, score, hints, and saved progress.
+- Sixteen deterministic trays add four rounds per difficulty. They reuse the Word Grid scoring, hidden target slots, progressive hints, bonus-word history, completion, offline cache, challenges, backup, and optional Firestore progress model.
+- Catalogue validation enforces mode-specific path rules and verifies every fixed target can be submitted from its stored non-repeating tile selection.
 
 ## STrack parity release
 
@@ -83,11 +90,11 @@ Last updated: 2026-10-14
 
 ## Validation
 
-- `npm run test:unit`: 27 passing, including all-catalogue Word Grid target-path verification, round-word letter hints, legacy hint migration, clue-aware crossword navigation, fixed-target completion, stale-completion migration, deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
+- `npm run test:unit`: 28 passing, including connected and free-order Word Grid target verification, round-word letter hints, legacy hint migration, clue-aware crossword navigation, fixed-target completion, stale-completion migration, deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
-- `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
-- `npm run catalogue:check`: passing for 116 puzzles and all four difficulty tiers.
+- `npm test`: 42 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes connected Word Grid and Letter Mix play, reshuffling, scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
+- `npm run catalogue:check`: passing for 132 puzzles and all four difficulty tiers.
 - `npm run test:rules`: passing in CI with Java 21; this workstation does not have a Java runtime.
 - `npm run test:cloud`: configured for CI with Java 21; this workstation does not have a Java runtime.
 - Full clean-runner workflow: [CI run 38371495785](https://github.com/BicycleJeanre/wtrack/actions/runs/38371495785) passed.
@@ -125,6 +132,9 @@ Last updated: 2026-10-14
 - Round-word letter hint pull-request CI: [run 38546092171](https://github.com/BicycleJeanre/wtrack/actions/runs/38546092171) passed in full, including Firestore rules and the two-device cloud journey.
 - Round-word letter hint post-merge CI: [run 38546431192](https://github.com/BicycleJeanre/wtrack/actions/runs/38546431192) passed in full.
 - Round-word letter hint production release: [deployment run 38546805045](https://github.com/BicycleJeanre/wtrack/actions/runs/38546805045) passed from merge commit `3313a96`; a production reload confirmed three prior grid hints migrated to three revealed round-word letters with zero board markers.
+- Letter Mix pull-request CI: [run 38549311534](https://github.com/BicycleJeanre/wtrack/actions/runs/38549311534) passed in full on rerun after a transient synthetic Firebase account-creation timeout; the corrected browser assertion passed in Chromium, WebKit, and mobile Chromium.
+- Letter Mix post-merge CI: [run 38550016049](https://github.com/BicycleJeanre/wtrack/actions/runs/38550016049) passed in full from merge commit `b8e1ae5`, including Firestore rules and the two-device cloud journey.
+- Letter Mix production release: [deployment run 38550288430](https://github.com/BicycleJeanre/wtrack/actions/runs/38550288430) passed from merge commit `b8e1ae5`; a production PWA reload confirmed the free-order tray, shuffle control, eight hidden Easy targets, and live catalogue version `2026.10.5`.
 
 ## Next release-one work
 
