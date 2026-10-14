@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `342ea92`
-- Latest source pull request: [#19 — Show hidden Word Grid answer slots](https://github.com/BicycleJeanre/wtrack/pull/19)
+- Deployed application commit: `main` at `9920c04`
+- Latest source pull request: [#21 — Use fixed target lists for Word Grid rounds](https://github.com/BicycleJeanre/wtrack/pull/21)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `342ea92`
-- Deployment: [GitHub Pages run 38527763629](https://github.com/BicycleJeanre/wtrack/actions/runs/38527763629)
-- Verification: deployment workflow passed. The cache-busted production bundle contains the grouped **Round words** checklist, length-matched blank slots, found-word reveal copy, and post-target bonus-play guidance.
+- Source: `main` at `9920c04`
+- Deployment: [GitHub Pages run 38529652290](https://github.com/BicycleJeanre/wtrack/actions/runs/38529652290)
+- Verification: deployment workflow passed. A fresh production browser confirmed eight fixed Easy targets, hidden length-matched slots, target-word reveal, and valid non-target handling; the live catalogue and payload report version `2026.10.4`.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -47,7 +47,8 @@ Last updated: 2026-10-14
 
 ## Word Grid release candidate
 
-- Original adjacent-letter game mode with 4×4 and 5×5 grids, non-repeating eight-direction paths, length-based scoring, and difficulty-specific completion targets.
+- Original adjacent-letter game mode with 4×4 and 5×5 grids, non-repeating eight-direction paths, length-based scoring, and fixed verified target sets of 8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words.
+- Round answers remain hidden as length-matched slots until found, hints stay within the target set, and completion requires every listed target. Other dictionary-valid traces are identified but do not advance the round.
 - Pointer-drag, touch-by-tile, and keyboard play; found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
 - Sixteen deterministic grids use build-only `an-array-of-english-words` 2.0.0 (MIT), quality-filtered with `subtlex-word-frequencies` 2.0.0 (ISC). Only compact pre-solved payloads ship.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
@@ -82,7 +83,7 @@ Last updated: 2026-10-14
 
 ## Validation
 
-- `npm run test:unit`: 23 passing, including Word Grid adjacency, scoring, target completion, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
+- `npm run test:unit`: 24 passing, including Word Grid adjacency, fixed-target completion, stale-completion migration, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
@@ -109,6 +110,9 @@ Last updated: 2026-10-14
 - Word Grid production release: [deployment run 38427057844](https://github.com/BicycleJeanre/wtrack/actions/runs/38427057844) passed from merge commit `3a0a529`; production catalogue and payload endpoints confirmed all 16 new grids.
 - Word Grid answer-slot pull-request CI: [run 38527427320](https://github.com/BicycleJeanre/wtrack/actions/runs/38527427320) passed before merge.
 - Word Grid answer-slot production release: [deployment run 38527763629](https://github.com/BicycleJeanre/wtrack/actions/runs/38527763629) passed from merge commit `342ea92`; the cache-busted production asset confirmed the complete hidden-answer checklist UI.
+- Fixed Word Grid target-set pull-request CI: [run 38529252028](https://github.com/BicycleJeanre/wtrack/actions/runs/38529252028) passed before merge, including Firestore rules and the two-device cloud journey.
+- Fixed Word Grid target-set production release: [deployment run 38529652290](https://github.com/BicycleJeanre/wtrack/actions/runs/38529652290) passed from merge commit `9920c04`; fresh-browser verification confirmed eight hidden Easy targets, target reveal, non-target handling, and catalogue version `2026.10.4`.
+- Post-merge CI [run 38529624455](https://github.com/BicycleJeanre/wtrack/actions/runs/38529624455) passed in full on rerun after an initial transient synthetic Firebase sign-in timeout.
 
 ## Next release-one work
 
