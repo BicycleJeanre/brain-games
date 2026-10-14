@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `e4dac97`
-- Latest source pull request: [#33 — Separate Letter Mix catalogue category](https://github.com/BicycleJeanre/wtrack/pull/33)
+- Deployed application commit: `main` at `96fdaca`
+- Latest source pull request: [#35 — Submit Word Grid words with Enter](https://github.com/BicycleJeanre/wtrack/pull/35)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `e4dac97`
-- Deployment: [GitHub Pages run 38553013512](https://github.com/BicycleJeanre/wtrack/actions/runs/38553013512)
-- Verification: deployment workflow passed. A production PWA reload confirmed separate Home cards and counts for 16 connected Word Grids and 16 Letter Mix rounds. The top-level **Letter Mix** library filter immediately exposes its 16 puzzles without including connected grids.
+- Source: `main` at `96fdaca`
+- Deployment: [GitHub Pages run 38555560189](https://github.com/BicycleJeanre/wtrack/actions/runs/38555560189)
+- Verification: deployment workflow passed. A production PWA reload confirmed the updated keyboard guidance, and selecting `TEA` in Letter Mix then pressing Enter produced the expected accepted-word status without using the submit button.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -49,7 +49,7 @@ Last updated: 2026-10-14
 
 - Original adjacent-letter game mode with 4×4 and 5×5 grids, non-repeating eight-direction paths, length-based scoring, and fixed verified target sets of 8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words.
 - Round answers remain hidden as length-matched slots until found, hints stay within the target set, and completion requires every listed target. Other dictionary-valid traces persist as one-time bonus words and add their normal length-based points without advancing target completion.
-- Pointer-drag, touch-by-tile, and keyboard play; found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
+- Pointer-drag, touch-by-tile, and keyboard play; Space adds a focused tile and Enter submits the assembled word in both connected Word Grid and Letter Mix. Found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
 - Sixteen deterministic grids use build-only `an-array-of-english-words` 2.0.0 (MIT), quality-filtered with `subtlex-word-frequencies` 2.0.0 (ISC). Only compact pre-solved payloads ship.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
 
@@ -139,6 +139,9 @@ Last updated: 2026-10-14
 - Letter Mix category pull-request CI: [run 38552378765](https://github.com/BicycleJeanre/wtrack/actions/runs/38552378765) passed in full, including the independent 16-item filters in Chromium, WebKit, and mobile Chromium.
 - Letter Mix category post-merge CI: [run 38552685896](https://github.com/BicycleJeanre/wtrack/actions/runs/38552685896) passed in full from merge commit `e4dac97`, including Firestore rules and the two-device cloud journey.
 - Letter Mix category production release: [deployment run 38553013512](https://github.com/BicycleJeanre/wtrack/actions/runs/38553013512) passed from merge commit `e4dac97`; a production PWA reload confirmed the new top-level filter and the 16/16 Home count split.
+- Enter-to-submit pull-request CI: [run 38554864412](https://github.com/BicycleJeanre/wtrack/actions/runs/38554864412) passed in full, including Enter submission for connected Word Grid and Letter Mix in Chromium, WebKit, and mobile Chromium.
+- Enter-to-submit post-merge CI: [run 38555212638](https://github.com/BicycleJeanre/wtrack/actions/runs/38555212638) passed in full from merge commit `96fdaca`, including Firestore rules and the two-device cloud journey.
+- Enter-to-submit production release: [deployment run 38555560189](https://github.com/BicycleJeanre/wtrack/actions/runs/38555560189) passed from merge commit `96fdaca`; a production PWA reload and live Letter Mix submission confirmed Enter accepts the assembled word.
 
 ## Next release-one work
 
