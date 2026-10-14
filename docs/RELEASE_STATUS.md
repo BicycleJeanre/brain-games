@@ -1,11 +1,11 @@
 # WTrack release status
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `3a0a529`
-- Latest source pull request: [#17 — Add adjacent-letter Word Grid game](https://github.com/BicycleJeanre/wtrack/pull/17)
+- Deployed application commit: `main` at `342ea92`
+- Latest source pull request: [#19 — Show hidden Word Grid answer slots](https://github.com/BicycleJeanre/wtrack/pull/19)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-13
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `3a0a529`
-- Deployment: [GitHub Pages run 38427057844](https://github.com/BicycleJeanre/wtrack/actions/runs/38427057844)
-- Verification: deployment workflow passed. Cache-busted production catalogue requests returned version `2026.10.3`, 116 total puzzles, 16 Word Grids, and the complete `Letter Lab I` playable payload with 91 accepted words and a 10-point target.
+- Source: `main` at `342ea92`
+- Deployment: [GitHub Pages run 38527763629](https://github.com/BicycleJeanre/wtrack/actions/runs/38527763629)
+- Verification: deployment workflow passed. The cache-busted production bundle contains the grouped **Round words** checklist, length-matched blank slots, found-word reveal copy, and post-target bonus-play guidance.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -107,6 +107,8 @@ Last updated: 2026-10-13
 - Public-data generation production release: [deployment run 38394541080](https://github.com/BicycleJeanre/wtrack/actions/runs/38394541080) passed from merge commit `e91821f`; a live browser created a Hard astronomy word search directly from Wikimedia data and opened it from the offline payload cache.
 - Word Grid pull-request CI: [run 38426669092](https://github.com/BicycleJeanre/wtrack/actions/runs/38426669092) passed before merge.
 - Word Grid production release: [deployment run 38427057844](https://github.com/BicycleJeanre/wtrack/actions/runs/38427057844) passed from merge commit `3a0a529`; production catalogue and payload endpoints confirmed all 16 new grids.
+- Word Grid answer-slot pull-request CI: [run 38527427320](https://github.com/BicycleJeanre/wtrack/actions/runs/38527427320) passed before merge.
+- Word Grid answer-slot production release: [deployment run 38527763629](https://github.com/BicycleJeanre/wtrack/actions/runs/38527763629) passed from merge commit `342ea92`; the cache-busted production asset confirmed the complete hidden-answer checklist UI.
 
 ## Next release-one work
 
