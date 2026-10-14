@@ -65,12 +65,12 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .hero .primary { z-index:1; flex-direction:column; min-height:72px; }
 .section { margin-bottom:38px; }
 .section-heading,.page-heading,.player-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; }
-.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:38px; }
+.stat-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:38px; }
 .stat { padding:20px; }
 .stat b,.stat span { display:block; }
 .stat b { color:var(--accent); font-size:27px; }
 .stat span { color:var(--muted); font-size:11px; font-weight:750; }
-.split-feature { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.split-feature { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
 .settings-grid,.help-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .feature,.create-card,.settings-card,.help-card { padding:25px; }
 .feature p { min-height:44px; }
@@ -82,7 +82,7 @@ p,li { color:var(--muted); font-size:13px; line-height:1.65; }
 .challenge-card .secondary { align-self:end; margin-top:auto; }
 .challenge-stats { margin:10px 0 0; }
 .filter-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.filter-tabs { display:inline-grid; grid-template-columns:repeat(4,auto); gap:3px; margin-bottom:16px; padding:3px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
+.filter-tabs { display:inline-grid; grid-template-columns:repeat(5,auto); gap:3px; margin-bottom:16px; padding:3px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }
 .difficulty-tabs { grid-template-columns:repeat(6,auto); }
 .filter-tabs button { min-height:34px; padding:5px 12px; border:0; border-radius:6px; background:transparent; color:var(--muted); font-size:11px; font-weight:800; }
 .filter-tabs button[aria-pressed="true"] { background:var(--panel-raised); color:var(--accent); }

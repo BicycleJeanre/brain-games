@@ -9,7 +9,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Original Vite + strict TypeScript app with no UI framework.
 - 132 public puzzles: 50 word searches, 50 crosswords, 16 connected Word Grids, and 16 free-order Letter Mix trays, exported as individually downloadable static payloads.
 - An IndexedDB least-recently-used cache capped at ten playable offline puzzles; eviction never deletes progress.
-- Easy, Medium, Hard, and Diabolical library filters, with at least 24 puzzles in each tier.
+- Separate Word search, Crossword, connected Word Grid, and Letter Mix library filters, plus Easy, Medium, Hard, and Diabolical difficulty filters.
 - Stable daily and weekly challenges in every rated difficulty, with independent sessions, streaks, completion, and average-time summaries.
 - IndexedDB-first progress, completion state, preferences, and timer.
 - Separate active/completed history with individual deletion, synchronized tombstones, and scoped local-data controls.

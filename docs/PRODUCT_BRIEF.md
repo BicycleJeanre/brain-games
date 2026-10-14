@@ -19,7 +19,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ### Home and library
 
 - Resume active puzzles before discovery content, keep completed puzzles in a separate history, and allow either kind of saved session to be deleted individually.
-- Browse the expandable public catalogue and filter by type or by Easy, Medium, Hard, and Diabolical difficulty.
+- Browse the expandable public catalogue and filter Word searches, Crosswords, connected Word Grids, and Letter Mix as four distinct play styles, or filter by Easy, Medium, Hard, and Diabolical difficulty.
 - Download a puzzle on first open and retain at most ten playable payloads offline using least-recently-opened eviction.
 - Show difficulty, progress, completion, and provenance details.
 - Offer deterministic daily and weekly challenges in every rated difficulty, with independent saved sessions and completion, streak, and average-time summaries.
