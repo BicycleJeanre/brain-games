@@ -22,10 +22,14 @@ test("Word Grid accepts adjacent paths, scores words, and persists hints", async
   await page.goto("./");
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="wg-letter-grid-1-001"]').click();
+  await expect(page.locator(".round-word-item")).toHaveCount(91);
+  await expect(page.locator('[data-round-word="aid"] .answer-slot')).toHaveCount(3);
+  await expect(page.locator('[data-round-word="aid"]')).not.toContainText("AID");
   for (const point of [[0,0],[0,1],[1,1]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
   await page.getByRole("button", { name: "Submit word" }).click();
   await expect(page.getByRole("status")).toContainText("AID scores 1 point");
   await expect(page.getByText("AID", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-round-word="aid"] .answer-slot')).toHaveCount(0);
   await page.getByRole("button", { name: "Show a starting path" }).click();
   await expect(page.locator(".grid-letter.hinted")).toHaveCount(2);
   await page.reload();

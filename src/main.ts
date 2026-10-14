@@ -204,6 +204,8 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
   const selected = new Set(wordGridPath.map(({ x, y }) => `${x}:${y}`));
   const currentWord = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
   const found = puzzle.words.filter((word) => progress.foundWordIds.includes(word.id));
+  const foundIds = new Set(progress.foundWordIds);
+  const wordLengths = [...new Set(puzzle.words.map((word) => word.label.length))].sort((left, right) => left - right);
   const score = found.reduce((total, word) => total + word.score, 0);
   return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word Grid · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
@@ -219,7 +221,14 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
         <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button></div>
         ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a starting path</button><span>${progress.hintedCells.length / 2} used</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
-        <div><span class="eyebrow">Found words</span>${found.length ? `<ul class="found-grid-words">${found.sort((left, right) => right.score - left.score || left.label.localeCompare(right.label)).map((word) => `<li><span>${escapeHtml(word.label)}</span><b>+${word.score}</b></li>`).join("")}</ul>` : `<p>No words found yet.</p>`}</div>
+        <section class="round-words" aria-labelledby="round-words-heading">
+          <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${puzzle.words.length}</strong></div>
+          <p class="round-words-note">Each row is one accepted word. Blank slots reveal its length; finding the word reveals its letters. Reaching the score target completes the round, while the remaining slots stay available for bonus play.</p>
+          <div class="round-word-scroll">${wordLengths.map((length) => `<section class="word-length-group" aria-label="${length}-letter words"><h3>${length} letters</h3><ul>${puzzle.words.filter((word) => word.label.length === length).sort((left, right) => left.label.localeCompare(right.label)).map((word) => {
+            const isFound = foundIds.has(word.id);
+            return `<li class="round-word-item ${isFound ? "found" : ""}" data-round-word="${word.id}"><span class="visually-hidden">${isFound ? `${word.label}, found` : `Unfound ${length}-letter word`}</span><span class="round-word-answer" aria-hidden="true">${isFound ? escapeHtml(word.label) : [...word.label].map(() => `<i class="answer-slot">_</i>`).join("")}</span><b>+${word.score}</b></li>`;
+          }).join("")}</ul></section>`).join("")}</div>
+        </section>
         ${progress.completedAt ? `<div class="complete-banner"><strong>Target reached</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
         ${puzzleProvenance(puzzle)}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
