@@ -4,7 +4,7 @@ const ROOT = new URL("../", import.meta.url);
 const PUZZLES_URL = new URL("src/data/puzzles.json", ROOT);
 const THEMES_URL = new URL("src/data/catalogue-themes.json", ROOT);
 const CORE_IDS = new Set(["ws-word-craft-001", "ws-ocean-001", "cw-puzzle-desk-001", "cw-coast-001"]);
-const CATALOGUE_VERSION = "2026.10.4";
+const CATALOGUE_VERSION = "2026.10.5";
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Diabolical"];
 const ROMAN = ["I", "II", "III", "IV"];
 const WORD_COUNTS = [6, 8, 10, 12];
@@ -257,6 +257,7 @@ const WORD_GRID_LENGTH_PROFILES = [
   [3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 8, 8],
 ];
 const WORD_GRID_TITLES = ["Letter Lab", "Word Wander", "Lexicon Lane", "Tile Tangle"];
+const LETTER_MIX_TITLES = ["Letter Mix", "Word Tumbler", "Shuffle Lab", "Anagram Deck"];
 
 function scoreWordGridWord(length) {
   return length < 5 ? 1 : length === 5 ? 2 : length === 6 ? 3 : length === 7 ? 5 : 11;
@@ -316,6 +317,7 @@ function buildWordGrid(level, edition) {
   return {
     id: `wg-letter-grid-${level + 1}-${String(edition + 1).padStart(3, "0")}`,
     kind: "word-grid",
+    wordGridMode: "adjacent",
     title: `${WORD_GRID_TITLES[edition]} ${ROMAN[level]}`,
     subtitle: `${size}×${size} adjacent-letter grid · ${roundWords.length} target words`,
     difficulty: DIFFICULTIES[level],
@@ -336,12 +338,77 @@ function buildWordGrid(level, edition) {
   };
 }
 
+function shuffled(items, next) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(next() * (index + 1));
+    [result[index], result[swap]] = [result[swap], result[index]];
+  }
+  return result;
+}
+
+function freePath(letters, label, columns) {
+  const used = new Set();
+  return [...label].map((letter) => {
+    const index = letters.findIndex((candidate, position) => candidate === letter && !used.has(position));
+    if (index < 0) return null;
+    used.add(index);
+    return { x: index % columns, y: Math.floor(index / columns) };
+  });
+}
+
+function buildLetterMix(level, edition) {
+  const next = random(hash(`letter-mix:${level}:${edition}`));
+  const anchors = wordGridWords
+    .filter((word) => word.length === 8)
+    .sort((left, right) => (commonRank.get(left) ?? 20000) - (commonRank.get(right) ?? 20000) || left.localeCompare(right));
+  const offset = hash(`letter-mix-anchor:${level}:${edition}`) % anchors.length;
+  let best = null;
+  for (let attempt = 0; attempt < Math.min(48, anchors.length); attempt += 1) {
+    const anchor = anchors[(offset + attempt * 37) % anchors.length];
+    const letters = shuffled([...anchor.toUpperCase()], next);
+    const words = wordGridWords.flatMap((candidate) => {
+      const label = candidate.toUpperCase();
+      if (label.length > letters.length) return [];
+      const path = freePath(letters, label, 4);
+      return path.every(Boolean) ? [{ id: candidate, label, path, score: scoreWordGridWord(label.length) }] : [];
+    }).sort((left, right) => left.label.localeCompare(right.label));
+    const quality = words.length + words.filter((word) => word.label.length >= 5).length * 3 + words.filter((word) => word.label.length >= 7).length * 8;
+    if (!best || quality > best.quality) best = { letters, words, quality };
+  }
+  if (!best || best.words.length < WORD_GRID_LENGTH_PROFILES[level].length) throw new Error(`Could not generate Letter Mix ${level}/${edition}`);
+  const roundWords = selectRoundWords(best.words, level);
+  return {
+    id: `wg-letter-mix-${level + 1}-${String(edition + 1).padStart(3, "0")}`,
+    kind: "word-grid",
+    wordGridMode: "shuffle",
+    title: `${LETTER_MIX_TITLES[edition]} ${ROMAN[level]}`,
+    subtitle: `8-letter shuffle tray · ${roundWords.length} target words`,
+    difficulty: DIFFICULTIES[level],
+    catalogueVersion: CATALOGUE_VERSION,
+    source: {
+      name: "WTrack Letter Mix catalogue",
+      url: "https://github.com/words/an-array-of-english-words",
+      licence: "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
+      note: "Deterministic WTrack generator 1.2; eight-letter trays and their complete accepted subword sets are derived at build time from an-array-of-english-words 2.0.0 and filtered with subtlex-word-frequencies 2.0.0. No live API is used.",
+    },
+    rows: 2,
+    columns: 4,
+    grid: [best.letters.slice(0, 4).join(""), best.letters.slice(4).join("")],
+    minimumLength: 3,
+    targetScore: roundWords.reduce((sum, word) => sum + word.score, 0),
+    roundWordIds: roundWords.map((word) => word.id),
+    words: best.words,
+  };
+}
+
 const current = JSON.parse(await readFile(PUZZLES_URL, "utf8"));
-const core = [...CORE_IDS].map((id) => current.find((puzzle) => puzzle.id === id)).filter(Boolean);
+const core = [...CORE_IDS].map((id) => current.find((puzzle) => puzzle.id === id)).filter(Boolean).map((puzzle) => ({ ...puzzle, catalogueVersion: CATALOGUE_VERSION }));
 if (core.length !== CORE_IDS.size) throw new Error("The four original core puzzles are required before catalogue generation.");
 const themes = JSON.parse(await readFile(THEMES_URL, "utf8"));
 const generated = themes.flatMap((theme) => DIFFICULTIES.flatMap((_, level) => [buildWordSearch(theme, level), buildCrossword(theme, level)]));
 const wordGridCatalogue = WORD_GRID_TITLES.flatMap((_, edition) => DIFFICULTIES.map((_, level) => buildWordGrid(level, edition)));
-const catalogue = [...core, ...generated, ...wordGridCatalogue];
+const letterMixCatalogue = LETTER_MIX_TITLES.flatMap((_, edition) => DIFFICULTIES.map((_, level) => buildLetterMix(level, edition)));
+const catalogue = [...core, ...generated, ...wordGridCatalogue, ...letterMixCatalogue];
 await writeFile(PUZZLES_URL, `${JSON.stringify(catalogue, null, 2)}\n`);
 console.log(`Generated ${catalogue.length} puzzles: ${catalogue.filter((puzzle) => puzzle.kind === "word-search").length} word searches, ${catalogue.filter((puzzle) => puzzle.kind === "crossword").length} crosswords, and ${catalogue.filter((puzzle) => puzzle.kind === "word-grid").length} Word Grids.`);

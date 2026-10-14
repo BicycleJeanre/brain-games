@@ -13,9 +13,9 @@ test("home and catalogue expose all puzzle types", async ({ page }) => {
   await expect(page.getByText("Word craft")).toBeVisible();
   await expect(page.getByText("Puzzle desk")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Letter Lab I", exact: true })).toBeVisible();
-  await expect(page.locator(".catalogue-badge")).toContainText("116 puzzles");
+  await expect(page.locator(".catalogue-badge")).toContainText("132 puzzles");
   await page.getByRole("button", { name: "Diabolical", exact: true }).click();
-  await expect(page.getByText("Showing 28 of 116 puzzles")).toBeVisible();
+  await expect(page.getByText("Showing 32 of 132 puzzles")).toBeVisible();
 });
 
 test("Word Grid accepts adjacent paths, scores words, and persists hints", async ({ page }) => {
@@ -55,6 +55,26 @@ test("Word Grid accepts adjacent paths, scores words, and persists hints", async
   await expect(page.locator(".bonus-word")).toContainText("AID");
   await expect(page.locator(".grid-letter.hinted")).toHaveCount(0);
   await expect(page.locator(".round-word-item .answer-slot.hinted")).toHaveCount(2);
+});
+
+test("Letter Mix shuffles its tray and accepts non-adjacent words", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "Puzzles", exact: true }).click();
+  await page.locator('[data-open="wg-letter-mix-1-001"]').click();
+  await expect(page.getByText("Letter Mix · Easy", { exact: true })).toBeVisible();
+  const cells = page.locator("[data-grid-cell]");
+  await expect(cells).toHaveCount(8);
+  const before = await cells.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.gridCell));
+  await page.getByRole("button", { name: "Shuffle letters" }).click();
+  const after = await cells.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.gridCell));
+  expect(after).not.toEqual(before);
+  expect([...after].sort()).toEqual([...before].sort());
+  await expect(page.getByRole("status")).toContainText("score and found words are unchanged");
+
+  for (const point of [[3,1],[0,0],[3,0]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
+  await page.getByRole("button", { name: "Submit word" }).click();
+  await expect(page.getByRole("status")).toContainText("GET scores 1 point");
+  await expect(page.getByText("GET", { exact: true })).toBeVisible();
 });
 
 test("word-search progress survives reload", async ({ page }) => {

@@ -4,6 +4,7 @@ export type Theme = "system" | "light" | "dark";
 export type ChallengeCadence = "daily" | "weekly";
 export type TextSize = "small" | "medium" | "large";
 export type HighlightColour = "cyan" | "amber" | "violet" | "green";
+export type WordGridMode = "adjacent" | "shuffle";
 
 export interface PuzzleSource {
   name: string;
@@ -20,6 +21,7 @@ export interface PuzzleBase {
   difficulty: Difficulty;
   catalogueVersion: string;
   source: PuzzleSource;
+  wordGridMode?: WordGridMode;
 }
 
 export type PuzzleSummary = PuzzleBase;
@@ -66,6 +68,7 @@ export interface WordGridWord {
 
 export interface WordGridPuzzle extends PuzzleBase {
   kind: "word-grid";
+  wordGridMode: WordGridMode;
   rows: number;
   columns: number;
   grid: string[];

@@ -104,7 +104,8 @@ button:disabled { cursor:not-allowed; opacity:.55; }
 .word-cell.found { background:color-mix(in srgb,var(--success) 26%,var(--panel)); color:var(--text); box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--success) 65%,transparent); }
 .word-cell.hinted { position:relative; box-shadow:inset 0 0 0 3px var(--highlight); }
 .word-cell.hinted:after { content:"?"; position:absolute; right:3px; top:1px; color:var(--highlight); font-size:9px; font-weight:950; }
-.letter-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); width:min(100%,680px); aspect-ratio:1; gap:clamp(6px,1.2vw,12px); padding:clamp(10px,2vw,20px); background:var(--panel-soft); box-shadow:var(--shadow); user-select:none; touch-action:none; }
+.letter-grid { display:grid; grid-template-columns:repeat(var(--columns),1fr); width:min(100%,680px); aspect-ratio:var(--columns)/var(--rows); gap:clamp(6px,1.2vw,12px); padding:clamp(10px,2vw,20px); background:var(--panel-soft); box-shadow:var(--shadow); user-select:none; touch-action:none; }
+.letter-grid.shuffle { width:min(100%,620px); }
 .grid-letter { position:relative; min-width:0; min-height:0; border:1px solid var(--border-strong); border-radius:clamp(8px,1.5vw,14px); background:linear-gradient(145deg,var(--panel-raised),var(--panel)); color:var(--text); font-size:clamp(24px,5vw,48px); font-weight:900; box-shadow:0 5px 10px #0003; }
 .grid-letter:hover,.grid-letter.selected { border-color:var(--highlight); background:var(--highlight-soft); color:var(--highlight); transform:translateY(-1px); }
 .current-word { display:flex; min-height:58px; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border); border-radius:9px; background:var(--panel-soft); }

@@ -4,10 +4,10 @@ import { crosswords, puzzles, wordGrids, wordSearches } from "./fixtures.ts";
 import { findWord, isPuzzleComplete, isWordGridPath, nextEmptyCrosswordIndex, validatePuzzle, wordGridScore, wordGridWordForPath, wordPath } from "../src/puzzles.ts";
 
 test("catalogue contains validated puzzles of all three kinds", () => {
-  assert.equal(puzzles.length, 116);
+  assert.equal(puzzles.length, 132);
   assert.equal(wordSearches.length, 50);
   assert.equal(crosswords.length, 50);
-  assert.equal(wordGrids.length, 16);
+  assert.equal(wordGrids.length, 32);
   assert.deepEqual(new Set(puzzles.map((puzzle) => puzzle.difficulty)), new Set(["Easy", "Medium", "Hard", "Diabolical"]));
   assert.ok(puzzles.every((puzzle) => puzzle.source.licence && puzzle.source.note && puzzle.catalogueVersion));
   puzzles.forEach(validatePuzzle);
@@ -59,7 +59,7 @@ test("completion checks word-search words, crossword cells, and every Word Grid 
 });
 
 test("Word Grid paths use adjacent unique tiles and classic length scoring", () => {
-  const puzzle = wordGrids[0]!;
+  const puzzle = wordGrids.find((candidate) => candidate.wordGridMode === "adjacent")!;
   const word = puzzle.words.find((candidate) => candidate.label.length >= 5)!;
   assert.equal(isWordGridPath(word.path), true);
   assert.equal(wordGridWordForPath(puzzle, word.path)?.id, word.id);
@@ -75,8 +75,17 @@ test("every Word Grid round word has a playable path that spells its answer", ()
       const word = puzzle.words.find((candidate) => candidate.id === id);
       assert.ok(word, `${puzzle.id}/${id} is missing from its solution set`);
       assert.equal(word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join(""), word.label, `${puzzle.id}/${id} does not spell its answer`);
-      assert.equal(isWordGridPath(word.path), true, `${puzzle.id}/${id} is not an adjacent, non-repeating path`);
+      assert.equal(new Set(word.path.map(({ x, y }) => `${x}:${y}`)).size, word.path.length, `${puzzle.id}/${id} repeats a tile`);
+      if (puzzle.wordGridMode === "adjacent") assert.equal(isWordGridPath(word.path), true, `${puzzle.id}/${id} is not an adjacent, non-repeating path`);
       assert.equal(wordGridWordForPath(puzzle, word.path)?.id, id, `${puzzle.id}/${id} cannot be submitted through its stored path`);
     }
   }
+});
+
+test("Letter Mix accepts free-order paths but never reuses a tile", () => {
+  const puzzle = wordGrids.find((candidate) => candidate.wordGridMode === "shuffle")!;
+  const word = puzzle.words.find((candidate) => !isWordGridPath(candidate.path))!;
+  assert.ok(word, "Letter Mix needs at least one non-adjacent accepted word");
+  assert.equal(wordGridWordForPath(puzzle, word.path)?.id, word.id);
+  assert.equal(wordGridWordForPath(puzzle, [...word.path, word.path[0]!] as typeof word.path), null);
 });
