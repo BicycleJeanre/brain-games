@@ -26,7 +26,7 @@ test("word lookup accepts either selection direction", () => {
   assert.equal(findWord(puzzle, [...word.path].reverse())?.id, word.id);
 });
 
-test("completion checks word-search words, crossword cells, and Word Grid target scores", () => {
+test("completion checks word-search words, crossword cells, and every Word Grid round target", () => {
   const wordSearch = wordSearches[0]!;
   assert.equal(isPuzzleComplete(wordSearch, wordSearch.words.map((word) => word.id), []), true);
   assert.equal(isPuzzleComplete(wordSearch, [], []), false);
@@ -38,11 +38,11 @@ test("completion checks word-search words, crossword cells, and Word Grid target
   assert.equal(isPuzzleComplete(crossword, [], entries), false);
 
   const wordGrid = wordGrids[0]!;
-  let score = 0;
-  const enough = wordGrid.words.filter((word) => (score += word.score) <= wordGrid.targetScore + 11).map((word) => word.id);
-  while (wordGrid.words.filter((word) => enough.includes(word.id)).reduce((total, word) => total + word.score, 0) < wordGrid.targetScore) enough.push(wordGrid.words.find((word) => !enough.includes(word.id))!.id);
   assert.equal(isPuzzleComplete(wordGrid, [], []), false);
-  assert.equal(isPuzzleComplete(wordGrid, enough, []), true);
+  assert.equal(isPuzzleComplete(wordGrid, wordGrid.roundWordIds.slice(0, -1), []), false);
+  assert.equal(isPuzzleComplete(wordGrid, wordGrid.roundWordIds, []), true);
+  const nonTargetIds = wordGrid.words.filter((word) => !wordGrid.roundWordIds.includes(word.id)).map((word) => word.id);
+  assert.equal(isPuzzleComplete(wordGrid, nonTargetIds, []), false);
 });
 
 test("Word Grid paths use adjacent unique tiles and classic length scoring", () => {

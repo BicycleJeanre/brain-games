@@ -647,7 +647,7 @@
     "title": "Forest paths I",
     "subtitle": "Trees, trails, and woodland life · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -817,7 +817,7 @@
     "title": "Forest paths I",
     "subtitle": "Trees, trails, and woodland life · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -902,7 +902,7 @@
     "title": "Forest paths II",
     "subtitle": "Trees, trails, and woodland life · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -1126,7 +1126,7 @@
     "title": "Forest paths II",
     "subtitle": "Trees, trails, and woodland life · 7 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -1208,7 +1208,7 @@
     "title": "Forest paths III",
     "subtitle": "Trees, trails, and woodland life · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -1498,7 +1498,7 @@
     "title": "Forest paths III",
     "subtitle": "Trees, trails, and woodland life · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -1611,7 +1611,7 @@
     "title": "Forest paths IV",
     "subtitle": "Trees, trails, and woodland life · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -1942,7 +1942,7 @@
     "title": "Forest paths IV",
     "subtitle": "Trees, trails, and woodland life · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2071,7 +2071,7 @@
     "title": "Ocean depths I",
     "subtitle": "Life and motion beneath the waves · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2245,7 +2245,7 @@
     "title": "Ocean depths I",
     "subtitle": "Life and motion beneath the waves · 5 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2313,7 +2313,7 @@
     "title": "Ocean depths II",
     "subtitle": "Life and motion beneath the waves · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2553,7 +2553,7 @@
     "title": "Ocean depths II",
     "subtitle": "Life and motion beneath the waves · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2642,7 +2642,7 @@
     "title": "Ocean depths III",
     "subtitle": "Life and motion beneath the waves · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -2940,7 +2940,7 @@
     "title": "Ocean depths III",
     "subtitle": "Life and motion beneath the waves · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -3053,7 +3053,7 @@
     "title": "Ocean depths IV",
     "subtitle": "Life and motion beneath the waves · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -3400,7 +3400,7 @@
     "title": "Ocean depths IV",
     "subtitle": "Life and motion beneath the waves · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -3531,7 +3531,7 @@
     "title": "Deep space I",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -3717,7 +3717,7 @@
     "title": "Deep space I",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -3799,7 +3799,7 @@
     "title": "Deep space II",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -4047,7 +4047,7 @@
     "title": "Deep space II",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -4139,7 +4139,7 @@
     "title": "Deep space III",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -4445,7 +4445,7 @@
     "title": "Deep space III",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -4553,7 +4553,7 @@
     "title": "Deep space IV",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -4912,7 +4912,7 @@
     "title": "Deep space IV",
     "subtitle": "Worlds, lights, and journeys beyond Earth · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5041,7 +5041,7 @@
     "title": "Kitchen craft I",
     "subtitle": "Tools and ideas used to prepare a meal · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5215,7 +5215,7 @@
     "title": "Kitchen craft I",
     "subtitle": "Tools and ideas used to prepare a meal · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5298,7 +5298,7 @@
     "title": "Kitchen craft II",
     "subtitle": "Tools and ideas used to prepare a meal · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5530,7 +5530,7 @@
     "title": "Kitchen craft II",
     "subtitle": "Tools and ideas used to prepare a meal · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5624,7 +5624,7 @@
     "title": "Kitchen craft III",
     "subtitle": "Tools and ideas used to prepare a meal · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -5918,7 +5918,7 @@
     "title": "Kitchen craft III",
     "subtitle": "Tools and ideas used to prepare a meal · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -6028,7 +6028,7 @@
     "title": "Kitchen craft IV",
     "subtitle": "Tools and ideas used to prepare a meal · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -6367,7 +6367,7 @@
     "title": "Kitchen craft IV",
     "subtitle": "Tools and ideas used to prepare a meal · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -6493,7 +6493,7 @@
     "title": "Making music I",
     "subtitle": "Sounds, instruments, and musical structure · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -6683,7 +6683,7 @@
     "title": "Making music I",
     "subtitle": "Sounds, instruments, and musical structure · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -6768,7 +6768,7 @@
     "title": "Making music II",
     "subtitle": "Sounds, instruments, and musical structure · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7000,7 +7000,7 @@
     "title": "Making music II",
     "subtitle": "Sounds, instruments, and musical structure · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7090,7 +7090,7 @@
     "title": "Making music III",
     "subtitle": "Sounds, instruments, and musical structure · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7388,7 +7388,7 @@
     "title": "Making music III",
     "subtitle": "Sounds, instruments, and musical structure · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7495,7 +7495,7 @@
     "title": "Making music IV",
     "subtitle": "Sounds, instruments, and musical structure · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7842,7 +7842,7 @@
     "title": "Making music IV",
     "subtitle": "Sounds, instruments, and musical structure · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -7967,7 +7967,7 @@
     "title": "In the garden I",
     "subtitle": "Flowers, growth, and tending the soil · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8137,7 +8137,7 @@
     "title": "In the garden I",
     "subtitle": "Flowers, growth, and tending the soil · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8220,7 +8220,7 @@
     "title": "In the garden II",
     "subtitle": "Flowers, growth, and tending the soil · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8440,7 +8440,7 @@
     "title": "In the garden II",
     "subtitle": "Flowers, growth, and tending the soil · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8530,7 +8530,7 @@
     "title": "In the garden III",
     "subtitle": "Flowers, growth, and tending the soil · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8808,7 +8808,7 @@
     "title": "In the garden III",
     "subtitle": "Flowers, growth, and tending the soil · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -8914,7 +8914,7 @@
     "title": "In the garden IV",
     "subtitle": "Flowers, growth, and tending the soil · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9237,7 +9237,7 @@
     "title": "In the garden IV",
     "subtitle": "Flowers, growth, and tending the soil · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9360,7 +9360,7 @@
     "title": "Changing weather I",
     "subtitle": "Conditions moving through the sky · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9542,7 +9542,7 @@
     "title": "Changing weather I",
     "subtitle": "Conditions moving through the sky · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9626,7 +9626,7 @@
     "title": "Changing weather II",
     "subtitle": "Conditions moving through the sky · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9862,7 +9862,7 @@
     "title": "Changing weather II",
     "subtitle": "Conditions moving through the sky · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -9954,7 +9954,7 @@
     "title": "Changing weather III",
     "subtitle": "Conditions moving through the sky · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -10244,7 +10244,7 @@
     "title": "Changing weather III",
     "subtitle": "Conditions moving through the sky · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -10357,7 +10357,7 @@
     "title": "Changing weather IV",
     "subtitle": "Conditions moving through the sky · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -10704,7 +10704,7 @@
     "title": "Changing weather IV",
     "subtitle": "Conditions moving through the sky · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -10827,7 +10827,7 @@
     "title": "Ready to travel I",
     "subtitle": "Routes, transport, and life on the move · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11005,7 +11005,7 @@
     "title": "Ready to travel I",
     "subtitle": "Routes, transport, and life on the move · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11092,7 +11092,7 @@
     "title": "Ready to travel II",
     "subtitle": "Routes, transport, and life on the move · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11348,7 +11348,7 @@
     "title": "Ready to travel II",
     "subtitle": "Routes, transport, and life on the move · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11444,7 +11444,7 @@
     "title": "Ready to travel III",
     "subtitle": "Routes, transport, and life on the move · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11774,7 +11774,7 @@
     "title": "Ready to travel III",
     "subtitle": "Routes, transport, and life on the move · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -11892,7 +11892,7 @@
     "title": "Ready to travel IV",
     "subtitle": "Routes, transport, and life on the move · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -12263,7 +12263,7 @@
     "title": "Ready to travel IV",
     "subtitle": "Routes, transport, and life on the move · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -12389,7 +12389,7 @@
     "title": "Artist studio I",
     "subtitle": "Materials and choices behind visual art · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -12583,7 +12583,7 @@
     "title": "Artist studio I",
     "subtitle": "Materials and choices behind visual art · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -12665,7 +12665,7 @@
     "title": "Artist studio II",
     "subtitle": "Materials and choices behind visual art · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -12905,7 +12905,7 @@
     "title": "Artist studio II",
     "subtitle": "Materials and choices behind visual art · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -13000,7 +13000,7 @@
     "title": "Artist studio III",
     "subtitle": "Materials and choices behind visual art · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -13294,7 +13294,7 @@
     "title": "Artist studio III",
     "subtitle": "Materials and choices behind visual art · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -13405,7 +13405,7 @@
     "title": "Artist studio IV",
     "subtitle": "Materials and choices behind visual art · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -13756,7 +13756,7 @@
     "title": "Artist studio IV",
     "subtitle": "Materials and choices behind visual art · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -13882,7 +13882,7 @@
     "title": "Science lab I",
     "subtitle": "Ideas and objects used to explain nature · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14068,7 +14068,7 @@
     "title": "Science lab I",
     "subtitle": "Ideas and objects used to explain nature · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14153,7 +14153,7 @@
     "title": "Science lab II",
     "subtitle": "Ideas and objects used to explain nature · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14417,7 +14417,7 @@
     "title": "Science lab II",
     "subtitle": "Ideas and objects used to explain nature · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14508,7 +14508,7 @@
     "title": "Science lab III",
     "subtitle": "Ideas and objects used to explain nature · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14822,7 +14822,7 @@
     "title": "Science lab III",
     "subtitle": "Ideas and objects used to explain nature · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -14931,7 +14931,7 @@
     "title": "Science lab IV",
     "subtitle": "Ideas and objects used to explain nature · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -15302,7 +15302,7 @@
     "title": "Science lab IV",
     "subtitle": "Ideas and objects used to explain nature · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -15426,7 +15426,7 @@
     "title": "Game day I",
     "subtitle": "Competition, teamwork, and movement · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -15596,7 +15596,7 @@
     "title": "Game day I",
     "subtitle": "Competition, teamwork, and movement · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -15681,7 +15681,7 @@
     "title": "Game day II",
     "subtitle": "Competition, teamwork, and movement · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -15921,7 +15921,7 @@
     "title": "Game day II",
     "subtitle": "Competition, teamwork, and movement · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -16011,7 +16011,7 @@
     "title": "Game day III",
     "subtitle": "Competition, teamwork, and movement · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -16293,7 +16293,7 @@
     "title": "Game day III",
     "subtitle": "Competition, teamwork, and movement · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -16402,7 +16402,7 @@
     "title": "Game day IV",
     "subtitle": "Competition, teamwork, and movement · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -16737,7 +16737,7 @@
     "title": "Game day IV",
     "subtitle": "Competition, teamwork, and movement · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -16867,7 +16867,7 @@
     "title": "Around the city I",
     "subtitle": "Places and routes in an urban centre · 6 hidden words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17057,7 +17057,7 @@
     "title": "Around the city I",
     "subtitle": "Places and routes in an urban centre · 7 clues",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17139,7 +17139,7 @@
     "title": "Around the city II",
     "subtitle": "Places and routes in an urban centre · 8 hidden words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17395,7 +17395,7 @@
     "title": "Around the city II",
     "subtitle": "Places and routes in an urban centre · 8 clues",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17490,7 +17490,7 @@
     "title": "Around the city III",
     "subtitle": "Places and routes in an urban centre · 10 hidden words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17808,7 +17808,7 @@
     "title": "Around the city III",
     "subtitle": "Places and routes in an urban centre · 10 clues",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -17925,7 +17925,7 @@
     "title": "Around the city IV",
     "subtitle": "Places and routes in an urban centre · 12 hidden words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -18296,7 +18296,7 @@
     "title": "Around the city IV",
     "subtitle": "Places and routes in an urban centre · 12 clues",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack original catalogue",
       "url": "https://github.com/BicycleJeanre/wtrack",
@@ -18420,14 +18420,14 @@
     "id": "wg-letter-grid-1-001",
     "kind": "word-grid",
     "title": "Letter Lab I",
-    "subtitle": "4×4 adjacent-letter grid · target 10 points",
+    "subtitle": "4×4 adjacent-letter grid · 8 target words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -18439,6 +18439,16 @@
     ],
     "minimumLength": 3,
     "targetScore": 10,
+    "roundWordIds": [
+      "ain",
+      "are",
+      "man",
+      "fine",
+      "idea",
+      "made",
+      "admit",
+      "diner"
+    ],
     "words": [
       {
         "id": "admin",
@@ -20483,14 +20493,14 @@
     "id": "wg-letter-grid-2-001",
     "kind": "word-grid",
     "title": "Letter Lab II",
-    "subtitle": "4×4 adjacent-letter grid · target 22 points",
+    "subtitle": "4×4 adjacent-letter grid · 10 target words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -20501,7 +20511,19 @@
       "STSE"
     ],
     "minimumLength": 3,
-    "targetScore": 22,
+    "targetScore": 17,
+    "roundWordIds": [
+      "are",
+      "see",
+      "care",
+      "case",
+      "hope",
+      "swear",
+      "sweet",
+      "teach",
+      "search",
+      "secret"
+    ],
     "words": [
       {
         "id": "aces",
@@ -23669,14 +23691,14 @@
     "id": "wg-letter-grid-3-001",
     "kind": "word-grid",
     "title": "Letter Lab III",
-    "subtitle": "4×4 adjacent-letter grid · target 38 points",
+    "subtitle": "4×4 adjacent-letter grid · 12 target words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -23687,7 +23709,21 @@
       "RLTL"
     ],
     "minimumLength": 3,
-    "targetScore": 38,
+    "targetScore": 23,
+    "roundWordIds": [
+      "all",
+      "and",
+      "last",
+      "real",
+      "tell",
+      "least",
+      "stand",
+      "stars",
+      "escort",
+      "resort",
+      "result",
+      "taller"
+    ],
     "words": [
       {
         "id": "ale",
@@ -26649,14 +26685,14 @@
     "id": "wg-letter-grid-4-001",
     "kind": "word-grid",
     "title": "Letter Lab IV",
-    "subtitle": "5×5 adjacent-letter grid · target 60 points",
+    "subtitle": "5×5 adjacent-letter grid · 15 target words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 5,
     "columns": 5,
@@ -26668,7 +26704,24 @@
       "ETODS"
     ],
     "minimumLength": 3,
-    "targetScore": 60,
+    "targetScore": 52,
+    "roundWordIds": [
+      "man",
+      "too",
+      "mean",
+      "more",
+      "stop",
+      "means",
+      "meant",
+      "state",
+      "entire",
+      "report",
+      "spirit",
+      "despite",
+      "spirits",
+      "tampered",
+      "tempered"
+    ],
     "words": [
       {
         "id": "air",
@@ -32097,14 +32150,14 @@
     "id": "wg-letter-grid-1-002",
     "kind": "word-grid",
     "title": "Word Wander I",
-    "subtitle": "4×4 adjacent-letter grid · target 10 points",
+    "subtitle": "4×4 adjacent-letter grid · 8 target words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -32116,6 +32169,16 @@
     ],
     "minimumLength": 3,
     "targetScore": 10,
+    "roundWordIds": [
+      "are",
+      "can",
+      "not",
+      "care",
+      "case",
+      "once",
+      "cares",
+      "years"
+    ],
     "words": [
       {
         "id": "aces",
@@ -34827,14 +34890,14 @@
     "id": "wg-letter-grid-2-002",
     "kind": "word-grid",
     "title": "Word Wander II",
-    "subtitle": "4×4 adjacent-letter grid · target 22 points",
+    "subtitle": "4×4 adjacent-letter grid · 10 target words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -34845,7 +34908,19 @@
       "SART"
     ],
     "minimumLength": 3,
-    "targetScore": 22,
+    "targetScore": 17,
+    "roundWordIds": [
+      "and",
+      "don",
+      "door",
+      "good",
+      "soon",
+      "again",
+      "doing",
+      "train",
+      "string",
+      "strong"
+    ],
     "words": [
       {
         "id": "ado",
@@ -37275,14 +37350,14 @@
     "id": "wg-letter-grid-3-002",
     "kind": "word-grid",
     "title": "Word Wander III",
-    "subtitle": "4×4 adjacent-letter grid · target 38 points",
+    "subtitle": "4×4 adjacent-letter grid · 12 target words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -37293,7 +37368,21 @@
       "NDSF"
     ],
     "minimumLength": 3,
-    "targetScore": 38,
+    "targetScore": 25,
+    "roundWordIds": [
+      "and",
+      "don",
+      "dead",
+      "does",
+      "part",
+      "apart",
+      "spare",
+      "trade",
+      "parade",
+      "pardon",
+      "spared",
+      "parades"
+    ],
     "words": [
       {
         "id": "add",
@@ -40150,14 +40239,14 @@
     "id": "wg-letter-grid-4-002",
     "kind": "word-grid",
     "title": "Word Wander IV",
-    "subtitle": "5×5 adjacent-letter grid · target 60 points",
+    "subtitle": "5×5 adjacent-letter grid · 15 target words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 5,
     "columns": 5,
@@ -40169,7 +40258,24 @@
       "AUESB"
     ],
     "minimumLength": 3,
-    "targetScore": 60,
+    "targetScore": 52,
+    "roundWordIds": [
+      "our",
+      "out",
+      "lost",
+      "must",
+      "true",
+      "hours",
+      "house",
+      "music",
+      "cattle",
+      "series",
+      "toilet",
+      "curious",
+      "serious",
+      "cautious",
+      "rustlers"
+    ],
     "words": [
       {
         "id": "act",
@@ -44534,14 +44640,14 @@
     "id": "wg-letter-grid-1-003",
     "kind": "word-grid",
     "title": "Lexicon Lane I",
-    "subtitle": "4×4 adjacent-letter grid · target 10 points",
+    "subtitle": "4×4 adjacent-letter grid · 8 target words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -44553,6 +44659,16 @@
     ],
     "minimumLength": 3,
     "targetScore": 10,
+    "roundWordIds": [
+      "and",
+      "are",
+      "don",
+      "does",
+      "done",
+      "rest",
+      "sound",
+      "under"
+    ],
     "words": [
       {
         "id": "and",
@@ -47481,14 +47597,14 @@
     "id": "wg-letter-grid-2-003",
     "kind": "word-grid",
     "title": "Lexicon Lane II",
-    "subtitle": "4×4 adjacent-letter grid · target 22 points",
+    "subtitle": "4×4 adjacent-letter grid · 10 target words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -47499,7 +47615,19 @@
       "RNAE"
     ],
     "minimumLength": 3,
-    "targetScore": 22,
+    "targetScore": 17,
+    "roundWordIds": [
+      "not",
+      "one",
+      "open",
+      "rest",
+      "stop",
+      "notes",
+      "stone",
+      "store",
+      "poster",
+      "sunset"
+    ],
     "words": [
       {
         "id": "ape",
@@ -49984,14 +50112,14 @@
     "id": "wg-letter-grid-3-003",
     "kind": "word-grid",
     "title": "Lexicon Lane III",
-    "subtitle": "4×4 adjacent-letter grid · target 38 points",
+    "subtitle": "4×4 adjacent-letter grid · 12 target words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -50002,7 +50130,21 @@
       "JERS"
     ],
     "minimumLength": 3,
-    "targetScore": 38,
+    "targetScore": 27,
+    "roundWordIds": [
+      "don",
+      "was",
+      "done",
+      "gone",
+      "wait",
+      "doing",
+      "rings",
+      "water",
+      "signed",
+      "waiter",
+      "waiters",
+      "waiting"
+    ],
     "words": [
       {
         "id": "ate",
@@ -52460,14 +52602,14 @@
     "id": "wg-letter-grid-4-003",
     "kind": "word-grid",
     "title": "Lexicon Lane IV",
-    "subtitle": "5×5 adjacent-letter grid · target 60 points",
+    "subtitle": "5×5 adjacent-letter grid · 15 target words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 5,
     "columns": 5,
@@ -52479,7 +52621,24 @@
       "PEARF"
     ],
     "minimumLength": 3,
-    "targetScore": 60,
+    "targetScore": 52,
+    "roundWordIds": [
+      "end",
+      "see",
+      "idea",
+      "late",
+      "talk",
+      "enter",
+      "sweet",
+      "trade",
+      "desert",
+      "ladies",
+      "settle",
+      "darkest",
+      "flatten",
+      "inserted",
+      "sweetest"
+    ],
     "words": [
       {
         "id": "ale",
@@ -56422,14 +56581,14 @@
     "id": "wg-letter-grid-1-004",
     "kind": "word-grid",
     "title": "Tile Tangle I",
-    "subtitle": "4×4 adjacent-letter grid · target 10 points",
+    "subtitle": "4×4 adjacent-letter grid · 8 target words",
     "difficulty": "Easy",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -56441,6 +56600,16 @@
     ],
     "minimumLength": 3,
     "targetScore": 10,
+    "roundWordIds": [
+      "are",
+      "day",
+      "say",
+      "body",
+      "said",
+      "stay",
+      "beast",
+      "toast"
+    ],
     "words": [
       {
         "id": "aid",
@@ -58941,14 +59110,14 @@
     "id": "wg-letter-grid-2-004",
     "kind": "word-grid",
     "title": "Tile Tangle II",
-    "subtitle": "4×4 adjacent-letter grid · target 22 points",
+    "subtitle": "4×4 adjacent-letter grid · 10 target words",
     "difficulty": "Medium",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -58959,7 +59128,19 @@
       "GMEA"
     ],
     "minimumLength": 3,
-    "targetScore": 22,
+    "targetScore": 17,
+    "roundWordIds": [
+      "are",
+      "don",
+      "does",
+      "done",
+      "time",
+      "state",
+      "taste",
+      "treat",
+      "matter",
+      "remind"
+    ],
     "words": [
       {
         "id": "ami",
@@ -62295,14 +62476,14 @@
     "id": "wg-letter-grid-3-004",
     "kind": "word-grid",
     "title": "Tile Tangle III",
-    "subtitle": "4×4 adjacent-letter grid · target 38 points",
+    "subtitle": "4×4 adjacent-letter grid · 12 target words",
     "difficulty": "Hard",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 4,
     "columns": 4,
@@ -62313,7 +62494,21 @@
       "LOCL"
     ],
     "minimumLength": 3,
-    "targetScore": 38,
+    "targetScore": 25,
+    "roundWordIds": [
+      "see",
+      "sir",
+      "case",
+      "else",
+      "last",
+      "cards",
+      "stars",
+      "trial",
+      "locate",
+      "social",
+      "stairs",
+      "cartels"
+    ],
     "words": [
       {
         "id": "ads",
@@ -64765,14 +64960,14 @@
     "id": "wg-letter-grid-4-004",
     "kind": "word-grid",
     "title": "Tile Tangle IV",
-    "subtitle": "5×5 adjacent-letter grid · target 60 points",
+    "subtitle": "5×5 adjacent-letter grid · 15 target words",
     "difficulty": "Diabolical",
-    "catalogueVersion": "2026.10.3",
+    "catalogueVersion": "2026.10.4",
     "source": {
       "name": "WTrack Word Grid catalogue",
       "url": "https://github.com/words/an-array-of-english-words",
       "licence": "MIT word list; ISC frequency data; puzzle payload AGPL-3.0-or-later",
-      "note": "Deterministic WTrack generator 1.0; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. No live API is used."
+      "note": "Deterministic WTrack generator 1.1; candidate words derived from an-array-of-english-words 2.0.0 and filtered to the top 20,000 lowercase entries in subtlex-word-frequencies 2.0.0, then stored with canonical paths. A fixed difficulty-scaled target set is selected from those verified paths. No live API is used."
     },
     "rows": 5,
     "columns": 5,
@@ -64784,7 +64979,24 @@
       "UAQGV"
     ],
     "minimumLength": 3,
-    "targetScore": 60,
+    "targetScore": 52,
+    "roundWordIds": [
+      "not",
+      "one",
+      "also",
+      "late",
+      "line",
+      "alone",
+      "lines",
+      "spent",
+      "intent",
+      "sailor",
+      "senior",
+      "airline",
+      "liaison",
+      "petition",
+      "rational"
+    ],
     "words": [
       {
         "id": "ain",

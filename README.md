@@ -20,7 +20,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - User-triggered, browser-local puzzle generation from English Wikipedia topic links and Wikidata CC0 terms, with Easy through Diabolical profiles and complete provenance saved in the ten-puzzle offline cache.
 - Private `.puz`, iPUZ, JPZ, and XD file import through `@xwordly/xword-parser`; imported payloads remain local and Unrated.
 - Auto-saving STrack-style preferences for light/dark/system themes, timer and hint/help visibility, grid/clue/menu text sizes, four highlight palettes, and crossword correctness feedback.
-- Pointer, touch, and keyboard play across all three game types, including a Word Grid round checklist whose blank character slots reveal answers as they are found, plus non-destructive JSON device backup merge and scoped storage controls.
+- Pointer, touch, and keyboard play across all three game types, including difficulty-scaled Word Grid target sets whose blank character slots reveal answers only as they are found, plus non-destructive JSON device backup merge and scoped storage controls.
 - Persistent offline hints: a highlighted path cell for word searches, a revealed active-clue letter for crosswords, and a two-tile starting path for Word Grid.
 - Versioned service-worker cache and `/wtrack/` base-path verification.
 - Chromium, mobile Chromium, and WebKit browser coverage plus unit, catalogue-integrity, real server-stop offline restart, base-path, Firestore-rules, and emulator-backed cloud-journey checks.

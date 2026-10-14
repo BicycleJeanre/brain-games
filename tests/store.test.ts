@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "fake-indexeddb/auto";
-import { puzzles, wordSearches } from "./fixtures.ts";
+import { puzzles, wordGrids, wordSearches } from "./fixtures.ts";
 import { DEFAULT_PREFERENCES, MAX_OFFLINE_PUZZLES, newProgress, normalizeData, Store } from "../src/store.ts";
 
 test("new progress has a cell entry for the whole grid", () => {
@@ -47,6 +47,22 @@ test("store persists found words in IndexedDB", async () => {
   const reloaded = new Store();
   await reloaded.load();
   assert.deepEqual(reloaded.data.progress[puzzle.id]?.foundWordIds, [puzzle.words[0]!.id]);
+});
+
+test("opening a revised Word Grid clears stale completion but preserves found words", async () => {
+  const store = new Store();
+  await store.load();
+  const puzzle = wordGrids[0]!;
+  const progress = newProgress(puzzle, 42);
+  const preserved = puzzle.roundWordIds[0]!;
+  progress.foundWordIds = [preserved];
+  progress.completedAt = 84;
+  store.data.progress[puzzle.id] = progress;
+
+  const reopened = await store.start(puzzle);
+
+  assert.equal(reopened.completedAt, null);
+  assert.deepEqual(reopened.foundWordIds, [preserved]);
 });
 
 test("puzzle cache keeps only the ten most recently opened payloads", async () => {

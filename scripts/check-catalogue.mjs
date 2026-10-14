@@ -40,9 +40,13 @@ for (const puzzle of puzzles) {
     assert.ok(openCells.every((cell) => used.has(cell)), `${puzzle.id} contains an unclued cell`);
   } else {
     assert.ok(puzzle.words.length >= 10, `${puzzle.id} needs at least ten accepted words`);
+    const expectedTargets = { Easy: 8, Medium: 10, Hard: 12, Diabolical: 15 }[puzzle.difficulty];
+    assert.equal(puzzle.roundWordIds.length, expectedTargets, `${puzzle.id} has the wrong target-word count`);
+    assert.equal(new Set(puzzle.roundWordIds).size, puzzle.roundWordIds.length, `${puzzle.id} has duplicate target words`);
     assert.ok(puzzle.targetScore > 0, `${puzzle.id} needs a target score`);
-    const available = puzzle.words.reduce((total, word) => total + word.score, 0);
-    assert.ok(available >= puzzle.targetScore, `${puzzle.id} target is unreachable`);
+    const targetWords = puzzle.roundWordIds.map((id) => puzzle.words.find((word) => word.id === id));
+    assert.ok(targetWords.every(Boolean), `${puzzle.id} references an unknown target word`);
+    assert.equal(targetWords.reduce((total, word) => total + word.score, 0), puzzle.targetScore, `${puzzle.id} has the wrong target score`);
     for (const word of puzzle.words) {
       const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
       assert.equal(actual, word.label, `${puzzle.id}/${word.id} has an invalid path`);

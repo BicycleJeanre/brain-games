@@ -123,7 +123,7 @@ function home() {
   <section class="split-feature">
     <article class="card feature"><span class="kind-icon">WS</span><h2>Word searches</h2><p>Trace in eight directions, track every find, and resume on any screen size.</p><button class="text-button" data-filter="word-search">Browse word searches →</button></article>
     <article class="card feature"><span class="kind-icon">CW</span><h2>Crosswords</h2><p>Keyboard-first grids, paired across/down clues, and optional checking as you type.</p><button class="text-button" data-filter="crossword">Browse crosswords →</button></article>
-    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Join adjacent letters without reusing a tile, discover words, and race toward the target score.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
+    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Join adjacent letters without reusing a tile and uncover every hidden target word.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
   </section>`;
 }
 
@@ -203,9 +203,11 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
   const hinted = new Set(progress.hintedCells);
   const selected = new Set(wordGridPath.map(({ x, y }) => `${x}:${y}`));
   const currentWord = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
-  const found = puzzle.words.filter((word) => progress.foundWordIds.includes(word.id));
+  const targetIds = new Set(puzzle.roundWordIds);
+  const roundWords = puzzle.words.filter((word) => targetIds.has(word.id));
+  const found = roundWords.filter((word) => progress.foundWordIds.includes(word.id));
   const foundIds = new Set(progress.foundWordIds);
-  const wordLengths = [...new Set(puzzle.words.map((word) => word.label.length))].sort((left, right) => left - right);
+  const wordLengths = [...new Set(roundWords.map((word) => word.label.length))].sort((left, right) => left - right);
   const score = found.reduce((total, word) => total + word.score, 0);
   return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word Grid · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
@@ -222,14 +224,14 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
         ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a starting path</button><span>${progress.hintedCells.length / 2} used</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <section class="round-words" aria-labelledby="round-words-heading">
-          <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${puzzle.words.length}</strong></div>
-          <p class="round-words-note">Each row is one accepted word. Blank slots reveal its length; finding the word reveals its letters. Reaching the score target completes the round, while the remaining slots stay available for bonus play.</p>
-          <div class="round-word-scroll">${wordLengths.map((length) => `<section class="word-length-group" aria-label="${length}-letter words"><h3>${length} letters</h3><ul>${puzzle.words.filter((word) => word.label.length === length).sort((left, right) => left.label.localeCompare(right.label)).map((word) => {
+          <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${roundWords.length}</strong></div>
+          <p class="round-words-note">These are the fixed target words for this grid. Blank slots show each word's length; its letters stay hidden until you find it. Find every listed word to finish the round.</p>
+          <div class="round-word-scroll">${wordLengths.map((length) => `<section class="word-length-group" aria-label="${length}-letter words"><h3>${length} letters</h3><ul>${roundWords.filter((word) => word.label.length === length).sort((left, right) => left.label.localeCompare(right.label)).map((word) => {
             const isFound = foundIds.has(word.id);
             return `<li class="round-word-item ${isFound ? "found" : ""}" data-round-word="${word.id}"><span class="visually-hidden">${isFound ? `${word.label}, found` : `Unfound ${length}-letter word`}</span><span class="round-word-answer" aria-hidden="true">${isFound ? escapeHtml(word.label) : [...word.label].map(() => `<i class="answer-slot">_</i>`).join("")}</span><b>+${word.score}</b></li>`;
           }).join("")}</ul></section>`).join("")}</div>
         </section>
-        ${progress.completedAt ? `<div class="complete-banner"><strong>Target reached</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
+        ${progress.completedAt ? `<div class="complete-banner"><strong>Round complete</strong><span>${formatTime(progress.elapsedSeconds)}</span></div>` : ""}
         ${puzzleProvenance(puzzle)}
         <button class="secondary" data-reset="${puzzle.id}">Start over</button>
       </aside>
@@ -307,7 +309,7 @@ function help() {
     <div class="help-grid">
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
-      <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Longer words score more; reach the displayed target to complete the puzzle.</p></article>
+      <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Each round has a fixed hidden target list; find every listed word to complete the puzzle.</p></article>
       <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints mark the first two tiles of a remaining word. Hints work locally and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
@@ -331,6 +333,7 @@ async function openPuzzle(id: string, sessionId = id, challenge?: PuzzleProgress
   libraryMessage = cachedPuzzleIds.has(id) ? "Opening saved offline puzzle…" : "Downloading puzzle for offline play…";
   render();
   let puzzle = await store.getCachedPuzzle(id);
+  if (puzzle?.kind === "word-grid" && (!Array.isArray(puzzle.roundWordIds) || puzzle.catalogueVersion !== summary.catalogueVersion)) puzzle = null;
   try {
     if (!puzzle) {
       puzzle = await downloadPuzzle(id);
@@ -409,12 +412,14 @@ async function submitWordGrid() {
   const word = wordGridWordForPath(puzzle, wordGridPath);
   const label = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
   const progress = sessionProgress();
+  const isTarget = word ? puzzle.roundWordIds.includes(word.id) : false;
   if (word && progress?.foundWordIds.includes(word.id)) playerMessage = `${word.label} was already found.`;
-  else if (word) {
+  else if (word && isTarget) {
     await store.update(puzzle, (current) => { current.foundWordIds.push(word.id); }, activeSessionId ?? puzzle.id);
     playerMessage = `${word.label} scores ${word.score} point${word.score === 1 ? "" : "s"}.`;
     void cloud.upload();
-  } else if (wordGridPath.length < puzzle.minimumLength) playerMessage = `Words need at least ${puzzle.minimumLength} letters.`;
+  } else if (word) playerMessage = `${word.label} is valid in this grid, but it is not one of this round's target words.`;
+  else if (wordGridPath.length < puzzle.minimumLength) playerMessage = `Words need at least ${puzzle.minimumLength} letters.`;
   else playerMessage = `${label || "That path"} is not in this grid's accepted word list.`;
   wordGridPath = [];
   render();

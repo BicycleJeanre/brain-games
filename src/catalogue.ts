@@ -1,7 +1,7 @@
 import { validatePuzzle } from "./puzzles.ts";
 import type { Puzzle, PuzzleSummary } from "./types.ts";
 
-export const CATALOGUE_VERSION = "2026.10.3";
+export const CATALOGUE_VERSION = "2026.10.4";
 
 interface CatalogueEnvelope {
   version: string;

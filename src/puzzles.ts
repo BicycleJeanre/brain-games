@@ -50,7 +50,7 @@ export function crosswordCells(clue: CrosswordClue): number[] {
 
 export function isPuzzleComplete(puzzle: Puzzle, foundWordIds: string[], entries: string[]) {
   if (puzzle.kind === "word-search") return puzzle.words.every((word) => foundWordIds.includes(word.id));
-  if (puzzle.kind === "word-grid") return puzzle.words.filter((word) => foundWordIds.includes(word.id)).reduce((total, word) => total + word.score, 0) >= puzzle.targetScore;
+  if (puzzle.kind === "word-grid") return puzzle.roundWordIds.every((id) => foundWordIds.includes(id));
   return puzzle.grid.every((row, y) => [...row].every((letter, x) => letter === "#" || entries[y * puzzle.columns + x] === letter));
 }
 
@@ -63,12 +63,16 @@ export function validatePuzzle(puzzle: Puzzle) {
     }
   } else if (puzzle.kind === "word-grid") {
     if (puzzle.minimumLength < 3 || puzzle.targetScore < 1) throw new Error(`Invalid Word Grid rules for ${puzzle.id}`);
+    if (!puzzle.roundWordIds.length || new Set(puzzle.roundWordIds).size !== puzzle.roundWordIds.length) throw new Error(`Invalid Word Grid target set for ${puzzle.id}`);
     for (const word of puzzle.words) {
       const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
       if (actual !== word.label || !isWordGridPath(word.path) || word.score !== wordGridScore(word.label.length)) throw new Error(`Invalid Word Grid path for ${puzzle.id}/${word.id}`);
     }
-    const available = puzzle.words.reduce((total, word) => total + word.score, 0);
-    if (puzzle.targetScore > available) throw new Error(`Unreachable Word Grid target for ${puzzle.id}`);
+    const wordById = new Map(puzzle.words.map((word) => [word.id, word]));
+    const targetWords = puzzle.roundWordIds.map((id) => wordById.get(id));
+    if (targetWords.some((word) => !word)) throw new Error(`Unknown Word Grid target for ${puzzle.id}`);
+    const targetScore = targetWords.reduce((total, word) => total + word!.score, 0);
+    if (puzzle.targetScore !== targetScore) throw new Error(`Incorrect Word Grid target score for ${puzzle.id}`);
   } else {
     for (const clue of puzzle.clues) {
       const actual = [...clue.answer].map((_, offset) => puzzle.grid[clue.row + (clue.direction === "down" ? offset : 0)]?.[clue.column + (clue.direction === "across" ? offset : 0)]).join("");
