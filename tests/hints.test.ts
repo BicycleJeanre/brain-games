@@ -20,13 +20,25 @@ test("word-search hints identify unused cells on unfinished words", () => {
   assert.equal(chooseWordSearchHint(puzzle, progress), null);
 });
 
-test("Word Grid hints reveal only a remaining word's starting path", () => {
+test("Word Grid hints progressively reveal one verified target path", () => {
   const puzzle = wordGrids[0]!;
   const progress = newProgress(puzzle, 42);
-  const hint = chooseWordGridHint(puzzle, progress);
-  assert.ok(hint);
-  assert.equal(hint.cellIndexes.length, 2);
-  assert.ok(puzzle.words.some((word) => puzzle.roundWordIds.includes(word.id) && word.path.slice(0, 2).every(({ x, y }, index) => y * puzzle.columns + x === hint.cellIndexes[index])));
+  const first = chooseWordGridHint(puzzle, progress);
+  assert.ok(first);
+  assert.equal(first.revealedCount, 2);
+  assert.equal(first.cellIndexes.length, 2);
+  const target = puzzle.words.find((word) => word.id === first.wordId);
+  assert.ok(target);
+  assert.ok(puzzle.roundWordIds.includes(target.id));
+  assert.equal(first.pattern, [...target.label].map((letter, index) => index < 2 ? letter : "_").join(" "));
+
+  progress.hintedCells.push(...first.cellIndexes);
+  const second = chooseWordGridHint(puzzle, progress);
+  assert.ok(second);
+  assert.equal(second.wordId, target.id);
+  assert.equal(second.revealedCount, 3);
+  assert.deepEqual(second.cellIndexes.slice(0, 2), first.cellIndexes);
+  assert.equal(second.cellIndexes[2], target.path[2]!.y * puzzle.columns + target.path[2]!.x);
   progress.foundWordIds = [...puzzle.roundWordIds];
   assert.equal(chooseWordGridHint(puzzle, progress), null);
 });

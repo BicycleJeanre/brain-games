@@ -222,7 +222,7 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
         <div class="control-heading"><span class="eyebrow">Score</span><strong>${score} point${score === 1 ? "" : "s"}</strong></div>
         <div class="current-word" aria-live="polite"><span>${currentWord || "Choose a letter"}</span><small>${currentWord ? `${currentWord.length} letters` : `Minimum ${puzzle.minimumLength}`}</small></div>
         <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button></div>
-        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a starting path</button><span>${progress.hintedCells.length / 2} used</span></div>` : ""}
+        ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Show a path hint</button><span>${progress.hintedCells.length} tile${progress.hintedCells.length === 1 ? "" : "s"} revealed</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <section class="round-words" aria-labelledby="round-words-heading">
           <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${roundWords.length}</strong></div>
@@ -312,7 +312,7 @@ function help() {
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
       <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Each round has a fixed hidden target list; find every listed word to complete the puzzle. Other valid words earn bonus points.</p></article>
-      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints mark the first two tiles of a remaining word. Hints work locally and stay recorded with your progress.</p></article>
+      <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints start with two ordered letters of a target, then extend the same path one tile at a time. Hints work locally and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
       <article class="card help-card"><h2>Backups & deletion</h2><p>Backup restore is non-destructive: it adds missing sessions and keeps existing ones. Delete one saved session from Home, or use scoped controls in Settings. Signed-in deletions synchronize through private tombstones.</p></article>
@@ -495,10 +495,10 @@ function bind() {
       }
     } else {
       const hint = chooseWordGridHint(activePuzzle, progress);
-      if (!hint) playerMessage = "No unused starting-path hints remain.";
+      if (!hint) playerMessage = "Every remaining target path is already fully hinted.";
       else {
         await store.update(activePuzzle, (current) => { current.hintedCells.push(...hint.cellIndexes.filter((cell) => !current.hintedCells.includes(cell))); }, activeSessionId ?? activePuzzle.id);
-        playerMessage = `A ${hint.wordLength}-letter word worth ${hint.points} point${hint.points === 1 ? "" : "s"} begins along the highlighted tiles.`;
+        playerMessage = `Path hint ${hint.revealedCount} of ${hint.wordLength}: ${hint.pattern}. This target is worth ${hint.points} point${hint.points === 1 ? "" : "s"}; follow the highlighted letters in that order.`;
       }
     }
     render();

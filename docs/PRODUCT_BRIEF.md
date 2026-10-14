@@ -45,7 +45,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Score every accepted word by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11), retain valid non-target finds as bonus words, and complete the puzzle only by finding every fixed target.
 - Support pointer drag, touch-by-tile, keyboard focus/selection, saved found words, reset, timer, and offline completion.
 - Select a verified fixed target set from the grid—8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words—and show only those targets as length-matched blank character slots, revealing letters only after each word is found.
-- Offline hints reveal only the first two tiles and length/value of a remaining word.
+- Offline hints begin with the first two ordered letters and tiles of a remaining target, then progressively reveal one more path tile per use without marking the word found.
 
 ### Create and import
 
