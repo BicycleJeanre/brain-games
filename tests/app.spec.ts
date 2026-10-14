@@ -61,7 +61,7 @@ test("Letter Mix shuffles its tray and accepts non-adjacent words", async ({ pag
   await page.goto("./");
   await page.getByRole("button", { name: "Puzzles", exact: true }).click();
   await page.locator('[data-open="wg-letter-mix-1-001"]').click();
-  await expect(page.getByText("Letter Mix · Easy", { exact: true })).toBeVisible();
+  await expect(page.locator(".player-heading .eyebrow")).toHaveText("Letter Mix · Easy");
   const cells = page.locator("[data-grid-cell]");
   await expect(cells).toHaveCount(8);
   const before = await cells.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.gridCell));
