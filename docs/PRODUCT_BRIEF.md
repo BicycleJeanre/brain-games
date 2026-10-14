@@ -35,7 +35,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 ### Crossword player
 
 - Across/down clue lists, conventional numbering, active clue highlighting, and crossing-aware navigation.
-- Keyboard entry, Backspace behavior, arrow navigation, touch input, optional correctness marking, pause, reset, and completion summary.
+- Keyboard entry that skips existing crossing letters within the active clue, Backspace behavior, arrow navigation, touch input, optional correctness marking, pause, reset, and completion summary.
 - Offline hints reveal one unresolved letter in the active clue, then fall back to the rest of the grid.
 - Private imports for licensed or personal `.puz`, iPUZ, JPZ, and XD puzzles where the parser can preserve the required grid and clue metadata. Imports are Unrated and are not published.
 

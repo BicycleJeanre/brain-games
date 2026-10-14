@@ -4,7 +4,7 @@ import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleByI
 import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint } from "./hints.ts";
-import { findWord, wordGridWordForPath, wordPath } from "./puzzles.ts";
+import { findWord, nextEmptyCrosswordIndex, wordGridWordForPath, wordPath } from "./puzzles.ts";
 import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
 import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
@@ -597,12 +597,16 @@ function bind() {
     }, { once: true });
     input.addEventListener("input", async () => {
       if (!activePuzzle || activePuzzle.kind !== "crossword") return;
+      const puzzle = activePuzzle;
       const value = input.value.toUpperCase().replace(/[^A-Z]/g, "").slice(-1);
       input.value = value;
       const index = Number(input.dataset.crosswordCell);
-      await store.update(activePuzzle, (progress) => { progress.entries[index] = value; }, activeSessionId ?? activePuzzle.id);
+      const progress = await store.update(puzzle, (current) => { current.entries[index] = value; }, activeSessionId ?? puzzle.id);
+      const activeClue = puzzle.clues.find((clue) => clueKey(clue.number, clue.direction) === selectedClue);
+      const next = value && activeClue
+        ? nextEmptyCrosswordIndex(puzzle, activeClue, index, progress.entries)
+        : nextCrosswordIndex(puzzle, index, "next");
       render();
-      const next = nextCrosswordIndex(activePuzzle, index, "next");
       if (value && next !== index) app.querySelector<HTMLInputElement>(`[data-crossword-cell="${next}"]`)?.focus();
       void cloud.upload();
     });

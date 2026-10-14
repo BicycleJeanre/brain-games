@@ -1,4 +1,4 @@
-import type { CrosswordClue, GridPoint, Puzzle, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
+import type { CrosswordClue, CrosswordPuzzle, GridPoint, Puzzle, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
 const pointKey = ({ x, y }: GridPoint) => `${x}:${y}`;
 
@@ -46,6 +46,15 @@ export function crosswordCells(clue: CrosswordClue): number[] {
   return [...clue.answer].map((_, offset) => clue.direction === "across"
     ? clue.row * 100 + clue.column + offset
     : (clue.row + offset) * 100 + clue.column);
+}
+
+export function nextEmptyCrosswordIndex(puzzle: CrosswordPuzzle, clue: CrosswordClue, current: number, entries: string[]) {
+  const indexes = [...clue.answer].map((_, offset) =>
+    (clue.row + (clue.direction === "down" ? offset : 0)) * puzzle.columns
+    + clue.column + (clue.direction === "across" ? offset : 0));
+  const position = indexes.indexOf(current);
+  if (position < 0) return current;
+  return indexes.slice(position + 1).find((index) => !entries[index]) ?? indexes.at(-1) ?? current;
 }
 
 export function isPuzzleComplete(puzzle: Puzzle, foundWordIds: string[], entries: string[]) {
