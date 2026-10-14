@@ -24,13 +24,13 @@ Hint selection runs locally with a bundled deterministic library. It needs no ac
 
 ## Word Grid
 
-Trace through adjacent letters horizontally, vertically, or diagonally. A tile cannot be used twice in one word, and accepted words have at least three letters. You can drag through a path or tap its letters in order, then choose **Submit word**. With a keyboard, use arrow keys to move focus and Enter or Space to add a tile.
+Trace through adjacent letters horizontally, vertically, or diagonally. A tile cannot be used twice in one word, and accepted words have at least three letters. You can drag through a path or tap its letters in order, then choose **Submit word**. With a keyboard, use the arrow keys to move focus, Space to add a tile, and Enter to submit the assembled word.
 
 The **Round words** checklist is a fixed set of words verified to exist in that grid: 8 on Easy, 10 on Medium, 12 on Hard, or 15 on Diabolical. Each answer appears as blank character slots grouped by length. Finding a target replaces its slots with the letters and updates the found count. Words of 3–4 letters score 1 point, 5 score 2, 6 score 3, 7 score 5, and 8 or more score 11. Find every listed target to complete the round. Other dictionary-valid traces are saved as bonus words and award the same length-based points, but they do not replace a missing target. **Reveal a round-word letter** fills one blank in a remaining target on each use. The board stays unmarked, and hints do not mark the target as found.
 
 ### Letter Mix
 
-Letter Mix uses the same targets, scoring, bonus-word, hint, completion, and save rules, but the letters do not need to touch. Tap any unused tiles in the order that spells your word; each tile can still be used only once per submission. Choose **Shuffle letters** whenever you want a new tray arrangement. Shuffling clears only the word you are currently building—it does not change the tray's letters, accepted words, score, hints, or saved finds. Keyboard arrow movement follows the tray's current visual order.
+Letter Mix uses the same targets, scoring, bonus-word, hint, completion, and save rules, but the letters do not need to touch. Tap any unused tiles in the order that spells your word; each tile can still be used only once per submission. Choose **Shuffle letters** whenever you want a new tray arrangement. Shuffling clears only the word you are currently building—it does not change the tray's letters, accepted words, score, hints, or saved finds. Keyboard arrow movement follows the tray's current visual order; Space adds the focused tile and Enter submits the assembled word.
 
 ## Settings and readability
 

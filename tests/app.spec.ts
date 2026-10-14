@@ -44,7 +44,7 @@ test("Word Grid accepts adjacent paths, scores words, and persists hints", async
   await expect(page.getByRole("status")).toContainText("AID was already found");
   await expect(page.locator(".controls > .control-heading strong").first()).toHaveText("1 point");
   for (const point of [[1,2],[2,2],[1,3]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
-  await page.getByRole("button", { name: "Submit word" }).click();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("status")).toContainText("AIN scores 1 point");
   await expect(page.getByText("AIN", { exact: true })).toBeVisible();
   await expect(page.locator('[data-round-word="ain"] .answer-slot')).toHaveCount(0);
@@ -81,7 +81,7 @@ test("Letter Mix shuffles its tray and accepts non-adjacent words", async ({ pag
   await expect(page.getByRole("status")).toContainText("score and found words are unchanged");
 
   for (const point of [[3,1],[0,0],[3,0]]) await page.locator(`[data-grid-cell="${point[0]},${point[1]}"]`).click();
-  await page.getByRole("button", { name: "Submit word" }).click();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("status")).toContainText("GET scores 1 point");
   await expect(page.getByText("GET", { exact: true })).toBeVisible();
 });

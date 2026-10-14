@@ -232,7 +232,7 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
             return `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="${isShuffle ? "Letter" : `Row ${y + 1}, column ${x + 1}`}, ${letter}">${letter}</button>`;
           }).join("")}
         </div>
-        ${store.data.preferences.showControlHelp ? `<p class="board-note">${isShuffle ? "Tap unused letters in any order to build a word. Each tile can be used once per word. Shuffle rearranges the tray without changing your score or found words." : "Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused."} Arrow keys move focus; Enter or Space adds a tile.</p>` : ""}
+        ${store.data.preferences.showControlHelp ? `<p class="board-note">${isShuffle ? "Tap unused letters in any order to build a word. Each tile can be used once per word. Shuffle rearranges the tray without changing your score or found words." : "Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused."} Arrow keys move focus; Space adds a tile; Enter submits the word.</p>` : ""}
       </div>
       <aside class="controls card">
         <div class="control-heading"><span class="eyebrow">Score</span><strong>${score} point${score === 1 ? "" : "s"}</strong></div>
@@ -604,7 +604,7 @@ function bind() {
           const y = point.y + (event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0);
           app.querySelector<HTMLButtonElement>(`[data-grid-cell="${x},${y}"]`)?.focus();
         }
-      } else if (event.key === "Enter" || event.key === " ") {
+      } else if (event.key === " ") {
         event.preventDefault();
         if (appendWordGridPoint(wordGridPoint(cell))) render();
       }
@@ -843,4 +843,11 @@ async function boot() {
 
 addEventListener("online", render);
 addEventListener("offline", render);
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.repeat || view !== "player" || activePuzzle?.kind !== "word-grid" || !wordGridPath.length) return;
+  const target = event.target instanceof Element ? event.target : null;
+  if (target?.closest('button:not([data-grid-cell]), input, select, textarea, a, [contenteditable="true"]')) return;
+  event.preventDefault();
+  void submitWordGrid();
+});
 void boot();
