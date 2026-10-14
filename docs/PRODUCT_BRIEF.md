@@ -45,7 +45,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - In Letter Mix rounds, select letters in any order without reusing a tile; allow the tray to be shuffled without changing targets, score, hints, or progress.
 - Accept words of three or more letters from the puzzle's frozen solution set in either mode.
 - Score every accepted word by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11), retain valid non-target finds as bonus words, and complete the puzzle only by finding every fixed target.
-- Support pointer drag, touch-by-tile, keyboard focus/selection, saved found words, reset, timer, and offline completion.
+- Support pointer drag, touch-by-tile, keyboard focus and Space-based selection, Enter-based word submission, saved found words, reset, timer, and offline completion.
 - Select a verified fixed target set from the grid—8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words—and show only those targets as length-matched blank character slots, revealing letters only after each word is found.
 - Offline hints reveal one letter per use inside a remaining round-word entry without marking grid tiles or marking the word found.
 
