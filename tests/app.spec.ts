@@ -157,6 +157,10 @@ test("crossword accepts keyboard input", async ({ page }) => {
   const first = page.locator('[data-crossword-cell="5"]');
   await first.fill("p");
   await expect(first).toHaveValue("P");
+  await page.locator('[data-crossword-cell="23"]').fill("a");
+  await page.locator('[data-clue="1-across"]').click();
+  await page.locator('[data-crossword-cell="22"]').fill("c");
+  await expect(page.locator('[data-crossword-cell="24"]')).toBeFocused();
 });
 
 test("crossword files import privately and open as unrated puzzles", async ({ page }) => {

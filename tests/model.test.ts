@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { crosswords, puzzles, wordGrids, wordSearches } from "./fixtures.ts";
-import { findWord, isPuzzleComplete, isWordGridPath, validatePuzzle, wordGridScore, wordGridWordForPath, wordPath } from "../src/puzzles.ts";
+import { findWord, isPuzzleComplete, isWordGridPath, nextEmptyCrosswordIndex, validatePuzzle, wordGridScore, wordGridWordForPath, wordPath } from "../src/puzzles.ts";
 
 test("catalogue contains validated puzzles of all three kinds", () => {
   assert.equal(puzzles.length, 116);
@@ -24,6 +24,19 @@ test("word lookup accepts either selection direction", () => {
   const word = puzzle.words[0]!;
   assert.equal(findWord(puzzle, word.path)?.id, word.id);
   assert.equal(findWord(puzzle, [...word.path].reverse())?.id, word.id);
+});
+
+test("crossword typing skips filled cells within the active clue", () => {
+  const puzzle = crosswords[0]!;
+  const clue = puzzle.clues.find((candidate) => candidate.number === 1 && candidate.direction === "across")!;
+  const entries = Array.from({ length: puzzle.rows * puzzle.columns }, () => "");
+  entries[23] = "A";
+  entries[25] = "H";
+  assert.equal(nextEmptyCrosswordIndex(puzzle, clue, 22, entries), 24);
+  entries[24] = "C";
+  assert.equal(nextEmptyCrosswordIndex(puzzle, clue, 24, entries), 26);
+  entries[26] = "E";
+  assert.equal(nextEmptyCrosswordIndex(puzzle, clue, 24, entries), 26);
 });
 
 test("completion checks word-search words, crossword cells, and every Word Grid round target", () => {

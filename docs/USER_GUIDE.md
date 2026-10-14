@@ -16,7 +16,7 @@ Choose **Give me a hint** to highlight one cell crossed by a word you have not f
 
 ## Crosswords
 
-Select a clue or grid cell and type a letter. The active clue is highlighted. Arrow keys move to the next open cell. Enable **Mark incorrect crossword letters** in Settings if you want immediate feedback; leave it off for traditional unassisted solving.
+Select a clue or grid cell and type a letter. The active clue is highlighted. After each letter, focus moves to the next empty cell in that clue and skips crossing letters that are already filled. Arrow keys still move one open grid cell at a time. Enable **Mark incorrect crossword letters** in Settings if you want immediate feedback; leave it off for traditional unassisted solving.
 
 Choose **Reveal a letter** to fill one unresolved cell in the active clue. If that clue is already solved, WTrack chooses an unresolved cell elsewhere. Revealed letters have a visible outline, and the hint count is saved with progress.
 
