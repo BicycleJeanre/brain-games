@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `0138d84`
-- Latest source pull request: [#25 — Skip filled cells during crossword entry](https://github.com/BicycleJeanre/wtrack/pull/25)
+- Deployed application commit: `main` at `3f8efe3`
+- Latest source pull request: [#27 — Add progressive Word Grid path hints](https://github.com/BicycleJeanre/wtrack/pull/27)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `0138d84`
-- Deployment: [GitHub Pages run 38533750963](https://github.com/BicycleJeanre/wtrack/actions/runs/38533750963)
-- Verification: deployment workflow passed. A fresh production browser confirmed crossword typing preserved a filled crossing cell and moved focus directly to the next empty cell within the active clue.
+- Source: `main` at `3f8efe3`
+- Deployment: [GitHub Pages run 38544166216](https://github.com/BicycleJeanre/wtrack/actions/runs/38544166216)
+- Verification: deployment workflow passed. A production reload confirmed Letter Lab II exposes the progressive path-hint control, retains all ten verified round targets, and preserves existing bonus-word and hint progress.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -43,7 +43,7 @@ Last updated: 2026-10-14
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized; no phone provider or paid service enabled.
 - Firebase Web app: `1:283171656458:web:d26cce81a969ee907e60f3`; all four public identifiers are present as GitHub Actions secrets.
 - Persistent offline hint history is part of each local/cloud progress record and remains backward compatible with existing version-one data.
-- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter; Word Grid hints mark a remaining word's first two tiles.
+- Word-search hints mark a useful cell without finding the word; crossword hints reveal one unresolved active-clue letter; Word Grid hints reveal two ordered target-path letters initially and then extend that same path one tile per use.
 
 ## Word Grid release candidate
 
@@ -83,7 +83,7 @@ Last updated: 2026-10-14
 
 ## Validation
 
-- `npm run test:unit`: 25 passing, including clue-aware crossword navigation, Word Grid adjacency, fixed-target completion, stale-completion migration, and hints alongside deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
+- `npm run test:unit`: 26 passing, including all-catalogue Word Grid target-path verification, progressive hints, clue-aware crossword navigation, fixed-target completion, stale-completion migration, deterministic challenges, private import, backup merge, cache eviction, and Wikimedia generation.
 - `npm run build`: passing.
 - `npm run test:base-path`: passing for `/wtrack/`.
 - `npm test`: 39 passing across desktop Chromium, WebKit, and mobile Chromium, with six intentional project-specific skips. Coverage includes Word Grid scoring and hint persistence, auto-saving settings, accessibility, private import, public-data generation, challenge isolation, cache bounds, and offline restart.
@@ -119,6 +119,9 @@ Last updated: 2026-10-14
 - Crossword skip-filled-cell pull-request CI: [run 38532968076](https://github.com/BicycleJeanre/wtrack/actions/runs/38532968076) passed in full on rerun after an initial transient synthetic Firebase sign-in timeout.
 - Crossword skip-filled-cell production release: [deployment run 38533750963](https://github.com/BicycleJeanre/wtrack/actions/runs/38533750963) passed from merge commit `0138d84`; fresh-browser verification confirmed a filled crossing at cell 23 was preserved and focus advanced from cell 22 to cell 24.
 - Crossword skip-filled-cell post-merge CI: [run 38533718950](https://github.com/BicycleJeanre/wtrack/actions/runs/38533718950) passed in full on rerun after the same transient emulator sign-in timeout.
+- Progressive Word Grid hint pull-request CI: [run 38543529695](https://github.com/BicycleJeanre/wtrack/actions/runs/38543529695) passed in full, including Firestore rules and the two-device cloud journey.
+- Progressive Word Grid hint post-merge CI: [run 38543921840](https://github.com/BicycleJeanre/wtrack/actions/runs/38543921840) passed in full.
+- Progressive Word Grid hint production release: [deployment run 38544166216](https://github.com/BicycleJeanre/wtrack/actions/runs/38544166216) passed from merge commit `3f8efe3`; the deployed asset and a production PWA reload confirmed the new control and preserved Letter Lab II progress.
 
 ## Next release-one work
 
