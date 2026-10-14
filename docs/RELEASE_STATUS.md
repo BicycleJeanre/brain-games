@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `9920c04`
-- Latest source pull request: [#21 — Use fixed target lists for Word Grid rounds](https://github.com/BicycleJeanre/wtrack/pull/21)
+- Deployed application commit: `main` at `b4a5218`
+- Latest source pull request: [#23 — Score valid Word Grid extras as bonus words](https://github.com/BicycleJeanre/wtrack/pull/23)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `9920c04`
-- Deployment: [GitHub Pages run 38529652290](https://github.com/BicycleJeanre/wtrack/actions/runs/38529652290)
-- Verification: deployment workflow passed. A fresh production browser confirmed eight fixed Easy targets, hidden length-matched slots, target-word reveal, and valid non-target handling; the live catalogue and payload report version `2026.10.4`.
+- Source: `main` at `b4a5218`
+- Deployment: [GitHub Pages run 38531486088](https://github.com/BicycleJeanre/wtrack/actions/runs/38531486088)
+- Verification: deployment workflow passed. A fresh production browser confirmed a valid non-target word awards one bonus point, appears in the persisted Bonus words section, leaves the fixed target counter unchanged, and cannot score twice.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -48,7 +48,7 @@ Last updated: 2026-10-14
 ## Word Grid release candidate
 
 - Original adjacent-letter game mode with 4×4 and 5×5 grids, non-repeating eight-direction paths, length-based scoring, and fixed verified target sets of 8 Easy, 10 Medium, 12 Hard, or 15 Diabolical words.
-- Round answers remain hidden as length-matched slots until found, hints stay within the target set, and completion requires every listed target. Other dictionary-valid traces are identified but do not advance the round.
+- Round answers remain hidden as length-matched slots until found, hints stay within the target set, and completion requires every listed target. Other dictionary-valid traces persist as one-time bonus words and add their normal length-based points without advancing target completion.
 - Pointer-drag, touch-by-tile, and keyboard play; found-word history, timer, reset, offline hints, saved progress, challenges, backup, and optional Firestore state use the existing local-first model.
 - Sixteen deterministic grids use build-only `an-array-of-english-words` 2.0.0 (MIT), quality-filtered with `subtlex-word-frequencies` 2.0.0 (ISC). Only compact pre-solved payloads ship.
 - Hint selection uses bundled `pure-rand` 8.4.2 (MIT, zero dependencies) and makes no runtime network request.
@@ -113,6 +113,9 @@ Last updated: 2026-10-14
 - Fixed Word Grid target-set pull-request CI: [run 38529252028](https://github.com/BicycleJeanre/wtrack/actions/runs/38529252028) passed before merge, including Firestore rules and the two-device cloud journey.
 - Fixed Word Grid target-set production release: [deployment run 38529652290](https://github.com/BicycleJeanre/wtrack/actions/runs/38529652290) passed from merge commit `9920c04`; fresh-browser verification confirmed eight hidden Easy targets, target reveal, non-target handling, and catalogue version `2026.10.4`.
 - Post-merge CI [run 38529624455](https://github.com/BicycleJeanre/wtrack/actions/runs/38529624455) passed in full on rerun after an initial transient synthetic Firebase sign-in timeout.
+- Word Grid bonus-word pull-request CI: [run 38531192507](https://github.com/BicycleJeanre/wtrack/actions/runs/38531192507) passed before merge, including Firestore rules and the two-device cloud journey.
+- Word Grid bonus-word production release: [deployment run 38531486088](https://github.com/BicycleJeanre/wtrack/actions/runs/38531486088) passed from merge commit `b4a5218`; fresh-browser verification confirmed first-award scoring, visible bonus history, unchanged target progress, and duplicate prevention.
+- Word Grid bonus-word post-merge CI: [run 38531457149](https://github.com/BicycleJeanre/wtrack/actions/runs/38531457149) passed in full.
 
 ## Next release-one work
 
