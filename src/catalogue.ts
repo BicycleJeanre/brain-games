@@ -12,6 +12,8 @@ export let puzzles: PuzzleSummary[] = [];
 export let wordSearches: PuzzleSummary[] = [];
 export let crosswords: PuzzleSummary[] = [];
 export let wordGrids: PuzzleSummary[] = [];
+export let connectedWordGrids: PuzzleSummary[] = [];
+export let letterMixes: PuzzleSummary[] = [];
 const localPuzzles = new Map<string, PuzzleSummary>();
 
 function refreshLists(remote: PuzzleSummary[] = puzzles.filter((puzzle) => !localPuzzles.has(puzzle.id))) {
@@ -19,6 +21,8 @@ function refreshLists(remote: PuzzleSummary[] = puzzles.filter((puzzle) => !loca
   wordSearches = puzzles.filter((puzzle) => puzzle.kind === "word-search");
   crosswords = puzzles.filter((puzzle) => puzzle.kind === "crossword");
   wordGrids = puzzles.filter((puzzle) => puzzle.kind === "word-grid");
+  connectedWordGrids = wordGrids.filter((puzzle) => puzzle.wordGridMode !== "shuffle");
+  letterMixes = wordGrids.filter((puzzle) => puzzle.wordGridMode === "shuffle");
 }
 
 const catalogueUrl = (path: string) => new URL(`catalogue/${path}`, document.baseURI);
@@ -41,6 +45,7 @@ export function registerLocalPuzzle(puzzle: Puzzle) {
     difficulty: puzzle.difficulty,
     catalogueVersion: puzzle.catalogueVersion,
     source: puzzle.source,
+    wordGridMode: puzzle.wordGridMode,
   };
   localPuzzles.set(puzzle.id, summary);
   refreshLists();

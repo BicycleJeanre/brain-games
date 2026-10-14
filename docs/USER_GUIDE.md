@@ -2,7 +2,7 @@
 
 ## Starting and resuming
 
-Open **Puzzles** to browse the public catalogue. Filter by **Word searches**, **Crosswords**, or **Word Grids**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its compact payload and marks it **Available offline**. WTrack saves progress after every meaningful move. Home separates active and completed sessions, and each saved session can be deleted without removing its downloaded puzzle.
+Open **Puzzles** to browse the public catalogue. Filter independently by **Word searches**, **Crosswords**, **Word Grids**, or **Letter Mix**, and by **Easy**, **Medium**, **Hard**, or **Diabolical**. Opening a puzzle downloads its compact payload and marks it **Available offline**. WTrack saves progress after every meaningful move. Home separates active and completed sessions, and each saved session can be deleted without removing its downloaded puzzle.
 
 Home also offers a daily and a weekly challenge in every difficulty. A challenge uses its own saved session, so playing it never overwrites your ordinary attempt at the same puzzle. Challenge selections remain stable for their UTC day or ISO week. The cards show current-period completion, streak, and average completion time.
 

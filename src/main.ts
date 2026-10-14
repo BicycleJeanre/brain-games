@@ -1,6 +1,6 @@
 import "./style.css";
 import { createBackup, parseBackup } from "./backup.ts";
-import { CATALOGUE_VERSION, crosswords, downloadPuzzle, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordGrids, wordSearches } from "./catalogue.ts";
+import { CATALOGUE_VERSION, connectedWordGrids, crosswords, downloadPuzzle, letterMixes, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
 import { challengeSet, challengeStats } from "./challenges.ts";
 import { cloudConfigured, CloudSync, sendReset, signInAccount, signOutAccount, watchAuth } from "./cloud.ts";
 import { chooseCrosswordHint, chooseWordGridHint, chooseWordSearchHint, recordWordGridHint, wordGridHintCount, wordGridHintCounts } from "./hints.ts";
@@ -9,13 +9,14 @@ import { MAX_OFFLINE_PUZZLES, Store } from "./store.ts";
 import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferences, Puzzle, PuzzleKind, PuzzleProgress, PuzzleSummary, WordGridPuzzle, WordSearchPuzzle } from "./types.ts";
 
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
+type LibraryType = "all" | PuzzleKind | "letter-mix";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const store = new Store();
 let view: View = "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let activePuzzle: Puzzle | null = null;
 let activeSessionId: string | null = null;
-let libraryType: "all" | PuzzleKind = "all";
+let libraryType: LibraryType = "all";
 let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
 let wordGridPath: GridPoint[] = [];
@@ -42,6 +43,11 @@ const completedCount = () => Object.values(store.data.progress).filter((progress
 const kindLabel = (kind: PuzzleKind) => kind === "word-search" ? "Word search" : kind === "crossword" ? "Crossword" : "Word Grid";
 const puzzleKindLabel = (puzzle: Pick<PuzzleSummary, "kind" | "wordGridMode">) => puzzle.kind === "word-grid" && puzzle.wordGridMode === "shuffle" ? "Letter Mix" : kindLabel(puzzle.kind);
 const kindIcon = (kind: PuzzleKind) => kind === "word-search" ? "WS" : kind === "crossword" ? "CW" : "GRID";
+const puzzleKindIcon = (puzzle: Pick<PuzzleSummary, "kind" | "wordGridMode">) => puzzle.kind === "word-grid" && puzzle.wordGridMode === "shuffle" ? "MIX" : kindIcon(puzzle.kind);
+const matchesLibraryType = (puzzle: PuzzleSummary) => libraryType === "all"
+  || (libraryType === "letter-mix" ? puzzle.kind === "word-grid" && puzzle.wordGridMode === "shuffle"
+    : libraryType === "word-grid" ? puzzle.kind === "word-grid" && puzzle.wordGridMode !== "shuffle"
+      : puzzle.kind === libraryType);
 
 const cloud = new CloudSync(store, () => render());
 let authReady: ReturnType<typeof watchAuth> | undefined;
@@ -79,7 +85,7 @@ function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = fa
   const privateLocal = puzzle.catalogueVersion === "local-import-1" || puzzle.catalogueVersion.startsWith("wikidata-live-");
   const available = cached || (!privateLocal && navigator.onLine);
   return `<article class="puzzle-card card">
-    <span class="kind-icon" aria-hidden="true">${kindIcon(puzzle.kind)}</span>
+    <span class="kind-icon" aria-hidden="true">${puzzleKindIcon(puzzle)}</span>
     <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${puzzleKindLabel(puzzle)} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
     <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : privateLocal ? "Create again" : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
   </article>`;
@@ -118,23 +124,25 @@ function home() {
   <section class="stat-grid">
     <article class="card stat"><b>${wordSearches.length}</b><span>Word searches</span></article>
     <article class="card stat"><b>${crosswords.length}</b><span>Crosswords</span></article>
-    <article class="card stat"><b>${wordGrids.length}</b><span>Word Grids</span></article>
+    <article class="card stat"><b>${connectedWordGrids.length}</b><span>Word Grids</span></article>
+    <article class="card stat"><b>${letterMixes.length}</b><span>Letter Mix</span></article>
     <article class="card stat"><b>${completedCount()}</b><span>Completed</span></article>
   </section>
   ${completed.length ? `<section class="section completed-section"><div class="section-heading"><div><span class="eyebrow">Your recent finishes</span><h2>Completed puzzles</h2></div></div><div class="puzzle-list">${completed.map(([sessionId, progress]) => { const puzzle = puzzleById(progress.puzzleId); return puzzle ? puzzleCard(puzzle, sessionId, true) : ""; }).join("")}</div></section>` : ""}
   <section class="split-feature">
     <article class="card feature"><span class="kind-icon">WS</span><h2>Word searches</h2><p>Trace in eight directions, track every find, and resume on any screen size.</p><button class="text-button" data-filter="word-search">Browse word searches →</button></article>
     <article class="card feature"><span class="kind-icon">CW</span><h2>Crosswords</h2><p>Keyboard-first grids, paired across/down clues, and optional checking as you type.</p><button class="text-button" data-filter="crossword">Browse crosswords →</button></article>
-    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Trace connected grids or mix free-order letter trays, then uncover every hidden target word.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
+    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Trace connected letters horizontally, vertically, or diagonally without reusing a tile.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
+    <article class="card feature"><span class="kind-icon">MIX</span><h2>Letter Mix</h2><p>Build words from a free-order tray and shuffle the letters whenever you want a new view.</p><button class="text-button" data-filter="letter-mix">Browse Letter Mix →</button></article>
   </section>`;
 }
 
 function library() {
-  const visible = puzzles.filter((puzzle) => (libraryType === "all" || puzzle.kind === libraryType) && (libraryDifficulty === "all" || puzzle.difficulty === libraryDifficulty));
+  const visible = puzzles.filter((puzzle) => matchesLibraryType(puzzle) && (libraryDifficulty === "all" || puzzle.difficulty === libraryDifficulty));
   return `<div class="page-heading"><div><span class="eyebrow">Public catalogue and your local puzzles</span><h1>Puzzles</h1></div><span class="catalogue-badge">${puzzles.length} puzzles · ${cachedPuzzleIds.size}/${MAX_OFFLINE_PUZZLES} offline</span></div>
     <div class="filter-row">
       <div class="filter-tabs" role="group" aria-label="Puzzle type">
-        ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"],["word-grid","Word Grids"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
+        ${[["all","All types"],["word-search","Word searches"],["crossword","Crosswords"],["word-grid","Word Grids"],["letter-mix","Letter Mix"]].map(([id,label]) => `<button data-library-filter="${id}" aria-pressed="${libraryType === id}">${label}</button>`).join("")}
       </div>
       <div class="filter-tabs difficulty-tabs" role="group" aria-label="Difficulty">
         ${[["all","All levels"],["Easy","Easy"],["Medium","Medium"],["Hard","Hard"],["Diabolical","Diabolical"],["Unrated","Unrated"]].map(([id,label]) => `<button data-difficulty-filter="${id}" aria-pressed="${libraryDifficulty === id}">${label}</button>`).join("")}
@@ -293,7 +301,7 @@ function settings() {
         <p class="preference-status" data-preferences-status role="status">Preferences save on this device and sync when signed in.</p>
       </section>
       <section class="card settings-card"><span class="eyebrow">Player layout</span><h2>Choose what stays visible</h2>
-        ${settingToggle("showHints", "Show hint controls", "Keep the local hint actions in all three puzzle players.", preferences.showHints)}
+        ${settingToggle("showHints", "Show hint controls", "Keep the local hint actions in all four puzzle players.", preferences.showHints)}
         ${settingToggle("showControlHelp", "Show help text", "Keep keyboard, touch, and selection reminders beneath each board.", preferences.showControlHelp)}
       </section>
       <section class="card settings-card"><span class="eyebrow">Readability</span><h2>Type size and highlight</h2><p>Choose from tested presets rather than fine-tuning individual values.</p>
@@ -322,6 +330,7 @@ function help() {
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
       <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Each round has a fixed hidden target list; find every listed word to complete the puzzle. Other valid words earn bonus points.</p></article>
+      <article class="card help-card"><h2>Letter Mix</h2><p>Tap letters in any order to build words of three or more letters without reusing a tile. Shuffle the tray for a new arrangement; targets, score, hints, and found words stay unchanged.</p></article>
       <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints reveal one letter at a time inside a hidden round-word entry without marking any grid tile. Hints work locally and stay recorded with your progress.</p></article>
       <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
@@ -466,8 +475,8 @@ function bind() {
     const challenge = cadence ? { cadence, periodKey: element.dataset.period!, difficulty: element.dataset.difficulty as Difficulty } : undefined;
     void openPuzzle(element.dataset.open!, element.dataset.session ?? element.dataset.open!, challenge);
   }));
-  app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as PuzzleKind; view = "library"; render(); }));
-  app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as "all" | PuzzleKind; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.filter as LibraryType; view = "library"; render(); }));
+  app.querySelectorAll<HTMLElement>("[data-library-filter]").forEach((element) => element.addEventListener("click", () => { libraryType = element.dataset.libraryFilter as LibraryType; render(); }));
   app.querySelectorAll<HTMLElement>("[data-difficulty-filter]").forEach((element) => element.addEventListener("click", () => { libraryDifficulty = element.dataset.difficultyFilter as "all" | Difficulty; render(); }));
   app.querySelectorAll<HTMLElement>("[data-reset]").forEach((element) => element.addEventListener("click", async () => {
     const puzzle = activePuzzle;

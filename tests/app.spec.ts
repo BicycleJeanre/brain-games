@@ -14,6 +14,15 @@ test("home and catalogue expose all puzzle types", async ({ page }) => {
   await expect(page.getByText("Puzzle desk")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Letter Lab I", exact: true })).toBeVisible();
   await expect(page.locator(".catalogue-badge")).toContainText("132 puzzles");
+  await page.getByRole("button", { name: "Word Grids", exact: true }).click();
+  await expect(page.getByText("Showing 16 of 132 puzzles")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Letter Lab I", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Letter Mix I", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Letter Mix", exact: true }).click();
+  await expect(page.getByText("Showing 16 of 132 puzzles")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Letter Mix I", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Letter Lab I", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "All types", exact: true }).click();
   await page.getByRole("button", { name: "Diabolical", exact: true }).click();
   await expect(page.getByText("Showing 32 of 132 puzzles")).toBeVisible();
 });
