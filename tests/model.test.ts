@@ -68,3 +68,15 @@ test("Word Grid paths use adjacent unique tiles and classic length scoring", () 
   assert.equal(wordGridScore(5), 2);
   assert.equal(wordGridScore(8), 11);
 });
+
+test("every Word Grid round word has a playable path that spells its answer", () => {
+  for (const puzzle of wordGrids) {
+    for (const id of puzzle.roundWordIds) {
+      const word = puzzle.words.find((candidate) => candidate.id === id);
+      assert.ok(word, `${puzzle.id}/${id} is missing from its solution set`);
+      assert.equal(word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join(""), word.label, `${puzzle.id}/${id} does not spell its answer`);
+      assert.equal(isWordGridPath(word.path), true, `${puzzle.id}/${id} is not an adjacent, non-repeating path`);
+      assert.equal(wordGridWordForPath(puzzle, word.path)?.id, id, `${puzzle.id}/${id} cannot be submitted through its stored path`);
+    }
+  }
+});

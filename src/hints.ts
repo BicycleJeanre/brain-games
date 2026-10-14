@@ -20,8 +20,11 @@ export interface CrosswordHint {
 export interface WordGridHint {
   kind: "word-grid";
   cellIndexes: number[];
+  wordId: string;
   wordLength: number;
   points: number;
+  revealedCount: number;
+  pattern: string;
 }
 
 export type PuzzleHint = WordSearchHint | CrosswordHint | WordGridHint;
@@ -88,9 +91,36 @@ export function chooseWordGridHint(puzzle: WordGridPuzzle, progress: PuzzleProgr
   const targets = new Set(puzzle.roundWordIds);
   const candidates = puzzle.words
     .filter((word) => targets.has(word.id) && !progress.foundWordIds.includes(word.id))
-    .map((word) => ({ word, cells: word.path.slice(0, 2).map(({ x, y }) => y * puzzle.columns + x) }))
-    .filter(({ cells }) => cells.some((cell) => !hinted.has(cell)))
-    .sort((left, right) => right.word.score - left.word.score || right.word.label.length - left.word.label.length || left.word.label.localeCompare(right.word.label));
+    .map((word) => {
+      const cells = word.path.map(({ x, y }) => y * puzzle.columns + x);
+      let revealedCount = 0;
+      while (revealedCount < cells.length && hinted.has(cells[revealedCount]!)) revealedCount += 1;
+      return { word, cells, revealedCount };
+    })
+    .filter(({ cells, revealedCount }) => revealedCount < cells.length)
+    .sort((left, right) => {
+      const leftInProgress = left.revealedCount >= 2 ? 1 : 0;
+      const rightInProgress = right.revealedCount >= 2 ? 1 : 0;
+      return rightInProgress - leftInProgress
+        || right.revealedCount - left.revealedCount
+        || right.word.score - left.word.score
+        || right.word.label.length - left.word.label.length
+        || left.word.label.localeCompare(right.word.label);
+    });
   const selected = candidates[0];
-  return selected ? { kind: "word-grid", cellIndexes: selected.cells, wordLength: selected.word.label.length, points: selected.word.score } : null;
+  if (!selected) return null;
+
+  const revealedCount = Math.min(selected.cells.length, selected.revealedCount >= 2 ? selected.revealedCount + 1 : 2);
+  const pattern = [...selected.word.label]
+    .map((letter, index) => index < revealedCount ? letter : "_")
+    .join(" ");
+  return {
+    kind: "word-grid",
+    cellIndexes: selected.cells.slice(0, revealedCount),
+    wordId: selected.word.id,
+    wordLength: selected.word.label.length,
+    points: selected.word.score,
+    revealedCount,
+    pattern,
+  };
 }
