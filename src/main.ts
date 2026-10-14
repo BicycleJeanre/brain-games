@@ -19,6 +19,7 @@ let libraryType: "all" | PuzzleKind = "all";
 let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
 let wordGridPath: GridPoint[] = [];
+let wordGridTileOrder: GridPoint[] = [];
 let wordGridDragging = false;
 let wordGridDragStartLength = 0;
 let dragStart: GridPoint | null = null;
@@ -39,6 +40,7 @@ const progressFor = (puzzle: { id: string }) => store.data.progress[puzzle.id];
 const sessionProgress = () => activeSessionId ? store.data.progress[activeSessionId] : undefined;
 const completedCount = () => Object.values(store.data.progress).filter((progress) => progress.completedAt).length;
 const kindLabel = (kind: PuzzleKind) => kind === "word-search" ? "Word search" : kind === "crossword" ? "Crossword" : "Word Grid";
+const puzzleKindLabel = (puzzle: Pick<PuzzleSummary, "kind" | "wordGridMode">) => puzzle.kind === "word-grid" && puzzle.wordGridMode === "shuffle" ? "Letter Mix" : kindLabel(puzzle.kind);
 const kindIcon = (kind: PuzzleKind) => kind === "word-search" ? "WS" : kind === "crossword" ? "CW" : "GRID";
 
 const cloud = new CloudSync(store, () => render());
@@ -78,7 +80,7 @@ function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = fa
   const available = cached || (!privateLocal && navigator.onLine);
   return `<article class="puzzle-card card">
     <span class="kind-icon" aria-hidden="true">${kindIcon(puzzle.kind)}</span>
-    <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${kindLabel(puzzle.kind)} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
+    <div><span class="eyebrow">${progress?.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${puzzleKindLabel(puzzle)} · ${puzzle.difficulty}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(puzzle.subtitle)}</p>${cached ? `<span class="offline-label">Available offline</span>` : ""}</div>
     <div class="card-actions"><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" ${available ? "" : "disabled"}>${available ? status : privateLocal ? "Create again" : "Online only"}</button>${removable ? `<button class="text-button danger-action" data-delete-progress="${sessionId}" aria-label="Delete saved progress for ${escapeHtml(puzzle.title)}">Delete</button>` : ""}</div>
   </article>`;
 }
@@ -92,7 +94,7 @@ function challengeSection(cadence: ChallengeCadence) {
       const progress = store.data.progress[sessionId];
       const cached = cachedPuzzleIds.has(puzzle.id);
       const available = navigator.onLine || cached;
-      return `<article class="card challenge-card"><span class="eyebrow">${difficulty} · ${kindLabel(puzzle.kind)}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(periodKey)}${cached ? " · Offline" : ""}</p><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" data-challenge="${cadence}" data-period="${periodKey}" data-difficulty="${difficulty}" ${available ? "" : "disabled"}>${available ? progress?.completedAt ? "Complete" : progress ? "Continue" : "Start challenge" : "Online only"}</button></article>`;
+      return `<article class="card challenge-card"><span class="eyebrow">${difficulty} · ${puzzleKindLabel(puzzle)}</span><h3>${escapeHtml(puzzle.title)}</h3><p>${escapeHtml(periodKey)}${cached ? " · Offline" : ""}</p><button class="secondary compact" data-open="${puzzle.id}" data-session="${sessionId}" data-challenge="${cadence}" data-period="${periodKey}" data-difficulty="${difficulty}" ${available ? "" : "disabled"}>${available ? progress?.completedAt ? "Complete" : progress ? "Continue" : "Start challenge" : "Online only"}</button></article>`;
     }).join("")}</div>
     <p class="challenge-stats">${stats.completed} completed · ${stats.averageSeconds === null ? "No average yet" : `${formatTime(stats.averageSeconds)} average`}</p>
   </section>`;
@@ -123,7 +125,7 @@ function home() {
   <section class="split-feature">
     <article class="card feature"><span class="kind-icon">WS</span><h2>Word searches</h2><p>Trace in eight directions, track every find, and resume on any screen size.</p><button class="text-button" data-filter="word-search">Browse word searches →</button></article>
     <article class="card feature"><span class="kind-icon">CW</span><h2>Crosswords</h2><p>Keyboard-first grids, paired across/down clues, and optional checking as you type.</p><button class="text-button" data-filter="crossword">Browse crosswords →</button></article>
-    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Join adjacent letters without reusing a tile and uncover every hidden target word.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
+    <article class="card feature"><span class="kind-icon">GRID</span><h2>Word Grid</h2><p>Trace connected grids or mix free-order letter trays, then uncover every hidden target word.</p><button class="text-button" data-filter="word-grid">Browse Word Grids →</button></article>
   </section>`;
 }
 
@@ -200,6 +202,9 @@ function crosswordPlayer(puzzle: CrosswordPuzzle, progress: PuzzleProgress) {
 }
 
 function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
+  const isShuffle = puzzle.wordGridMode === "shuffle";
+  const naturalOrder = puzzle.grid.flatMap((row, y) => [...row].map((_, x) => ({ x, y })));
+  const tileOrder = isShuffle && wordGridTileOrder.length === naturalOrder.length ? wordGridTileOrder : naturalOrder;
   const selected = new Set(wordGridPath.map(({ x, y }) => `${x}:${y}`));
   const currentWord = wordGridPath.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
   const targetIds = new Set(puzzle.roundWordIds);
@@ -210,23 +215,26 @@ function wordGridPlayer(puzzle: WordGridPuzzle, progress: PuzzleProgress) {
   const wordLengths = [...new Set(roundWords.map((word) => word.label.length))].sort((left, right) => left - right);
   const hintedLetterCount = [...wordGridHintCounts(puzzle, progress).values()].reduce((total, count) => total + count, 0);
   const score = puzzle.words.filter((word) => foundIds.has(word.id)).reduce((total, word) => total + word.score, 0);
-  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}Word Grid · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
+  return `<div class="player-heading"><button class="back-button" data-nav="library">← Puzzles</button><div><span class="eyebrow">${progress.challenge ? `${progress.challenge.cadence} challenge · ` : ""}${isShuffle ? "Letter Mix" : "Word Grid"} · ${puzzle.difficulty}</span><h1>${escapeHtml(puzzle.title)}</h1></div><span class="timer">${store.data.preferences.showTimer ? formatTime(progress.elapsedSeconds) : ""}</span></div>
     <div class="player-layout">
       <div class="board-column">
-        <div class="letter-grid card" style="--columns:${puzzle.columns}" role="grid" aria-label="${escapeHtml(puzzle.title)} Word Grid">
-          ${puzzle.grid.flatMap((row, y) => [...row].map((letter, x) => `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="Row ${y + 1}, column ${x + 1}, ${letter}">${letter}</button>`)).join("")}
+        <div class="letter-grid card ${isShuffle ? "shuffle" : ""}" style="--columns:${puzzle.columns};--rows:${puzzle.rows}" role="grid" aria-label="${escapeHtml(puzzle.title)} ${isShuffle ? "letter tray" : "Word Grid"}">
+          ${tileOrder.map(({ x, y }) => {
+            const letter = puzzle.grid[y]?.[x] ?? "";
+            return `<button role="gridcell" class="grid-letter ${selected.has(`${x}:${y}`) ? "selected" : ""}" data-grid-cell="${x},${y}" aria-pressed="${selected.has(`${x}:${y}`)}" aria-label="${isShuffle ? "Letter" : `Row ${y + 1}, column ${x + 1}`}, ${letter}">${letter}</button>`;
+          }).join("")}
         </div>
-        ${store.data.preferences.showControlHelp ? `<p class="board-note">Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused. Arrow keys move focus; Enter or Space adds a tile.</p>` : ""}
+        ${store.data.preferences.showControlHelp ? `<p class="board-note">${isShuffle ? "Tap unused letters in any order to build a word. Each tile can be used once per word. Shuffle rearranges the tray without changing your score or found words." : "Drag through adjacent letters, or tap letters one at a time. Tiles may touch horizontally, vertically, or diagonally and cannot be reused."} Arrow keys move focus; Enter or Space adds a tile.</p>` : ""}
       </div>
       <aside class="controls card">
         <div class="control-heading"><span class="eyebrow">Score</span><strong>${score} point${score === 1 ? "" : "s"}</strong></div>
         <div class="current-word" aria-live="polite"><span>${currentWord || "Choose a letter"}</span><small>${currentWord ? `${currentWord.length} letters` : `Minimum ${puzzle.minimumLength}`}</small></div>
-        <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button></div>
+        <div class="button-row"><button class="primary" data-grid-submit ${wordGridPath.length < puzzle.minimumLength ? "disabled" : ""}>Submit word</button><button class="secondary" data-grid-clear ${wordGridPath.length ? "" : "disabled"}>Clear</button>${isShuffle ? `<button class="secondary" data-grid-shuffle>Shuffle letters</button>` : ""}</div>
         ${store.data.preferences.showHints ? `<div class="hint-actions"><button class="secondary" data-hint>Reveal a round-word letter</button><span>${hintedLetterCount} letter${hintedLetterCount === 1 ? "" : "s"} shown</span></div>` : ""}
         ${playerMessage ? `<p class="hint-message" role="status">${escapeHtml(playerMessage)}</p>` : ""}
         <section class="round-words" aria-labelledby="round-words-heading">
           <div class="control-heading"><span class="eyebrow" id="round-words-heading">Round words</span><strong>${found.length} / ${roundWords.length}</strong></div>
-          <p class="round-words-note">These are the fixed target words for this grid. Blank slots show each word's length; its letters stay hidden until you find it. Find every listed word to finish the round; other valid words score as bonuses.</p>
+          <p class="round-words-note">These are the fixed target words for this ${isShuffle ? "tray" : "grid"}. Blank slots show each word's length; its letters stay hidden until you find it. Find every listed word to finish the round; other valid words score as bonuses.</p>
           <div class="round-word-scroll">${wordLengths.map((length) => `<section class="word-length-group" aria-label="${length}-letter words"><h3>${length} letters</h3><ul>${roundWords.filter((word) => word.label.length === length).sort((left, right) => left.label.localeCompare(right.label)).map((word) => {
             const isFound = foundIds.has(word.id);
             const hintedCount = isFound ? 0 : wordGridHintCount(puzzle, progress, word.id);
@@ -356,6 +364,7 @@ async function openPuzzle(id: string, sessionId = id, challenge?: PuzzleProgress
   activeSessionId = sessionId;
   selectionStart = null;
   wordGridPath = [];
+  wordGridTileOrder = puzzle.kind === "word-grid" ? puzzle.grid.flatMap((row, y) => [...row].map((_, x) => ({ x, y }))) : [];
   playerMessage = "";
   selectedClue = puzzle.kind === "crossword" && puzzle.clues[0] ? clueKey(puzzle.clues[0].number, puzzle.clues[0].direction) : "";
   await store.start(puzzle, sessionId, challenge);
@@ -405,7 +414,7 @@ function appendWordGridPoint(point: GridPoint) {
   if (!activePuzzle || activePuzzle.kind !== "word-grid") return false;
   const previous = wordGridPath.at(-1);
   if (wordGridPath.some(({ x, y }) => x === point.x && y === point.y)) return false;
-  if (previous && Math.max(Math.abs(previous.x - point.x), Math.abs(previous.y - point.y)) !== 1) return false;
+  if (activePuzzle.wordGridMode === "adjacent" && previous && Math.max(Math.abs(previous.x - point.x), Math.abs(previous.y - point.y)) !== 1) return false;
   wordGridPath.push(point);
   return true;
 }
@@ -425,7 +434,7 @@ async function submitWordGrid() {
       : `${word.label} is a bonus word worth ${word.score} point${word.score === 1 ? "" : "s"}.`;
     void cloud.upload();
   } else if (wordGridPath.length < puzzle.minimumLength) playerMessage = `Words need at least ${puzzle.minimumLength} letters.`;
-  else playerMessage = `${label || "That path"} is not in this grid's accepted word list.`;
+  else playerMessage = `${label || (puzzle.wordGridMode === "shuffle" ? "That word" : "That path")} is not in this ${puzzle.wordGridMode === "shuffle" ? "tray" : "grid"}'s accepted word list.`;
   wordGridPath = [];
   render();
 }
@@ -575,10 +584,17 @@ function bind() {
       if (!activePuzzle || activePuzzle.kind !== "word-grid") return;
       if (event.key.startsWith("Arrow")) {
         event.preventDefault();
-        const point = wordGridPoint(cell);
-        const x = point.x + (event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0);
-        const y = point.y + (event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0);
-        app.querySelector<HTMLButtonElement>(`[data-grid-cell="${x},${y}"]`)?.focus();
+        if (activePuzzle.wordGridMode === "shuffle") {
+          const cells = [...app.querySelectorAll<HTMLButtonElement>("[data-grid-cell]")];
+          const index = cells.indexOf(cell);
+          const offset = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : event.key === "ArrowUp" ? -activePuzzle.columns : activePuzzle.columns;
+          cells[index + offset]?.focus();
+        } else {
+          const point = wordGridPoint(cell);
+          const x = point.x + (event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0);
+          const y = point.y + (event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0);
+          app.querySelector<HTMLButtonElement>(`[data-grid-cell="${x},${y}"]`)?.focus();
+        }
       } else if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         if (appendWordGridPoint(wordGridPoint(cell))) render();
@@ -587,6 +603,18 @@ function bind() {
   });
   app.querySelector<HTMLElement>("[data-grid-submit]")?.addEventListener("click", () => void submitWordGrid());
   app.querySelector<HTMLElement>("[data-grid-clear]")?.addEventListener("click", () => { wordGridPath = []; playerMessage = ""; render(); });
+  app.querySelector<HTMLElement>("[data-grid-shuffle]")?.addEventListener("click", () => {
+    if (!activePuzzle || activePuzzle.kind !== "word-grid" || activePuzzle.wordGridMode !== "shuffle") return;
+    const previous = wordGridTileOrder.map(({ x, y }) => `${x}:${y}`).join("|");
+    for (let index = wordGridTileOrder.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [wordGridTileOrder[index], wordGridTileOrder[swap]] = [wordGridTileOrder[swap]!, wordGridTileOrder[index]!];
+    }
+    if (wordGridTileOrder.length > 1 && wordGridTileOrder.map(({ x, y }) => `${x}:${y}`).join("|") === previous) wordGridTileOrder.push(wordGridTileOrder.shift()!);
+    wordGridPath = [];
+    playerMessage = "Letters shuffled. Your score and found words are unchanged.";
+    render();
+  });
 
   app.querySelectorAll<HTMLButtonElement>("[data-clue]").forEach((button) => button.addEventListener("click", () => { selectedClue = button.dataset.clue!; render(); }));
   app.querySelectorAll<HTMLInputElement>("[data-crossword-cell]").forEach((input) => {

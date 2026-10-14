@@ -37,7 +37,8 @@ export function isWordGridPath(path: GridPoint[]) {
 }
 
 export function wordGridWordForPath(puzzle: WordGridPuzzle, path: GridPoint[]) {
-  if (path.length < puzzle.minimumLength || !isWordGridPath(path)) return null;
+  const unique = new Set(path.map(pointKey)).size === path.length;
+  if (path.length < puzzle.minimumLength || !unique || (puzzle.wordGridMode !== "shuffle" && !isWordGridPath(path))) return null;
   const label = path.map(({ x, y }) => puzzle.grid[y]?.[x] ?? "").join("");
   return puzzle.words.find((word) => word.label === label) ?? null;
 }
@@ -71,11 +72,13 @@ export function validatePuzzle(puzzle: Puzzle) {
       if (actual !== word.label) throw new Error(`Invalid word path for ${puzzle.id}/${word.id}`);
     }
   } else if (puzzle.kind === "word-grid") {
+    if (puzzle.wordGridMode !== "adjacent" && puzzle.wordGridMode !== "shuffle") throw new Error(`Invalid Word Grid mode for ${puzzle.id}`);
     if (puzzle.minimumLength < 3 || puzzle.targetScore < 1) throw new Error(`Invalid Word Grid rules for ${puzzle.id}`);
     if (!puzzle.roundWordIds.length || new Set(puzzle.roundWordIds).size !== puzzle.roundWordIds.length) throw new Error(`Invalid Word Grid target set for ${puzzle.id}`);
     for (const word of puzzle.words) {
       const actual = word.path.map(({ x, y }) => puzzle.grid[y]?.[x]).join("");
-      if (actual !== word.label || !isWordGridPath(word.path) || word.score !== wordGridScore(word.label.length)) throw new Error(`Invalid Word Grid path for ${puzzle.id}/${word.id}`);
+      const unique = new Set(word.path.map(pointKey)).size === word.path.length;
+      if (actual !== word.label || !unique || (puzzle.wordGridMode === "adjacent" && !isWordGridPath(word.path)) || word.score !== wordGridScore(word.label.length)) throw new Error(`Invalid Word Grid path for ${puzzle.id}/${word.id}`);
     }
     const wordById = new Map(puzzle.words.map((word) => [word.id, word]));
     const targetWords = puzzle.roundWordIds.map((id) => wordById.get(id));
