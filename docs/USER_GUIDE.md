@@ -26,7 +26,7 @@ Hint selection runs locally with a bundled deterministic library. It needs no ac
 
 Trace through adjacent letters horizontally, vertically, or diagonally. A tile cannot be used twice in one word, and accepted words have at least three letters. You can drag through a path or tap its letters in order, then choose **Submit word**. With a keyboard, use arrow keys to move focus and Enter or Space to add a tile.
 
-Words of 3–4 letters score 1 point, 5 score 2, 6 score 3, 7 score 5, and 8 or more score 11. Reach the displayed target to complete the puzzle; you do not need to find every accepted word. **Show a starting path** highlights the first two tiles of one remaining word and reports its length and value without revealing the answer.
+The **Round words** checklist shows every accepted answer as blank character slots, grouped by length. Finding a word replaces its slots with the letters and updates the found count. Words of 3–4 letters score 1 point, 5 score 2, 6 score 3, 7 score 5, and 8 or more score 11. Reach the displayed target to complete the round; unfinished slots remain available for optional bonus play. **Show a starting path** highlights the first two tiles of one remaining word and reports its length and value without revealing the answer.
 
 ## Settings and readability
 

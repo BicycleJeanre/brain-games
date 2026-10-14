@@ -44,6 +44,7 @@ The puzzle board remains the visual centre of gravity. The interface uses the fa
 - Trace horizontal, vertical, or diagonal adjacent letters without reusing a tile; accept words of three or more letters from the puzzle's frozen solution set.
 - Score by length (3–4: 1, 5: 2, 6: 3, 7: 5, 8+: 11) and complete the puzzle by reaching its difficulty-specific target.
 - Support pointer drag, touch-by-tile, keyboard focus/selection, saved found words, reset, timer, and offline completion.
+- Show every accepted round word as length-matched blank character slots, revealing its letters only after it is found; retain unfinished slots for optional bonus play after the target is reached.
 - Offline hints reveal only the first two tiles and length/value of a remaining word.
 
 ### Create and import
