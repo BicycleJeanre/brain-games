@@ -4,8 +4,8 @@ Last updated: 2026-10-14
 
 ## Current lane
 
-- Deployed application commit: `main` at `b8e1ae5`
-- Latest source pull request: [#31 — Add free-order Letter Mix game](https://github.com/BicycleJeanre/wtrack/pull/31)
+- Deployed application commit: `main` at `e4dac97`
+- Latest source pull request: [#33 — Separate Letter Mix catalogue category](https://github.com/BicycleJeanre/wtrack/pull/33)
 - Active release state: live and production-verified
 
 ## Production deployment
@@ -13,9 +13,9 @@ Last updated: 2026-10-14
 - Route: [https://bicyclejeanre.github.io/wtrack/](https://bicyclejeanre.github.io/wtrack/)
 - Owner/developer: Jeanre Van Wyk
 - First deployed: 2026-10-13
-- Source: `main` at `b8e1ae5`
-- Deployment: [GitHub Pages run 38550288430](https://github.com/BicycleJeanre/wtrack/actions/runs/38550288430)
-- Verification: deployment workflow passed. A production PWA reload exposed all 32 Word Grid-family rounds; the published index contains 132 puzzles, and the live Letter Mix I payload reports catalogue version `2026.10.5`, shuffle mode, 147 accepted words, and 8 fixed targets.
+- Source: `main` at `e4dac97`
+- Deployment: [GitHub Pages run 38553013512](https://github.com/BicycleJeanre/wtrack/actions/runs/38553013512)
+- Verification: deployment workflow passed. A production PWA reload confirmed separate Home cards and counts for 16 connected Word Grids and 16 Letter Mix rounds. The top-level **Letter Mix** library filter immediately exposes its 16 puzzles without including connected grids.
 - Cloud smoke test: a disposable synthetic account passed Email/Password creation, owner-only Firestore write/read, unauthenticated denial, and full fixture cleanup.
 - Current status: active
 - Retirement decision: none
@@ -58,6 +58,7 @@ Last updated: 2026-10-14
 - Free-order eight-letter trays accept any non-repeating tile sequence from a frozen verified solution set; letters do not need to be adjacent.
 - **Shuffle letters** changes only the visible tile arrangement and clears the word currently being built. It preserves the tray's accepted words, targets, score, hints, and saved progress.
 - Sixteen deterministic trays add four rounds per difficulty. They reuse the Word Grid scoring, hidden target slots, progressive hints, bonus-word history, completion, offline cache, challenges, backup, and optional Firestore progress model.
+- Letter Mix is a separate visible catalogue type with its own Home card, `MIX` icon, count, help entry, and library filter; the connected Word Grid filter contains only its 16 adjacency-based rounds.
 - Catalogue validation enforces mode-specific path rules and verifies every fixed target can be submitted from its stored non-repeating tile selection.
 
 ## STrack parity release
@@ -135,6 +136,9 @@ Last updated: 2026-10-14
 - Letter Mix pull-request CI: [run 38549311534](https://github.com/BicycleJeanre/wtrack/actions/runs/38549311534) passed in full on rerun after a transient synthetic Firebase account-creation timeout; the corrected browser assertion passed in Chromium, WebKit, and mobile Chromium.
 - Letter Mix post-merge CI: [run 38550016049](https://github.com/BicycleJeanre/wtrack/actions/runs/38550016049) passed in full from merge commit `b8e1ae5`, including Firestore rules and the two-device cloud journey.
 - Letter Mix production release: [deployment run 38550288430](https://github.com/BicycleJeanre/wtrack/actions/runs/38550288430) passed from merge commit `b8e1ae5`; a production PWA reload confirmed the free-order tray, shuffle control, eight hidden Easy targets, and live catalogue version `2026.10.5`.
+- Letter Mix category pull-request CI: [run 38552378765](https://github.com/BicycleJeanre/wtrack/actions/runs/38552378765) passed in full, including the independent 16-item filters in Chromium, WebKit, and mobile Chromium.
+- Letter Mix category post-merge CI: [run 38552685896](https://github.com/BicycleJeanre/wtrack/actions/runs/38552685896) passed in full from merge commit `e4dac97`, including Firestore rules and the two-device cloud journey.
+- Letter Mix category production release: [deployment run 38553013512](https://github.com/BicycleJeanre/wtrack/actions/runs/38553013512) passed from merge commit `e4dac97`; a production PWA reload confirmed the new top-level filter and the 16/16 Home count split.
 
 ## Next release-one work
 
