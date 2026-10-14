@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { challengePeriodKey, challengeSet, challengeStats, currentChallengePuzzleIds } from "../src/challenges.ts";
+import { challengePeriodKey, challengeSet, challengeSetForPeriod, challengeStats, currentChallengePuzzleIds, nextChallengePuzzle } from "../src/challenges.ts";
 import { createGame } from "../src/game.ts";
 import { regularPuzzlePool, selectRegularPuzzle } from "../src/puzzle-selection.ts";
 import type { Puzzle } from "../src/types.ts";
@@ -33,6 +33,26 @@ test("daily and weekly challenge sets are stable and cover every difficulty", ()
     dailyForDay.forEach((puzzle, index) => assert.notEqual(puzzle.id, weekly[index].id, "the weekly puzzle is not reused by any daily slot in its week"));
   }
   assert.equal(currentChallengePuzzleIds(catalogue, now).size, 8);
+});
+
+test("completed challenges advance through the same period's difficulty set", () => {
+  const now = new Date("2026-10-09T12:00:00Z");
+  for (const cadence of ["daily", "weekly"] as const) {
+    const periodKey = challengePeriodKey(cadence, now);
+    const set = challengeSet(catalogue, cadence, now);
+    assert.deepEqual(challengeSetForPeriod(catalogue, cadence, periodKey).map((puzzle) => puzzle.id), set.map((puzzle) => puzzle.id));
+
+    set.forEach((puzzle, index) => {
+      const game = createGame(puzzle, now.getTime() + index);
+      game.challenge = { cadence, periodKey };
+      assert.equal(nextChallengePuzzle(catalogue, game)?.id || null, set[index + 1]?.id || null);
+    });
+  }
+
+  const regular = createGame(catalogue[0], now.getTime());
+  assert.equal(nextChallengePuzzle(catalogue, regular), null);
+  assert.deepEqual(challengeSetForPeriod(catalogue, "daily", "not-a-date"), []);
+  assert.deepEqual(challengeSetForPeriod(catalogue, "weekly", "2026-W99"), []);
 });
 
 test("regular puzzle selection reserves every current daily and weekly challenge", () => {
