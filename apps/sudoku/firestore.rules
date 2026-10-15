@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function validId(value) {
+      return value is string && value.size() > 0 && value.size() <= 180;
+    }
+    function validGame(id) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId'])
+        && d.keys().hasOnly(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId', 'challenge'])
+        && d.version == 1
+        && d.id == id && validId(id)
+        && d.puzzle is map && validId(d.puzzle.id)
+        && d.puzzle.givens is string && d.puzzle.givens.size() == 81
+        && d.puzzle.solution is string && d.puzzle.solution.size() == 81
+        && d.values is list && d.values.size() == 81
+        && d.corner is list && d.corner.size() == 81
+        && d.centre is list && d.centre.size() == 81
+        && d.colours is list && d.colours.size() == 81
+        && (!('lines' in d) || (d.lines is list && d.lines.size() <= 160))
+        && d.eliminated is list && d.eliminated.size() == 81
+        && d.selected is list && d.selected.size() <= 81
+        && d.anchor is int && d.anchor >= 0 && d.anchor < 81
+        && d.mode in ['normal', 'corner', 'centre', 'colour', 'line']
+        && d.history is list && d.history.size() <= 80
+        && d.future is list && d.future.size() <= 80
+        && (!('hintHistory' in d) || (d.hintHistory is list && d.hintHistory.size() <= 40))
+        && (!('hintPath' in d) || (d.hintPath is string && d.hintPath.size() <= 200000))
+        && d.elapsed is int && d.elapsed >= 0 && d.elapsed <= 315576000
+        && d.startedAt is number && d.startedAt > 0
+        && d.updatedAt is number && d.updatedAt >= d.startedAt
+        && (d.completedAt == null || (d.completedAt is number && d.completedAt >= d.startedAt))
+        && d.paused is bool
+        && d.hintStage in ['none', 'minimal', 'preview']
+        && (d.hintId == null || (d.hintId is string && d.hintId.size() <= 240))
+        && (!('challenge' in d) || (d.challenge is map
+          && d.challenge.keys().hasAll(['cadence', 'periodKey'])
+          && d.challenge.keys().hasOnly(['cadence', 'periodKey'])
+          && d.challenge.cadence in ['daily', 'weekly']
+          && d.challenge.periodKey is string
+          && d.challenge.periodKey.size() >= 8
+          && d.challenge.periodKey.size() <= 10));
+    }
+    function validTrainingItem(value) {
+      return value is map
+        && value.keys().hasAll(['attempts', 'correct', 'completed', 'mastered', 'lastPracticedAt'])
+        && value.keys().hasOnly(['attempts', 'correct', 'completed', 'mastered', 'lastPracticedAt'])
+        && value.attempts is int && value.attempts >= 0
+        && value.correct is int && value.correct >= 0 && value.correct <= value.attempts
+        && value.completed is int && value.completed >= 0 && value.completed <= value.attempts
+        && value.mastered is bool
+        && value.lastPracticedAt is number && value.lastPracticedAt >= 0;
+    }
+    function validTrainingProgress(value) {
+      return value is map
+        && value.keys().hasOnly(['naked-single', 'hidden-single', 'locked-candidates', 'naked-pair', 'naked-triple', 'x-wing', 'swordfish', 'jellyfish', 'skyscraper', 'two-string-kite', 'xy-wing', 'xyz-wing', 'w-wing', 'simple-coloring', 'x-chain', 'xy-chain', 'aic', 'unique-rectangle', 'als-xz', 'forcing-chain'])
+        && (!('naked-single' in value) || validTrainingItem(value['naked-single']))
+        && (!('hidden-single' in value) || validTrainingItem(value['hidden-single']))
+        && (!('locked-candidates' in value) || validTrainingItem(value['locked-candidates']))
+        && (!('naked-pair' in value) || validTrainingItem(value['naked-pair']))
+        && (!('naked-triple' in value) || validTrainingItem(value['naked-triple']))
+        && (!('x-wing' in value) || validTrainingItem(value['x-wing']))
+        && (!('swordfish' in value) || validTrainingItem(value['swordfish']))
+        && (!('jellyfish' in value) || validTrainingItem(value['jellyfish']))
+        && (!('skyscraper' in value) || validTrainingItem(value['skyscraper']))
+        && (!('two-string-kite' in value) || validTrainingItem(value['two-string-kite']))
+        && (!('xy-wing' in value) || validTrainingItem(value['xy-wing']))
+        && (!('xyz-wing' in value) || validTrainingItem(value['xyz-wing']))
+        && (!('w-wing' in value) || validTrainingItem(value['w-wing']))
+        && (!('simple-coloring' in value) || validTrainingItem(value['simple-coloring']))
+        && (!('x-chain' in value) || validTrainingItem(value['x-chain']))
+        && (!('xy-chain' in value) || validTrainingItem(value['xy-chain']))
+        && (!('aic' in value) || validTrainingItem(value['aic']))
+        && (!('unique-rectangle' in value) || validTrainingItem(value['unique-rectangle']))
+        && (!('als-xz' in value) || validTrainingItem(value['als-xz']))
+        && (!('forcing-chain' in value) || validTrainingItem(value['forcing-chain']));
+    }
+    function validSettings() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['version', 'preferences', 'activeGameId', 'updatedAt'])
+        && d.keys().hasOnly(['version', 'preferences', 'activeGameId', 'deletedGames', 'trainingProgress', 'updatedAt'])
+        && d.version == 1
+        && d.preferences is map
+        && d.preferences.keys().hasAll(['theme', 'showTimer', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes'])
+        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
+        && d.preferences.theme in ['system', 'light', 'dark']
+        && (!('noteStyle' in d.preferences) || d.preferences.noteStyle in ['simple', 'advanced'])
+        && d.preferences.showTimer is bool
+        && (!('showColours' in d.preferences) || d.preferences.showColours is bool)
+        && (!('showLines' in d.preferences) || d.preferences.showLines is bool)
+        && (!('showValueSelection' in d.preferences) || d.preferences.showValueSelection is bool)
+        && (!('showCandidateCalculation' in d.preferences) || d.preferences.showCandidateCalculation is bool)
+        && (!('showControlHelp' in d.preferences) || d.preferences.showControlHelp is bool)
+        && d.preferences.autoCandidates is bool
+        && d.preferences.cleanCandidates is bool
+        && d.preferences.highlightPeers is bool
+        && d.preferences.highlightMatches is bool
+        && d.preferences.showMistakes is bool
+        && (!('noteSize' in d.preferences) || d.preferences.noteSize in ['small', 'medium', 'large'])
+        && (!('menuSize' in d.preferences) || d.preferences.menuSize in ['small', 'medium', 'large'])
+        && (!('digitSize' in d.preferences) || d.preferences.digitSize in ['small', 'medium', 'large'])
+        && (!('noteColour' in d.preferences) || d.preferences.noteColour in ['classic', 'mono', 'cyan', 'amber'])
+        && (!('menuColour' in d.preferences) || d.preferences.menuColour in ['standard', 'bright', 'cyan', 'amber'])
+        && (!('digitColour' in d.preferences) || d.preferences.digitColour in ['cyan', 'mono', 'amber'])
+        && (!('highlightColour' in d.preferences) || d.preferences.highlightColour in ['cyan', 'amber', 'violet', 'green'])
+        && (!('deletedGames' in d) || (d.deletedGames is map && d.deletedGames.size() <= 500))
+        && (!('trainingProgress' in d) || validTrainingProgress(d.trainingProgress))
+        && (d.activeGameId == null || validId(d.activeGameId))
+        && d.updatedAt is number && d.updatedAt > 0;
+    }
+    match /users/{uid}/games/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validGame(id);
+      allow delete: if owner(uid);
+    }
+    match /users/{uid}/meta/settings {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validSettings();
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

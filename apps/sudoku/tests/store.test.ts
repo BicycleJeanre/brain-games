@@ -1,0 +1,141 @@
+import "fake-indexeddb/auto";
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createGame } from "../src/game.ts";
+import type { AnnotationColour, BoardSnapshot, Puzzle } from "../src/types.ts";
+
+const puzzle: Puzzle = { id: "store-test", givens: "0".repeat(81), solution: "123456789".repeat(9), source: "Imported", sourceUrl: "", provenance: "test", licence: "test", seRating: null, ratingEngine: "Not rated", ratingVersion: "Not rated", difficulty: "Unrated", catalogueVersion: "test", fullHints: false };
+
+test("player preference presets migrate missing values and reject invalid values", async () => {
+  const { normalizePreferences } = await import("../src/store.ts");
+  const preferences = normalizePreferences({ theme: "dark", noteStyle: "simple", showLines: false, noteSize: "huge", highlightColour: "green" });
+  assert.equal(preferences.theme, "dark");
+  assert.equal(preferences.noteStyle, "simple");
+  assert.equal(preferences.showLines, false);
+  assert.equal(preferences.noteSize, "medium");
+  assert.equal(preferences.highlightColour, "green");
+  assert.equal(preferences.showColours, true);
+});
+
+test("IndexedDB persists active progress and backup import preserves existing IDs", async () => {
+  const { Store } = await import("../src/store.ts");
+  const first = new Store();
+  await first.load();
+  const game = createGame(puzzle, 100);
+  game.values[0] = "1";
+  (game as unknown as { colours: string[] }).colours = ["cyan", ...Array(80).fill("")];
+  delete (game as unknown as { lines?: unknown }).lines;
+  await first.putGame(game);
+  const second = new Store();
+  await second.load();
+  assert.equal(second.activeGame()?.values[0], "1");
+  assert.deepEqual(second.activeGame()?.colours[0], ["cyan"], "legacy single colours migrate to colour arrays");
+  assert.deepEqual(second.activeGame()?.lines, [], "legacy games gain an empty line collection");
+  const result = await second.importJson(first.exportJson());
+  assert.deepEqual(result, { added: 0, skipped: 1 });
+  await second.clear("all");
+  assert.equal(second.activeGame(), null);
+});
+
+test("cloud merge keeps the newest puzzle and settings versions", async () => {
+  const { Store } = await import("../src/store.ts");
+  const store = new Store();
+  await store.clear("all");
+  const local = createGame(puzzle, 200);
+  local.updatedAt = 300;
+  local.values[0] = "1";
+  await store.putGame(local);
+  const older = structuredClone(local); older.updatedAt = 250; older.values[0] = "2";
+  assert.equal(await store.mergeCloudGame(older), false);
+  assert.equal(store.data.games[local.id].values[0], "1");
+  const newer = structuredClone(local); newer.updatedAt = 350; newer.values[0] = "3";
+  assert.equal(await store.mergeCloudGame(newer), true);
+  assert.equal(store.data.games[local.id].values[0], "3");
+  const remotePreferences = { ...store.data.preferences, theme: "dark" as const };
+  assert.equal(await store.mergeCloudSettings({ preferences: remotePreferences, activeGameId: local.id, trainingProgress: { "naked-single": { attempts: 3, correct: 3, completed: 3, mastered: true, lastPracticedAt: 123 } }, updatedAt: store.data.settingsUpdatedAt + 10 }), true);
+  assert.equal(store.data.preferences.theme, "dark");
+  assert.equal(store.data.trainingProgress["naked-single"]?.mastered, true);
+});
+
+test("deleted puzzles stay deleted when a stale cloud game arrives", async () => {
+  const { Store } = await import("../src/store.ts");
+  const store = new Store();
+  await store.clear("all");
+  const game = createGame(puzzle, 400);
+  await store.putGame(game);
+  await store.removeGame(game.id, 500);
+  assert.equal(store.activeGame(), null);
+  assert.equal(store.data.deletedGames[game.id], 500);
+
+  const staleCloudCopy = structuredClone(game);
+  staleCloudCopy.updatedAt = 600;
+  assert.equal(await store.mergeCloudGame(staleCloudCopy), false);
+  assert.equal(store.data.games[game.id], undefined);
+
+  const otherDevice = new Store();
+  await otherDevice.clear("all");
+  await otherDevice.putGame(structuredClone(staleCloudCopy));
+  assert.equal(await otherDevice.mergeCloudSettings({
+    preferences: otherDevice.data.preferences,
+    activeGameId: game.id,
+    deletedGames: { [game.id]: 500 },
+    updatedAt: 500,
+  }), true);
+  assert.equal(otherDevice.activeGame(), null);
+  assert.equal(otherDevice.data.games[game.id], undefined);
+});
+
+test("cloud encoding preserves multiple colours and line annotations without nested arrays", async () => {
+  const { decodeCloudGame, encodeCloudGame, encodeCloudSettings, MAX_SYNCED_GAME_BYTES } = await import("../src/cloud.ts");
+  const { emptyData } = await import("../src/store.ts");
+  const gameWithoutHints = createGame(puzzle, 699);
+  const encodedWithoutHints = encodeCloudGame(gameWithoutHints);
+  assert.equal("hintPath" in encodedWithoutHints, false, "absent hint paths are omitted instead of sent as undefined");
+  const game = createGame(puzzle, 700);
+  game.challenge = { cadence: "daily", periodKey: "2026-10-10" };
+  game.colours[0] = ["cyan", "amber", "indigo"];
+  game.lines = [{ from: 0, to: 10, colour: "rose" }];
+  game.hintPath = {
+    engine: "HoDoKu TS test",
+    generatedAt: 701,
+    complete: true,
+    hints: [{ id: "hodoku-test", technique: "Naked single", summary: "Test", explanation: "Test", kind: "place", evidence: [1], targets: [{ cell: 0, digit: 1 }] }],
+  };
+  const encoded = encodeCloudGame(game);
+  assert.equal(encoded.colours[0], "cyan|amber|indigo");
+  assert.deepEqual(encoded.lines, [{ from: 0, to: 10, colour: "rose" }]);
+  assert.equal(typeof encoded.hintPath, "string", "nested hint data is serialized for Firestore");
+  const decoded = decodeCloudGame(encoded);
+  assert.deepEqual(decoded?.colours[0], ["cyan", "amber", "indigo"]);
+  assert.deepEqual(decoded?.lines, [{ from: 0, to: 10, colour: "rose" }]);
+  assert.deepEqual(decoded?.challenge, { cadence: "daily", periodKey: "2026-10-10" });
+  assert.deepEqual(decoded?.hintPath, game.hintPath, "cached logical paths sync with the puzzle session");
+  game.hintPath.engine = "x".repeat(200_001);
+  assert.equal("hintPath" in encodeCloudGame(game), false, "oversized regenerable hint paths cannot block puzzle progress sync");
+
+  const settingsData = emptyData();
+  settingsData.settingsUpdatedAt = 702;
+  const settings = encodeCloudSettings(settingsData);
+  assert.deepEqual(settings.preferences, settingsData.preferences, "the rules test can use the exact expanded settings payload");
+  assert.equal(settings.updatedAt, 702);
+
+  const largeGame = createGame(puzzle, 703);
+  const allColours: AnnotationColour[] = ["cyan", "amber", "violet", "green", "rose", "slate", "lime", "orange", "indigo"];
+  const largeSnapshot: BoardSnapshot = {
+    values: [...largeGame.values],
+    corner: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    centre: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    colours: Array.from({ length: 81 }, () => [...allColours]),
+    lines: Array.from({ length: 160 }, (_, index) => ({ from: index % 80, to: index % 80 + 1, colour: "cyan" as const })),
+    eliminated: Array.from({ length: 81 }, () => [1, 2, 3, 4, 5, 6, 7, 8, 9]),
+  };
+  largeGame.history = Array.from({ length: 80 }, () => structuredClone(largeSnapshot));
+  largeGame.completedAt = 704;
+  largeGame.updatedAt = 704;
+  const budgeted = encodeCloudGame(largeGame);
+  assert.ok(new TextEncoder().encode(JSON.stringify(budgeted)).byteLength <= MAX_SYNCED_GAME_BYTES, "cloud games stay below the conservative Firestore document budget");
+  assert.ok(budgeted.history.length < 80, "only the oldest cloud undo snapshots are trimmed when necessary");
+  const budgetedRoundTrip = decodeCloudGame(budgeted);
+  assert.deepEqual(budgetedRoundTrip?.values, largeGame.values, "the current board survives cloud budgeting");
+  assert.equal(budgetedRoundTrip?.completedAt, 704, "completion survives cloud budgeting");
+});
