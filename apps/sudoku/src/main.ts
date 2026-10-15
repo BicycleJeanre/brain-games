@@ -11,6 +11,8 @@ import { deductionMatches, findTrainingPosition, patternCells, patternMatches, T
 import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, TrainingTechniqueId } from "./types.ts";
 
 const catalogue = catalogueJson as Puzzle[];
+const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
+const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
 const store = new Store();
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const dialog = document.querySelector<HTMLDialogElement>("#dialog")!;
@@ -90,6 +92,7 @@ function shell(content: string, title: string) {
   app.innerHTML = `
     <header class="app-header">
       <button class="brand" data-nav="home" aria-label="STrack home"><span class="brand-grid" aria-hidden="true">S</span><span>STrack</span></button>
+      ${combinedBuild ? `<a class="suite-link" href="${brainGamesHome}">Brain Games</a>` : ""}
       <span class="cloud-state" data-cloud-status>${cloud.status()}</span><nav aria-label="Main navigation">
         <button data-nav="training" class="${view === "training" ? "active" : ""}">Train</button>
         <button data-nav="library" class="${view === "library" ? "active" : ""}">Puzzles</button>
@@ -101,7 +104,7 @@ function shell(content: string, title: string) {
       <div class="page-heading"><div><span class="eyebrow">${online ? "Ready offline" : "Offline"}</span><h1>${escapeHtml(title)}</h1></div></div>
       ${content}
     </main>
-    <footer class="app-footer"><span>STrack is free software.</span><a href="https://github.com/BicycleJeanre/strack" target="_blank" rel="noreferrer">Source code · AGPL-3.0</a></footer>`;
+    <footer class="app-footer"><span>${combinedBuild ? "Sudoku in Brain Games" : "STrack is free software."}</span><a href="https://github.com/BicycleJeanre/${combinedBuild ? "brain-games" : "strack"}" target="_blank" rel="noreferrer">Source code · AGPL-3.0</a></footer>`;
   bindNavigation();
 }
 

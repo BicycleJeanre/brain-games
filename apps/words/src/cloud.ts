@@ -113,7 +113,7 @@ export class CloudSync {
     const available = services();
     if (!user || !available) return;
     const { database, firestoreApi } = await available;
-    const reference = firestoreApi.doc(database, "users", user.uid, "state", "app");
+    const reference = firestoreApi.doc(database, "users", user.uid, "wordState", "app");
     this.stopListening = firestoreApi.onSnapshot(reference, { includeMetadataChanges: true }, async (snapshot) => {
       const data: unknown = snapshot.data();
       if (snapshot.exists() && validCloudData(data)) await this.store.mergeRemote(data);
@@ -129,7 +129,7 @@ export class CloudSync {
     this.working = true;
     this.changed();
     const { database, firestoreApi } = await available;
-    const reference = firestoreApi.doc(database, "users", this.user.uid, "state", "app");
+    const reference = firestoreApi.doc(database, "users", this.user.uid, "wordState", "app");
     try {
       await firestoreApi.runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);

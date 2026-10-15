@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validId(value) {
+      return value is string && value.size() > 0 && value.size() <= 180;
+    }
+
+    function validSudokuGame(id) {
+      let d = request.resource.data;
+      return d.version == 1
+        && d.id == id && validId(id)
+        && d.values is list && d.values.size() == 81
+        && d.corner is list && d.corner.size() == 81
+        && d.centre is list && d.centre.size() == 81
+        && d.updatedAt is number;
+    }
+
+    function validSudokuSettings() {
+      let d = request.resource.data;
+      return d.version == 1
+        && d.preferences is map
+        && d.updatedAt is number
+        && (!('deletedGames' in d) || (d.deletedGames is map && d.deletedGames.size() <= 500));
+    }
+
+    function validWordState() {
+      let d = request.resource.data;
+      return d.version == 1
+        && d.preferences is map
+        && d.progress is map && d.progress.size() <= 2000
+        && d.deletedProgress is map && d.deletedProgress.size() <= 500
+        && d.settingsUpdatedAt is number;
+    }
+
+    match /users/{uid}/sudokuGames/{id} {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && validSudokuGame(id);
+    }
+
+    match /users/{uid}/sudokuMeta/settings {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validSudokuSettings();
+      allow delete: if false;
+    }
+
+    match /users/{uid}/wordState/app {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && validWordState();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

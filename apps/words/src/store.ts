@@ -15,6 +15,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   highlightColour: "cyan",
 };
 export const MAX_OFFLINE_PUZZLES = 10;
+const combinedBuild = import.meta.env?.VITE_BRAIN_GAMES === "true";
+const stateStore = combinedBuild ? "words-state" : "state";
+const puzzleCacheStore = combinedBuild ? "words-puzzle-cache" : "puzzle-cache";
 
 interface CachedPuzzle {
   id: string;
@@ -114,48 +117,49 @@ export class Store {
   private database?: Awaited<ReturnType<typeof openDB>>;
 
   async load() {
-    this.database = await openDB("wtrack", 2, { upgrade(db) {
-      if (!db.objectStoreNames.contains("state")) db.createObjectStore("state");
-      if (!db.objectStoreNames.contains("puzzle-cache")) db.createObjectStore("puzzle-cache");
+    this.database = await openDB(combinedBuild ? "brain-games-v1" : "wtrack", combinedBuild ? 1 : 2, { upgrade(db) {
+      for (const store of combinedBuild ? ["meta", "sudoku-state", "words-state", "words-puzzle-cache"] : ["state", "puzzle-cache"]) {
+        if (!db.objectStoreNames.contains(store)) db.createObjectStore(store);
+      }
     } });
-    this.data = normalizeData(await this.database.get("state", "app"));
+    this.data = normalizeData(await this.database.get(stateStore, "app"));
     return this.data;
   }
 
   async save() {
-    if (this.database) await this.database.put("state", this.data, "app");
+    if (this.database) await this.database.put(stateStore, this.data, "app");
   }
 
   async cachedPuzzleIds() {
     if (!this.database) return [];
-    return (await this.database.getAllKeys("puzzle-cache")).filter((key): key is string => typeof key === "string");
+    return (await this.database.getAllKeys(puzzleCacheStore)).filter((key): key is string => typeof key === "string");
   }
 
   async cachedPuzzles() {
     if (!this.database) return [];
-    return ((await this.database.getAll("puzzle-cache")) as CachedPuzzle[]).map((entry) => entry.puzzle);
+    return ((await this.database.getAll(puzzleCacheStore)) as CachedPuzzle[]).map((entry) => entry.puzzle);
   }
 
   async clearPuzzleCache() {
     if (!this.database) return;
-    await this.database.clear("puzzle-cache");
+    await this.database.clear(puzzleCacheStore);
   }
 
   async getCachedPuzzle(id: string, now = Date.now()) {
     if (!this.database) return null;
-    const cached = await this.database.get("puzzle-cache", id) as CachedPuzzle | undefined;
+    const cached = await this.database.get(puzzleCacheStore, id) as CachedPuzzle | undefined;
     if (!cached) return null;
     cached.lastOpenedAt = now;
-    await this.database.put("puzzle-cache", cached, id);
+    await this.database.put(puzzleCacheStore, cached, id);
     return cached.puzzle;
   }
 
   async cachePuzzle(puzzle: Puzzle, now = Date.now()) {
     if (!this.database) return [];
-    await this.database.put("puzzle-cache", { id: puzzle.id, puzzle, lastOpenedAt: now } satisfies CachedPuzzle, puzzle.id);
-    const cached = await this.database.getAll("puzzle-cache") as CachedPuzzle[];
+    await this.database.put(puzzleCacheStore, { id: puzzle.id, puzzle, lastOpenedAt: now } satisfies CachedPuzzle, puzzle.id);
+    const cached = await this.database.getAll(puzzleCacheStore) as CachedPuzzle[];
     const overflow = cached.sort((left, right) => right.lastOpenedAt - left.lastOpenedAt || left.id.localeCompare(right.id)).slice(MAX_OFFLINE_PUZZLES);
-    await Promise.all(overflow.map((entry) => this.database!.delete("puzzle-cache", entry.id)));
+    await Promise.all(overflow.map((entry) => this.database!.delete(puzzleCacheStore, entry.id)));
     return this.cachedPuzzleIds();
   }
 
