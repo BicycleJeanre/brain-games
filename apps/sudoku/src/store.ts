@@ -253,7 +253,7 @@ export class Store {
   async importJson(raw: string): Promise<{ added: number; skipped: number }> {
     const parsed = JSON.parse(raw);
     if (parsed?.format !== "strack-backup" || parsed?.data?.version !== 1 || typeof parsed.data.games !== "object") {
-      throw new Error("This is not a valid STrack version 1 backup.");
+      throw new Error("This is not a valid previous Sudoku backup.");
     }
     let added = 0;
     let skipped = 0;

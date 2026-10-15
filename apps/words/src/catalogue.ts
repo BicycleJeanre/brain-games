@@ -31,7 +31,7 @@ export async function loadCatalogue() {
   const response = await fetch(catalogueUrl("index.json"));
   if (!response.ok) throw new Error(`Catalogue request failed (${response.status}).`);
   const envelope = await response.json() as Partial<CatalogueEnvelope>;
-  if (envelope.version !== CATALOGUE_VERSION || !Array.isArray(envelope.puzzles)) throw new Error("The catalogue index is not compatible with this WTrack release.");
+  if (envelope.version !== CATALOGUE_VERSION || !Array.isArray(envelope.puzzles)) throw new Error("The catalogue index is not compatible with this Brain Games release.");
   refreshLists(envelope.puzzles);
   return puzzles;
 }

@@ -42,14 +42,14 @@ export function parseBackup(contents: string) {
     throw new Error("This file is not valid JSON.");
   }
 
-  if (!isRecord(value)) throw new Error("This is not a WTrack backup.");
+  if (!isRecord(value)) throw new Error("This is not a previous word-game backup.");
   const envelope = value as Partial<BackupEnvelope>;
   if (envelope.format !== BACKUP_FORMAT || !isRecord(envelope.data)) {
-    throw new Error("This is not a WTrack backup.");
+    throw new Error("This is not a previous word-game backup.");
   }
-  if (envelope.data.version !== 1) throw new Error("This backup uses an unsupported WTrack data version.");
+  if (envelope.data.version !== 1) throw new Error("This backup uses an unsupported word-game data version.");
   if (!isRecord(envelope.data.preferences) || !hasValidProgress(envelope.data.progress) || !isRecord(envelope.data.deletedProgress)) {
-    throw new Error("This WTrack backup is incomplete.");
+    throw new Error("This word-game backup is incomplete.");
   }
   return normalizeData(envelope.data);
 }

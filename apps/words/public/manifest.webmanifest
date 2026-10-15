@@ -1,6 +1,6 @@
 {
-  "name": "WTrack — Word Puzzles",
-  "short_name": "WTrack",
+  "name": "Brain Games · Word games",
+  "short_name": "Word games",
   "description": "Offline-first word searches and crosswords.",
   "start_url": "./",
   "scope": "./",

@@ -4,9 +4,9 @@ Brain Games is an offline-first entertainment application combining Sudoku and w
 
 It does not make cognitive, medical, therapeutic, educational-outcome, intelligence, reading-improvement, or health claims. Scores and progress describe recorded play only.
 
-## Current migration stage
+## Current integration stage
 
-The repository preserves the complete STrack and WTrack histories beneath `apps/sudoku/` and `apps/words/`. The live `/brain-games/` release provides a shared launcher, a versioned local database, previewable idempotent legacy import, combined backups, and a neutral owner-protected Firebase project. Both existing production deployments remain active and untouched.
+The repository preserves the complete source histories beneath `apps/sudoku/` and `apps/words/`. Brain Games provides one identity, game switcher, progress dashboard, installable offline scope, versioned local database, combined backup, and neutral owner-protected Firebase project. Sudoku and word-game engines remain independently testable modules inside that shared application. The previous production deployments remain active and untouched as rollback sources.
 
 See [the product brief](docs/PRODUCT_BRIEF.md) and [consolidation plan](docs/CONSOLIDATION_PLAN.md).
 

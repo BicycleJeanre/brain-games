@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const run = (command, args, environment = {}) => {
@@ -22,3 +22,39 @@ run("npm", ["run", "build", "--workspace=wtrack"], {
   EMPTY_OUT_DIR: "false",
   VITE_BRAIN_GAMES: "true",
 });
+
+const dist = resolve(root, "dist");
+const basePath = process.env.BASE_PATH || "/brain-games/";
+for (const module of ["sudoku", "words"]) {
+  const htmlPath = resolve(dist, module, "index.html");
+  const html = readFileSync(htmlPath, "utf8")
+    .replace(/href="[^"]*manifest\.webmanifest"/, `href="${basePath}manifest.webmanifest"`)
+    .replace(/href="[^"]*icon\.svg"/, `href="${basePath}icon.svg"`);
+  writeFileSync(htmlPath, html);
+  rmSync(resolve(dist, module, "sw.js"), { force: true });
+  rmSync(resolve(dist, module, "manifest.webmanifest"), { force: true });
+}
+
+const walk = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+  const path = resolve(directory, entry.name);
+  return entry.isDirectory() ? walk(path) : [relative(dist, path).replaceAll("\\", "/")];
+});
+const assets = walk(dist).filter((file) => file !== "sw.js" && !file.endsWith(".map") && !file.startsWith("words/catalogue/puzzles/"));
+const version = `brain-games-${Date.now()}`;
+writeFileSync(resolve(dist, "sw.js"), `const CACHE=${JSON.stringify(version)};
+const BASE=new URL('./',self.location.href);
+const ASSETS=${JSON.stringify(assets)}.map(path=>new URL(path,BASE).href);
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting())));
+self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
+self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('brain-games-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET'||new URL(event.request.url).origin!==BASE.origin)return;
+  const url=new URL(event.request.url);
+  if(event.request.mode==='navigate'&&url.pathname.startsWith(BASE.pathname)){
+    const relativePath=url.pathname.slice(BASE.pathname.length);
+    const documentPath=relativePath===''?'index.html':relativePath.endsWith('/')?relativePath+'index.html':relativePath;
+    event.respondWith(caches.open(CACHE).then(cache=>cache.match(new URL(documentPath,BASE).href)).then(hit=>hit||fetch(event.request)));return;
+  }
+  if(ASSETS.includes(event.request.url))event.respondWith(caches.open(CACHE).then(cache=>cache.match(event.request,{ignoreVary:true})).then(hit=>hit||fetch(event.request)));
+});
+`);

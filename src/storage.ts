@@ -12,8 +12,8 @@ type RecordValue = Record<string, unknown>;
 export interface MigrationPreview {
   legacySudoku: { present: boolean; games: number; completed: number };
   legacyWords: { present: boolean; progress: number; completed: number };
-  combinedSudoku: { games: number; completed: number };
-  combinedWords: { progress: number; completed: number };
+  combinedSudoku: { games: number; active: number; completed: number; averageSeconds: number | null };
+  combinedWords: { progress: number; active: number; completed: number; averageSeconds: number | null };
   lastImportedAt: string | null;
 }
 
@@ -70,7 +70,14 @@ async function readCombinedState(database: IDBPDatabase, store: string) {
 
 function stateCounts(value: RecordValue | null, collection: "games" | "progress") {
   const entries = Object.values(recordOrEmpty(value?.[collection]));
-  return { total: entries.length, completed: entries.filter((entry) => isRecord(entry) && numeric(entry.completedAt) > 0).length };
+  const completed = entries.filter((entry) => isRecord(entry) && numeric(entry.completedAt) > 0);
+  const recordedTimes = completed.map((entry) => numeric((entry as RecordValue).elapsedSeconds)).filter((seconds) => seconds > 0);
+  return {
+    total: entries.length,
+    active: entries.length - completed.length,
+    completed: completed.length,
+    averageSeconds: recordedTimes.length ? Math.round(recordedTimes.reduce((sum, seconds) => sum + seconds, 0) / recordedTimes.length) : null,
+  };
 }
 
 export async function migrationPreview(): Promise<MigrationPreview> {
@@ -92,8 +99,8 @@ export async function migrationPreview(): Promise<MigrationPreview> {
     return {
       legacySudoku: { present: Boolean(legacySudoku), games: legacySudokuCounts.total, completed: legacySudokuCounts.completed },
       legacyWords: { present: Boolean(legacyWords), progress: legacyWordsCounts.total, completed: legacyWordsCounts.completed },
-      combinedSudoku: { games: combinedSudokuCounts.total, completed: combinedSudokuCounts.completed },
-      combinedWords: { progress: combinedWordsCounts.total, completed: combinedWordsCounts.completed },
+      combinedSudoku: { games: combinedSudokuCounts.total, active: combinedSudokuCounts.active, completed: combinedSudokuCounts.completed, averageSeconds: combinedSudokuCounts.averageSeconds },
+      combinedWords: { progress: combinedWordsCounts.total, active: combinedWordsCounts.active, completed: combinedWordsCounts.completed, averageSeconds: combinedWordsCounts.averageSeconds },
       lastImportedAt: isRecord(meta) && typeof meta.lastImportedAt === "string" ? meta.lastImportedAt : null,
     };
   } finally {
@@ -108,7 +115,7 @@ function mergeTombstones(current: unknown, incoming: unknown) {
 }
 
 export function mergeSudokuState(currentValue: unknown, incomingValue: unknown) {
-  if (!isRecord(incomingValue) || incomingValue.version !== 1 || !isRecord(incomingValue.games)) throw new Error("This STrack data is incomplete.");
+  if (!isRecord(incomingValue) || incomingValue.version !== 1 || !isRecord(incomingValue.games)) throw new Error("This previous Sudoku data is incomplete.");
   if (!isRecord(currentValue) || currentValue.version !== 1 || !isRecord(currentValue.games)) {
     return { data: clone(incomingValue), added: Object.keys(incomingValue.games).length, updated: 0 };
   }
@@ -140,7 +147,7 @@ export function mergeSudokuState(currentValue: unknown, incomingValue: unknown) 
 }
 
 export function mergeWordsState(currentValue: unknown, incomingValue: unknown) {
-  if (!isRecord(incomingValue) || incomingValue.version !== 1 || !isRecord(incomingValue.progress)) throw new Error("This WTrack data is incomplete.");
+  if (!isRecord(incomingValue) || incomingValue.version !== 1 || !isRecord(incomingValue.progress)) throw new Error("This previous word-game data is incomplete.");
   if (!isRecord(currentValue) || currentValue.version !== 1 || !isRecord(currentValue.progress)) {
     return { data: clone(incomingValue), added: Object.keys(incomingValue.progress).length, updated: 0 };
   }
@@ -195,7 +202,7 @@ async function mergeIntoCombined(sudoku: unknown | null, words: unknown | null, 
 
 export async function importLegacyData() {
   const [sudoku, words] = await Promise.all([readLegacyState("strack-v1"), readLegacyState("wtrack")]);
-  if (!sudoku && !words) throw new Error("No compatible STrack or WTrack device data was found.");
+  if (!sudoku && !words) throw new Error("No compatible previous Sudoku or word-game data was found on this device.");
   return mergeIntoCombined(sudoku, words, "legacy-indexeddb");
 }
 
@@ -224,7 +231,7 @@ export function parseBackup(contents: string) {
   }
   if (value.format === "strack-backup") return { source: "strack-backup", sudoku: value.data ?? null, words: null };
   if (value.format === "wtrack-backup") return { source: "wtrack-backup", sudoku: null, words: value.data ?? null };
-  throw new Error("This is not a Brain Games, STrack, or WTrack backup.");
+  throw new Error("This is not a supported Brain Games or previous-app backup.");
 }
 
 export async function importBackup(contents: string) {

@@ -4,7 +4,7 @@ Status: Brain Games deployed; legacy routes retained
 Owner: Jeanre Van Wyk  
 Date: 2026-10-15  
 Repo: `BicycleJeanre/brain-games`  
-Branch: `codex/production-closeout`
+Branch: `codex/unified-experience`
 
 ## Purpose
 
@@ -33,7 +33,8 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - Live desktop/phone cross-device smoke restored representative Sudoku and Word Games sessions, then removed its disposable account and documents.
 - The live migration preview detected the owner's existing 30 STrack and 9 WTrack sessions without importing them.
 - No source application or existing production route has been changed or retired; `/strack/` and `/wtrack/` remain active.
+- The pending unified-experience release removes the inherited product names from the combined UI, adds a common Brain Games header and direct game switcher, exposes cross-game active/completed/average-time progress, and replaces the two module install/offline scopes with the single Brain Games manifest and service worker.
 
 ## Next checkpoint
 
-Have the owner review the detected counts, select **Import existing progress**, download a combined backup, and check a real installed PWA on both a PC and phone. Then continue Stage 5 shared-service extraction. Keep `/strack/` and `/wtrack/` active until explicit retirement authorization.
+Complete review, merge, deployment, and desktop/phone production verification of `codex/unified-experience`. Then continue shared account/settings/cloud extraction. Keep the previous `/strack/` and `/wtrack/` deployments active until explicit retirement authorization.

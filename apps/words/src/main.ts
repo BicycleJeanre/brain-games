@@ -13,6 +13,8 @@ type LibraryType = "all" | PuzzleKind | "letter-mix";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
 const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
+const brainGamesSudoku = `${brainGamesHome}sudoku/`;
+const brainGamesWords = `${brainGamesHome}words/`;
 const store = new Store();
 let view: View = "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
@@ -69,8 +71,9 @@ function chrome(content: string) {
   const active = view === "player" ? "library" : view;
   return `
     <header class="app-header">
-      <button class="brand" data-nav="home" aria-label="WTrack home"><span class="brand-grid">W</span><span>WTrack</span></button>
-      ${combinedBuild ? `<a class="suite-link" href="${brainGamesHome}">Brain Games</a>` : ""}
+      ${combinedBuild
+        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid">B</span><span>Brain Games</span></a><div class="game-switcher" aria-label="Games"><a href="${brainGamesSudoku}">Sudoku</a><a href="${brainGamesWords}" aria-current="page">Word games</a></div>`
+        : `<button class="brand" data-nav="home" aria-label="Word games home"><span class="brand-grid">A</span><span>Word games</span></button>`}
       <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
       <span class="cloud-state">${escapeHtml(cloud.status())}</span>
       <nav aria-label="Primary">
@@ -78,7 +81,7 @@ function chrome(content: string) {
       </nav>
     </header>
     <main id="main" class="${view === "player" ? "player-main" : ""}">${content}</main>
-    <footer class="app-footer"><span>Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/${combinedBuild ? "brain-games" : "wtrack"}">Source & provenance</a></footer>`;
+    <footer class="app-footer"><span>Brain Games · Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/${combinedBuild ? "brain-games" : "wtrack"}">Source & provenance</a></footer>`;
 }
 
 function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = false) {
@@ -270,7 +273,7 @@ function player() {
 
 function createLab() {
   return `<div class="page-heading"><div><span class="eyebrow">External puzzle tools</span><h1>Create</h1></div></div>
-    <form class="card create-card public-data-card" id="wikidata-form"><span class="kind-icon">LIVE</span><div><span class="eyebrow">Public data, generated on demand</span><h2>Create a playable puzzle from Wikimedia data</h2><p>Enter an English Wikipedia topic-page title. WTrack discovers its linked concepts, fetches their public Wikidata labels and descriptions, builds the puzzle in this browser, and keeps the complete result in the same ten-puzzle offline cache. No account or API key is needed.</p></div><div class="public-data-fields"><label>Topic page<input name="topic" value="astronomy" minlength="3" maxlength="80" required autocomplete="off" /></label><label>Puzzle type<select name="kind"><option value="word-search">Word search</option><option value="crossword">Crossword</option></select></label><label>Difficulty profile<select name="difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option><option>Diabolical</option></select></label></div><button class="primary" type="submit">Create public-data puzzle</button><p class="privacy-note">Requires a connection only while generating. The source topic page, selected Wikidata QIDs, licences, retrieval time, generator versions, and selection seed are saved with the puzzle. Friendly difficulty profiles change term length, count, grid size, and word direction; they are not a universal rating.</p></form>
+    <form class="card create-card public-data-card" id="wikidata-form"><span class="kind-icon">LIVE</span><div><span class="eyebrow">Public data, generated on demand</span><h2>Create a playable puzzle from Wikimedia data</h2><p>Enter an English Wikipedia topic-page title. Brain Games discovers its linked concepts, fetches their public Wikidata labels and descriptions, builds the puzzle in this browser, and keeps the complete result in the same ten-puzzle offline cache. No account or API key is needed.</p></div><div class="public-data-fields"><label>Topic page<input name="topic" value="astronomy" minlength="3" maxlength="80" required autocomplete="off" /></label><label>Puzzle type<select name="kind"><option value="word-search">Word search</option><option value="crossword">Crossword</option></select></label><label>Difficulty profile<select name="difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option><option>Diabolical</option></select></label></div><button class="primary" type="submit">Create public-data puzzle</button><p class="privacy-note">Requires a connection only while generating. The source topic page, selected Wikidata QIDs, licences, retrieval time, generator versions, and selection seed are saved with the puzzle. Friendly difficulty profiles change term length, count, grid size, and word direction; they are not a universal rating.</p></form>
     <div class="split-feature">
       <form class="card create-card" id="word-search-form"><span class="kind-icon">WS</span><h2>Generate a word search</h2><p>Powered locally by <code>@blex41/word-search</code>. Enter one word per line.</p><label>Words<textarea name="words">FOREST\nMOSS\nFERN\nTRAIL\nPINE\nOWL</textarea></label><button class="primary" type="submit">Generate preview</button></form>
       <form class="card create-card" id="crossword-form"><span class="kind-icon">CW</span><h2>Lay out a crossword</h2><p>Powered locally by <code>crossword-layout-generator</code>. Use <code>ANSWER | clue</code> on each line.</p><label>Answers and clues<textarea name="items">FOREST | A large area covered in trees\nFERN | A leafy plant without flowers\nTRAIL | A path through the woods\nPINE | An evergreen tree\nOWL | A nocturnal bird</textarea></label><button class="primary" type="submit">Generate preview</button></form>
@@ -320,15 +323,15 @@ function settings() {
       <section class="card settings-card"><span class="eyebrow">Backup</span><h2>Your device data</h2>
         <p>Download a private JSON copy of your progress and preferences. Restore merges missing sessions without replacing progress already on this device.</p>
         <button class="secondary" type="button" data-export-backup>Download backup</button>
-        <form id="import-form" class="import-form"><label>WTrack backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Merge backup</button></form>
+        <form id="import-form" class="import-form"><label>Previous word-game backup<input type="file" name="backup" accept="application/json,.json" required /></label><button class="primary" type="submit">Merge backup</button></form>
       </section>
       <section class="card settings-card"><span class="eyebrow">Storage</span><h2>Offline data controls</h2><p><strong>${cachedPuzzleIds.size} of ${MAX_OFFLINE_PUZZLES}</strong> offline puzzle slots are in use. Reset the current session, clear history, all progress, or downloaded payloads independently.</p><div class="data-actions">${activePuzzle && activeSessionId ? `<button class="secondary danger-action" type="button" data-reset-current>Reset current puzzle</button>` : ""}<button class="secondary" type="button" data-clear-progress="completed">Clear completed sessions</button><button class="secondary danger-action" type="button" data-clear-progress="all">Clear all progress</button><button class="secondary" type="button" data-clear-cache>Clear offline puzzles</button></div><p class="storage-note">Progress deletion synchronizes when signed in. Clearing offline puzzle payloads keeps progress and preferences.</p></section>
-      <section class="card settings-card"><span class="eyebrow">Help</span><h2>How WTrack works</h2><button class="secondary" type="button" data-nav="help">Open user guide</button><p class="storage-note"><strong>${navigator.onLine ? "Online" : "Offline"}.</strong> The shell, help, preferences, saved progress, catalogue index, and ten most recently opened puzzles work without a connection after the first production load.</p></section>
+      <section class="card settings-card"><span class="eyebrow">Help</span><h2>How word games work</h2><button class="secondary" type="button" data-nav="help">Open user guide</button><p class="storage-note"><strong>${navigator.onLine ? "Online" : "Offline"}.</strong> The shell, help, preferences, saved progress, catalogue index, and ten most recently opened puzzles work without a connection after the first production load.</p></section>
     </div>`;
 }
 
 function help() {
-  return `<div class="page-heading"><div><span class="eyebrow">How WTrack works</span><h1>Help</h1></div></div>
+  return `<div class="page-heading"><div><span class="eyebrow">How word games work</span><h1>Help</h1></div></div>
     <div class="help-grid">
       <article class="card help-card"><h2>Word searches</h2><p>Select the first letter, then the last. Words may run horizontally, vertically, or diagonally, forwards or backwards. Found words stay highlighted.</p></article>
       <article class="card help-card"><h2>Crosswords</h2><p>Select a clue or cell and type. Arrow keys move between cells. Optional checking marks a wrong letter without revealing the answer.</p></article>
@@ -810,8 +813,8 @@ async function reloadCatalogue() {
     catalogueError = "";
   } catch (error) {
     catalogueError = navigator.onLine
-      ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
-      : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
+      ? `Brain Games could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
+      : "This device has not cached the catalogue index yet. Reconnect and open Brain Games once.";
   }
   render();
 }
@@ -823,14 +826,14 @@ async function boot() {
     await loadCatalogue();
   } catch (error) {
     catalogueError = navigator.onLine
-      ? `WTrack could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
-      : "This device has not cached the catalogue index yet. Reconnect and open WTrack once.";
+      ? `Brain Games could not load the public catalogue. ${error instanceof Error ? error.message : "Please try again."}`
+      : "This device has not cached the catalogue index yet. Reconnect and open Brain Games once.";
   }
   for (const puzzle of await store.cachedPuzzles()) if (!puzzleById(puzzle.id)) registerLocalPuzzle(puzzle);
   applyPreferences();
   authReady = watchAuth((user) => void cloud.setUser(user));
   render();
-  if ("serviceWorker" in navigator) void navigator.serviceWorker.register(new URL("./sw.js", document.baseURI));
+  if ("serviceWorker" in navigator) void navigator.serviceWorker.register(combinedBuild ? `${brainGamesHome}sw.js` : new URL("./sw.js", document.baseURI));
   const token = ++renderToken;
   window.setInterval(async () => {
     if (token !== renderToken || view !== "player" || !activePuzzle) return;
