@@ -1,4 +1,5 @@
 import "./style.css";
+import { leaveProfile, profileConfigured, profileError, resetProfilePassword, useProfile, watchProfile, type ProfileUser } from "./auth.ts";
 import { createCombinedBackup, importBackup, importLegacyData, migrationPreview, type ImportResult, type MigrationPreview } from "./storage.ts";
 
 type ShellView = "home" | "play" | "progress" | "settings";
@@ -9,6 +10,9 @@ const themeKey = "brain-games-theme";
 const validViews = new Set<ShellView>(["home", "play", "progress", "settings"]);
 let preview: MigrationPreview | null = null;
 let dataMessage = "";
+let profileUser: ProfileUser | null = null;
+let profileMessage = "";
+let profileMessageError = false;
 
 const requestedView = new URLSearchParams(location.search).get("view") as ShellView | null;
 let view: ShellView = requestedView && validViews.has(requestedView) ? requestedView : "home";
@@ -27,6 +31,8 @@ function applyTheme(theme = savedTheme()) {
 }
 
 applyTheme();
+
+const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 
 const resultMessage = (result: ImportResult) => {
   const changed = result.sudokuAdded + result.sudokuUpdated + result.wordsAdded + result.wordsUpdated;
@@ -99,13 +105,24 @@ function settingsView() {
   return `
     <section class="page-heading"><div><span class="eyebrow">Preferences and data</span><h1>Settings</h1><p>Shared app choices live here. Detailed player controls remain available inside each game.</p></div></section>
     <div class="settings-grid">
+      <section class="settings-card profile-card card" aria-labelledby="profile-heading">
+        <div><span class="eyebrow">One account for every game</span><h2 id="profile-heading">Brain Games profile</h2>
+        ${!profileConfigured
+          ? `<p>Cloud profiles are not configured in this build. Every game remains available with device-only saves.</p>`
+          : profileUser
+            ? `<p>Signed in as <strong>${escapeHtml(profileUser.email || "your profile")}</strong>. This one profile is used by Sudoku, word games, and future Brain Games modules on this device.</p><p>Open either game to sync its saved progress automatically.</p><button class="secondary" type="button" data-profile-sign-out>Sign out on this device</button>`
+            : `<p>Sign in once to use the same private profile for Sudoku and every word game on this device. Use the same profile on your phone and PC to continue between them.</p>
+              <form class="profile-form" data-profile-form><label>Email<input type="email" name="email" autocomplete="email" required /></label><label>Password<input type="password" name="password" autocomplete="current-password" minlength="6" required /></label><div class="stack-actions"><button class="primary" type="submit">Sign in</button><button class="secondary" type="submit" data-create="true">Create profile</button></div><button class="text-button" type="button" data-reset-password>Send password reset email</button></form>`}
+        ${profileMessage ? `<p class="profile-message ${profileMessageError ? "error" : ""}" role="status">${escapeHtml(profileMessage)}</p>` : ""}</div>
+        <div class="profile-games" aria-label="Profile coverage"><span><b>9</b> Sudoku</span><span><b>A</b> Word games</span><span><b>+</b> Future games</span></div>
+      </section>
       <section class="settings-card card" aria-labelledby="appearance-heading">
         <span class="eyebrow">Appearance</span><h2 id="appearance-heading">Theme</h2><p>Use your device setting, or keep Brain Games light or dark.</p>
         <label class="settings-field"><span><strong>Colour theme</strong><small>Applies to this shared game desk.</small></span><select data-theme-select><option value="system" ${theme === "system" ? "selected" : ""}>System</option><option value="light" ${theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${theme === "dark" ? "selected" : ""}>Dark</option></select></label>
       </section>
       <section class="settings-card card" aria-labelledby="game-settings-heading">
-        <span class="eyebrow">Player preferences</span><h2 id="game-settings-heading">Game settings</h2><p>Open the full controls for display, assistance, timers, accounts and help.</p>
-        <div class="stack-actions"><a class="secondary" href="${base}sudoku/?view=settings">Sudoku settings</a><a class="secondary" href="${base}words/?view=settings">Word-game settings</a></div>
+        <span class="eyebrow">Player preferences</span><h2 id="game-settings-heading">Game settings</h2><p>Open each game's detailed display, assistance, timer, storage, and help controls. Your profile is managed above.</p>
+        <div class="stack-actions"><a class="secondary" href="${base}sudoku/?view=settings">Sudoku preferences</a><a class="secondary" href="${base}words/?view=settings">Word-game preferences</a></div>
       </section>
       <section class="settings-card data-card card" aria-labelledby="data-heading">
         <div><span class="eyebrow">Data &amp; backups</span><h2 id="data-heading">Your saved games</h2><p>Import compatible progress from earlier versions or keep an independent combined backup. Importing leaves the earlier data untouched.</p></div>
@@ -127,6 +144,7 @@ function render() {
   document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <header class="app-header">
       <button class="brand" data-view="home" aria-label="Brain Games home"><span aria-hidden="true">B</span><strong>Brain Games</strong></button>
+      <button class="profile-pill" data-view="settings" aria-label="${profileUser ? `Manage Brain Games profile for ${escapeHtml(profileUser.email || "signed-in user")}` : "Sign in to Brain Games"}">${profileUser ? escapeHtml(profileUser.email || "Profile") : "Sign in"}</button>
       <nav aria-label="Brain Games">
         <button data-view="home" class="${view === "home" ? "active" : ""}" ${view === "home" ? 'aria-current="page"' : ""}>Home</button>
         <button data-view="play" class="${view === "play" ? "active" : ""}" ${view === "play" ? 'aria-current="page"' : ""}>Play</button>
@@ -156,6 +174,49 @@ function bindView() {
     const next = (event.currentTarget as HTMLSelectElement).value as Theme;
     localStorage.setItem(themeKey, next);
     applyTheme(next);
+  });
+  document.querySelector<HTMLFormElement>("[data-profile-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    const submitter = (event as SubmitEvent).submitter as HTMLElement | null;
+    const email = String(data.get("email") ?? "").trim();
+    const password = String(data.get("password") ?? "");
+    profileMessage = submitter?.dataset.create ? "Creating your Brain Games profile…" : "Signing in to Brain Games…";
+    profileMessageError = false;
+    render();
+    try {
+      await useProfile(email, password, submitter?.dataset.create === "true");
+      profileMessage = "Signed in. Sudoku and word games now use this profile.";
+      render();
+    } catch (error) {
+      profileMessage = profileError(error);
+      profileMessageError = true;
+      render();
+    }
+  });
+  document.querySelector<HTMLElement>("[data-profile-sign-out]")?.addEventListener("click", async () => {
+    await leaveProfile();
+    profileMessage = "Signed out. Saved games remain on this device.";
+    profileMessageError = false;
+    render();
+  });
+  document.querySelector<HTMLElement>("[data-reset-password]")?.addEventListener("click", async () => {
+    const email = document.querySelector<HTMLInputElement>("[data-profile-form] input[name='email']")?.value.trim() ?? "";
+    if (!email) {
+      profileMessage = "Enter your email address first.";
+      profileMessageError = true;
+      return render();
+    }
+    try {
+      await resetProfilePassword(email);
+      profileMessage = "Password reset email sent.";
+      profileMessageError = false;
+    } catch (error) {
+      profileMessage = profileError(error);
+      profileMessageError = true;
+    }
+    render();
   });
   document.querySelector<HTMLButtonElement>("[data-import-legacy]")?.addEventListener("click", async (event) => {
     const button = event.currentTarget as HTMLButtonElement;
@@ -200,5 +261,6 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { i
 
 render();
 void refreshPreview();
+watchProfile((user) => { profileUser = user; render(); });
 
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register(`${base}sw.js`));

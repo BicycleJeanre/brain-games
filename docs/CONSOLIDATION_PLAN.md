@@ -62,11 +62,12 @@ Started: 2026-10-15
 - [x] Resolve duplicate emails and legacy UID mappings.
 - [x] Migrate test accounts and representative state first.
 - [x] Validate one account across phone and desktop before production cutover.
+- [x] Move sign-in, profile creation, password reset, and sign-out into one shared Brain Games profile surface used by every module.
 
 ### Stage 5 — Shared services
 
 - [x] Use one Brain Games local database, combined backup surface, and cross-game progress summary.
-- [ ] Replace the remaining game-specific authentication, cloud, and challenge implementations; the shared shell now owns top-level appearance, backup, migration, and settings discovery.
+- [ ] Replace the remaining game-specific cloud-data and challenge implementations; the shared shell now owns authentication/profile state, top-level appearance, backup, migration, and settings discovery.
 - [x] Consolidate installation and offline caching under one Brain Games manifest and service worker, with self-retiring compatibility workers for browsers that previously installed a module scope.
 - [ ] Lazy-load HoDoKu and word-generation/parser dependencies.
 - [ ] Retain domain-specific rules, hints, catalogues, provenance, and tests.

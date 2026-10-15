@@ -6,7 +6,7 @@ It does not make cognitive, medical, therapeutic, educational-outcome, intellige
 
 ## Current integration stage
 
-The repository preserves the complete source histories beneath `apps/sudoku/` and `apps/words/`. Brain Games provides one identity, app-style Home, Play, Progress and Settings views, direct game switching, an installable offline scope, versioned local database, combined backup, and neutral owner-protected Firebase project. Settings exposes shared appearance and data controls plus deep links to each game's detailed player preferences. Sudoku and word-game engines remain independently testable modules inside that shared application. The previous production deployments remain active and untouched as rollback sources.
+The repository preserves the complete source histories beneath `apps/sudoku/` and `apps/words/`. Brain Games provides one identity, one profile and sign-in, app-style Home, Play, Progress and Settings views, direct game switching, an installable offline scope, versioned local database, combined backup, and neutral owner-protected Firebase project. Settings owns the shared profile, appearance, and data controls, with deep links to each game's detailed player preferences. Sudoku and word-game engines remain independently testable modules inside that shared application. The previous production deployments remain active and untouched as rollback sources.
 
 See [the product brief](docs/PRODUCT_BRIEF.md) and [consolidation plan](docs/CONSOLIDATION_PLAN.md).
 

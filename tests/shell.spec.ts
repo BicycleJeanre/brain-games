@@ -30,11 +30,15 @@ test("the shared home exposes both complete game families", async ({ page }) => 
   await expect(page.getByText(/STrack|WTrack/)).toHaveCount(0);
 });
 
-test("settings are a distinct view and open each game's detailed settings", async ({ page }) => {
+test("one Brain Games profile owns sign-in for every game", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Sign in to Brain Games" }).click();
   await expect(page).toHaveURL(/\?view=settings$/);
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Brain Games profile" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create profile" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Your saved games" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /What would you like to play|Pick up where you left off/ })).toHaveCount(0);
 
@@ -44,9 +48,17 @@ test("settings are a distinct view and open each game's detailed settings", asyn
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-  await page.getByRole("link", { name: "Sudoku settings" }).click();
+  await page.getByRole("link", { name: "Sudoku preferences" }).click();
   await expect(page.getByRole("heading", { name: "Settings & help" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close settings and help" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toHaveAttribute("href", "/brain-games/?view=settings");
+  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Manage Brain Games profile" }).click();
+  await page.getByRole("link", { name: "Word-game preferences" }).click();
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toHaveAttribute("href", "/brain-games/?view=settings");
+  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
 });
 
 test("the shared home fits a phone viewport without horizontal scrolling", async ({ page }) => {
