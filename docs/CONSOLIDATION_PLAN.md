@@ -66,7 +66,7 @@ Started: 2026-10-15
 
 - [x] Use one Brain Games local database, combined backup surface, and cross-game progress summary.
 - [ ] Replace duplicate settings, authentication, cloud, and challenge implementations.
-- [x] Consolidate installation and offline caching under one Brain Games manifest and service worker.
+- [x] Consolidate installation and offline caching under one Brain Games manifest and service worker, with self-retiring compatibility workers for browsers that previously installed a module scope.
 - [ ] Lazy-load HoDoKu and word-generation/parser dependencies.
 - [ ] Retain domain-specific rules, hints, catalogues, provenance, and tests.
 
