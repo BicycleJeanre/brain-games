@@ -1,0 +1,8 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+apps/*/dist/
+apps/words/public/catalogue/
+apps/sudoku/vendor/hodoku-ts/dist/
+.DS_Store

@@ -37,6 +37,7 @@ self.addEventListener('fetch',event=>{
 export default defineConfig({
   base: process.env.BASE_PATH || "./",
   plugins: [offline()],
+  build: { outDir: process.env.BUILD_OUT_DIR || "dist", emptyOutDir: process.env.EMPTY_OUT_DIR !== "false" },
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
   preview: { host: "127.0.0.1", port: 4173, strictPort: true },
 });
