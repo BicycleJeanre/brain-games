@@ -1,54 +1,32 @@
 import "./style.css";
-import { createCombinedBackup, importBackup, importLegacyData, migrationPreview, type ImportResult } from "./storage.ts";
+import { createCombinedBackup, importBackup, importLegacyData, migrationPreview, type ImportResult, type MigrationPreview } from "./storage.ts";
+
+type ShellView = "home" | "play" | "progress" | "settings";
+type Theme = "system" | "light" | "dark";
 
 const base = import.meta.env.BASE_URL;
+const themeKey = "brain-games-theme";
+const validViews = new Set<ShellView>(["home", "play", "progress", "settings"]);
+let preview: MigrationPreview | null = null;
+let dataMessage = "";
 
-document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <header class="app-header">
-    <a class="brand" href="${base}" aria-label="Brain Games home"><span aria-hidden="true">B</span><strong>Brain Games</strong></a>
-    <nav aria-label="Brain Games"><a href="#play">Play</a><a href="#progress">Progress</a><a href="#data">Data</a></nav>
-  </header>
-  <main id="main">
-    <section class="hero">
-      <div><span class="eyebrow">One place to play</span><h1>Pick up a game or start something new.</h1><p>Sudoku, word games, saved progress, backups and cross-device play now belong to one Brain Games experience.</p></div>
-      <span class="status"><i aria-hidden="true"></i>${navigator.onLine ? "Ready online" : "Ready offline"}</span>
-    </section>
-    <section class="progress-card" id="progress" aria-labelledby="progress-heading">
-      <div class="section-heading"><div><span class="eyebrow">Across all games</span><h2 id="progress-heading">Your progress</h2></div><span class="progress-total" data-progress-total>Loading…</span></div>
-      <div class="progress-grid" data-progress-grid aria-live="polite"></div>
-    </section>
-    <section class="game-grid" id="play" aria-label="Game collections">
-      <a class="game-card sudoku" href="${base}sudoku/">
-        <span class="game-mark" aria-hidden="true">9</span>
-        <span><small>Sudoku</small><strong>Logic, candidates, hints and training</strong><em>Open Sudoku →</em></span>
-      </a>
-      <a class="game-card words" href="${base}words/">
-        <span class="game-mark" aria-hidden="true">A</span>
-        <span><small>Word games</small><strong>Crosswords, searches, grids and letter mixes</strong><em>Open Word Games →</em></span>
-      </a>
-    </section>
-    <section class="data-card" id="data" aria-labelledby="data-heading">
-      <div><span class="eyebrow">Data &amp; backups</span><h2 id="data-heading">Bring previous progress with you</h2><p>Brain Games can copy compatible Sudoku and word-game progress saved by earlier versions in this browser. You review the counts first; importing leaves the original data untouched.</p></div>
-      <div class="migration-summary" data-migration-summary role="status">Checking this device…</div>
-      <div class="data-actions">
-        <button class="primary" type="button" data-import-legacy disabled>Import existing progress</button>
-        <button class="secondary" type="button" data-export>Download combined backup</button>
-        <label class="file-action">Restore a backup<input type="file" accept="application/json,.json" data-import-file /></label>
-      </div>
-      <p class="data-message" data-data-message aria-live="polite"></p>
-    </section>
-    <section class="future-card">
-      <span class="eyebrow">More games later</span><h2>Built to grow beyond puzzles</h2><p>Future entertainment modules can include speed-reading games, memory, attention and mental arithmetic. Scores describe play only and do not imply cognitive or health benefits.</p>
-    </section>
-  </main>
-  <footer><span>Free software · AGPL-3.0-or-later</span><a href="https://github.com/BicycleJeanre/brain-games">Source code</a></footer>`;
+const requestedView = new URLSearchParams(location.search).get("view") as ShellView | null;
+let view: ShellView = requestedView && validViews.has(requestedView) ? requestedView : "home";
 
-const summary = document.querySelector<HTMLElement>("[data-migration-summary]")!;
-const progressGrid = document.querySelector<HTMLElement>("[data-progress-grid]")!;
-const progressTotal = document.querySelector<HTMLElement>("[data-progress-total]")!;
-const message = document.querySelector<HTMLElement>("[data-data-message]")!;
-const importLegacyButton = document.querySelector<HTMLButtonElement>("[data-import-legacy]")!;
+function savedTheme(): Theme {
+  const value = localStorage.getItem(themeKey);
+  return value === "light" || value === "dark" ? value : "system";
+}
+
+function applyTheme(theme = savedTheme()) {
+  const resolved = theme === "system"
+    ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+    : theme;
+  document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.themePreference = theme;
+}
+
+applyTheme();
 
 const resultMessage = (result: ImportResult) => {
   const changed = result.sudokuAdded + result.sudokuUpdated + result.wordsAdded + result.wordsUpdated;
@@ -65,59 +43,162 @@ const formatTime = (seconds: number | null) => {
   return hours ? `${hours}h ${minutes}m average` : `${minutes}:${String(remainder).padStart(2, "0")} average`;
 };
 
-async function refreshMigrationSummary() {
-  try {
-    const preview = await migrationPreview();
-    const legacyCount = preview.legacySudoku.games + preview.legacyWords.progress;
-    const active = preview.combinedSudoku.active + preview.combinedWords.active;
-    const completed = preview.combinedSudoku.completed + preview.combinedWords.completed;
-    importLegacyButton.disabled = legacyCount === 0;
-    summary.innerHTML = `<span><strong>${preview.legacySudoku.games}</strong> previous Sudoku session${preview.legacySudoku.games === 1 ? "" : "s"}</span><span><strong>${preview.legacyWords.progress}</strong> previous word-game session${preview.legacyWords.progress === 1 ? "" : "s"}</span><span><strong>${preview.combinedSudoku.games + preview.combinedWords.progress}</strong> already in Brain Games</span>`;
-    progressTotal.textContent = `${active} active · ${completed} completed`;
-    progressGrid.innerHTML = `
-      <article><span class="game-mark" aria-hidden="true">9</span><div><h3>Sudoku</h3><p><strong>${preview.combinedSudoku.active}</strong> active · <strong>${preview.combinedSudoku.completed}</strong> completed</p><small>${formatTime(preview.combinedSudoku.averageSeconds)}</small></div><a href="${base}sudoku/">${preview.combinedSudoku.active ? "Continue" : "Play"} Sudoku →</a></article>
-      <article class="words"><span class="game-mark" aria-hidden="true">A</span><div><h3>Word games</h3><p><strong>${preview.combinedWords.active}</strong> active · <strong>${preview.combinedWords.completed}</strong> completed</p><small>${formatTime(preview.combinedWords.averageSeconds)}</small></div><a href="${base}words/">${preview.combinedWords.active ? "Continue" : "Play"} word games →</a></article>`;
-  } catch {
-    summary.textContent = "Device progress could not be inspected. You can still restore a downloaded backup.";
-    progressTotal.textContent = "Unavailable";
-    progressGrid.textContent = "Progress could not be loaded on this device.";
-  }
+const gameCards = () => `
+  <div class="game-grid" aria-label="Game collections">
+    <a class="game-card sudoku" href="${base}sudoku/">
+      <span class="game-mark" aria-hidden="true">9</span>
+      <span><small>Sudoku</small><strong>Logic, candidates, hints and training</strong><em>Open Sudoku →</em></span>
+    </a>
+    <a class="game-card words" href="${base}words/">
+      <span class="game-mark" aria-hidden="true">A</span>
+      <span><small>Word games</small><strong>Crosswords, searches, grids and letter mixes</strong><em>Open Word games →</em></span>
+    </a>
+  </div>`;
+
+function progressContent() {
+  if (!preview) return `<div class="loading-card card" role="status">Loading your progress…</div>`;
+  const active = preview.combinedSudoku.active + preview.combinedWords.active;
+  const completed = preview.combinedSudoku.completed + preview.combinedWords.completed;
+  return `
+    <div class="section-heading"><div><span class="eyebrow">Across all games</span><h1>Your progress</h1></div><span class="progress-total">${active} active · ${completed} completed</span></div>
+    <div class="progress-grid">
+      <article class="card"><span class="game-mark" aria-hidden="true">9</span><div><h2>Sudoku</h2><p><strong>${preview.combinedSudoku.active}</strong> active · <strong>${preview.combinedSudoku.completed}</strong> completed</p><small>${formatTime(preview.combinedSudoku.averageSeconds)}</small></div><a href="${base}sudoku/">${preview.combinedSudoku.active ? "Continue" : "Play"} Sudoku →</a></article>
+      <article class="card words"><span class="game-mark" aria-hidden="true">A</span><div><h2>Word games</h2><p><strong>${preview.combinedWords.active}</strong> active · <strong>${preview.combinedWords.completed}</strong> completed</p><small>${formatTime(preview.combinedWords.averageSeconds)}</small></div><a href="${base}words/">${preview.combinedWords.active ? "Continue" : "Play"} word games →</a></article>
+    </div>`;
 }
 
-importLegacyButton.addEventListener("click", async () => {
-  importLegacyButton.disabled = true;
-  message.textContent = "Importing without changing the earlier app data…";
-  try {
-    message.textContent = resultMessage(await importLegacyData());
-    await refreshMigrationSummary();
-  } catch (error) {
-    message.textContent = error instanceof Error ? error.message : "The import could not be completed.";
-  }
-});
+function homeView() {
+  const active = preview ? preview.combinedSudoku.active + preview.combinedWords.active : 0;
+  return `
+    <section class="hero card">
+      <div><span class="eyebrow">Your game desk</span><h1>${active ? "Pick up where you left off." : "What would you like to play?"}</h1><p>Sudoku and word games share one home, while each game keeps the focused controls that make it enjoyable to play.</p></div>
+      <span class="status"><i aria-hidden="true"></i>${navigator.onLine ? "Ready online" : "Ready offline"}</span>
+    </section>
+    <section class="home-section" aria-labelledby="games-heading">
+      <div class="section-heading"><div><span class="eyebrow">Choose a game</span><h2 id="games-heading">Play</h2></div><button class="text-button" data-view="play">See all games →</button></div>
+      ${gameCards()}
+    </section>
+    <section class="home-section progress-preview card" aria-labelledby="progress-preview-heading">
+      <div><span class="eyebrow">Saved activity</span><h2 id="progress-preview-heading">${preview ? `${active} active game${active === 1 ? "" : "s"}` : "Loading progress…"}</h2><p>${preview ? `${preview.combinedSudoku.completed + preview.combinedWords.completed} completed across your game library.` : "Checking this device."}</p></div>
+      <button class="secondary" data-view="progress">View progress</button>
+    </section>`;
+}
 
-document.querySelector<HTMLButtonElement>("[data-export]")!.addEventListener("click", async () => {
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([await createCombinedBackup()], { type: "application/json" }));
-  link.download = `brain-games-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-  message.textContent = "Combined backup downloaded.";
-});
+function playView() {
+  return `
+    <section class="page-heading"><div><span class="eyebrow">Game library</span><h1>Choose a game</h1><p>Each game opens in its own focused player. Use the Brain Games header to switch without returning to a long landing page.</p></div></section>
+    ${gameCards()}
+    <section class="future-card card"><span class="eyebrow">More games later</span><h2>Built to grow</h2><p>Future entertainment modules can include speed-reading games, memory, attention and mental arithmetic. Scores describe play only and do not imply cognitive or health benefits.</p></section>`;
+}
 
-document.querySelector<HTMLInputElement>("[data-import-file]")!.addEventListener("change", async (event) => {
-  const input = event.currentTarget as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  try {
-    message.textContent = resultMessage(await importBackup(await file.text()));
-    await refreshMigrationSummary();
-  } catch (error) {
-    message.textContent = error instanceof Error ? error.message : "The backup could not be restored.";
-  } finally {
-    input.value = "";
-  }
-});
+function settingsView() {
+  const theme = savedTheme();
+  const legacySudoku = preview?.legacySudoku.games ?? 0;
+  const legacyWords = preview?.legacyWords.progress ?? 0;
+  const combined = preview ? preview.combinedSudoku.games + preview.combinedWords.progress : 0;
+  return `
+    <section class="page-heading"><div><span class="eyebrow">Preferences and data</span><h1>Settings</h1><p>Shared app choices live here. Detailed player controls remain available inside each game.</p></div></section>
+    <div class="settings-grid">
+      <section class="settings-card card" aria-labelledby="appearance-heading">
+        <span class="eyebrow">Appearance</span><h2 id="appearance-heading">Theme</h2><p>Use your device setting, or keep Brain Games light or dark.</p>
+        <label class="settings-field"><span><strong>Colour theme</strong><small>Applies to this shared game desk.</small></span><select data-theme-select><option value="system" ${theme === "system" ? "selected" : ""}>System</option><option value="light" ${theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${theme === "dark" ? "selected" : ""}>Dark</option></select></label>
+      </section>
+      <section class="settings-card card" aria-labelledby="game-settings-heading">
+        <span class="eyebrow">Player preferences</span><h2 id="game-settings-heading">Game settings</h2><p>Open the full controls for display, assistance, timers, accounts and help.</p>
+        <div class="stack-actions"><a class="secondary" href="${base}sudoku/?view=settings">Sudoku settings</a><a class="secondary" href="${base}words/?view=settings">Word-game settings</a></div>
+      </section>
+      <section class="settings-card data-card card" aria-labelledby="data-heading">
+        <div><span class="eyebrow">Data &amp; backups</span><h2 id="data-heading">Your saved games</h2><p>Import compatible progress from earlier versions or keep an independent combined backup. Importing leaves the earlier data untouched.</p></div>
+        <div class="migration-summary" role="status"><span><strong>${legacySudoku}</strong> previous Sudoku session${legacySudoku === 1 ? "" : "s"}</span><span><strong>${legacyWords}</strong> previous word-game session${legacyWords === 1 ? "" : "s"}</span><span><strong>${combined}</strong> already in Brain Games</span></div>
+        <div class="data-actions"><button class="primary" type="button" data-import-legacy ${legacySudoku + legacyWords ? "" : "disabled"}>Import existing progress</button><button class="secondary" type="button" data-export>Download combined backup</button><label class="file-action">Restore a backup<input type="file" accept="application/json,.json" data-import-file /></label></div>
+        <p class="data-message" aria-live="polite">${dataMessage}</p>
+      </section>
+    </div>`;
+}
 
-void refreshMigrationSummary();
+function viewContent() {
+  if (view === "play") return playView();
+  if (view === "progress") return `<section class="progress-page">${progressContent()}</section>`;
+  if (view === "settings") return settingsView();
+  return homeView();
+}
+
+function render() {
+  document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+    <header class="app-header">
+      <button class="brand" data-view="home" aria-label="Brain Games home"><span aria-hidden="true">B</span><strong>Brain Games</strong></button>
+      <nav aria-label="Brain Games">
+        <button data-view="home" class="${view === "home" ? "active" : ""}" ${view === "home" ? 'aria-current="page"' : ""}>Home</button>
+        <button data-view="play" class="${view === "play" ? "active" : ""}" ${view === "play" ? 'aria-current="page"' : ""}>Play</button>
+        <button data-view="progress" class="${view === "progress" ? "active" : ""}" ${view === "progress" ? 'aria-current="page"' : ""}>Progress</button>
+        <button data-view="settings" class="${view === "settings" ? "active" : ""}" ${view === "settings" ? 'aria-current="page"' : ""}>Settings</button>
+      </nav>
+    </header>
+    <main id="main" tabindex="-1">${viewContent()}</main>
+    <footer><span>Brain Games · Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/brain-games">Source code</a></footer>`;
+  bindView();
+}
+
+function navigate(next: ShellView, replace = false) {
+  if (next === view && !replace) return;
+  view = next;
+  const url = new URL(location.href);
+  if (next === "home") url.searchParams.delete("view"); else url.searchParams.set("view", next);
+  history[replace ? "replaceState" : "pushState"]({ view: next }, "", url);
+  scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  render();
+  document.querySelector<HTMLElement>("#main")?.focus({ preventScroll: true });
+}
+
+function bindView() {
+  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.view as ShellView)));
+  document.querySelector<HTMLSelectElement>("[data-theme-select]")?.addEventListener("change", (event) => {
+    const next = (event.currentTarget as HTMLSelectElement).value as Theme;
+    localStorage.setItem(themeKey, next);
+    applyTheme(next);
+  });
+  document.querySelector<HTMLButtonElement>("[data-import-legacy]")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    dataMessage = "Importing without changing the earlier app data…";
+    render();
+    try { dataMessage = resultMessage(await importLegacyData()); }
+    catch (error) { dataMessage = error instanceof Error ? error.message : "The import could not be completed."; }
+    await refreshPreview();
+  });
+  document.querySelector<HTMLButtonElement>("[data-export]")?.addEventListener("click", async () => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([await createCombinedBackup()], { type: "application/json" }));
+    link.download = `brain-games-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    dataMessage = "Combined backup downloaded.";
+    render();
+  });
+  document.querySelector<HTMLInputElement>("[data-import-file]")?.addEventListener("change", async (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try { dataMessage = resultMessage(await importBackup(await file.text())); }
+    catch (error) { dataMessage = error instanceof Error ? error.message : "The backup could not be restored."; }
+    await refreshPreview();
+  });
+}
+
+async function refreshPreview() {
+  try { preview = await migrationPreview(); }
+  catch { preview = null; if (view === "settings") dataMessage = "Device progress could not be inspected. You can still restore a downloaded backup."; }
+  render();
+}
+
+addEventListener("popstate", () => {
+  const next = new URLSearchParams(location.search).get("view") as ShellView | null;
+  view = next && validViews.has(next) ? next : "home";
+  render();
+});
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (savedTheme() === "system") applyTheme("system"); });
+
+render();
+void refreshPreview();
 
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register(`${base}sw.js`));

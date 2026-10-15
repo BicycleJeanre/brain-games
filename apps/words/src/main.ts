@@ -16,7 +16,8 @@ const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.m
 const brainGamesSudoku = `${brainGamesHome}sudoku/`;
 const brainGamesWords = `${brainGamesHome}words/`;
 const store = new Store();
-let view: View = "home";
+const requestedView = new URLSearchParams(location.search).get("view");
+let view: View = requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let activePuzzle: Puzzle | null = null;
 let activeSessionId: string | null = null;
