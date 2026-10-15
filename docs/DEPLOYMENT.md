@@ -39,3 +39,9 @@ First recorded: 2026-10-15.
 - Live verification: launcher and both module routes loaded; the existing-browser migration preview detected 30 STrack and 9 WTrack sessions without importing them.
 - Cross-device verification: a disposable account restored one Sudoku session and one Word Games session between isolated desktop and phone-sized touch profiles. Horizontal overflow was zero; the account and its test documents were removed.
 - Offline verification: the production artifact passed a real server-stop relaunch of the shell and both visited module scopes before deployment. A physical installed-PWA check remains an acceptance follow-up.
+- Unified-experience pull request: [#5](https://github.com/BicycleJeanre/brain-games/pull/5), merged as `3668ffa`.
+- Unified-experience deployment: [workflow run 38726394578](https://github.com/BicycleJeanre/brain-games/actions/runs/38726394578), successful on 2026-10-15.
+- Module-worker migration pull request: [#6](https://github.com/BicycleJeanre/brain-games/pull/6), merged as `98a2e0a` after the required check passed.
+- Current Pages deployment: [workflow run 38727174990](https://github.com/BicycleJeanre/brain-games/actions/runs/38727174990), successful on 2026-10-15.
+- Current live verification: the Brain Games home, shared Progress dashboard, Sudoku route, and Word games route loaded with no inherited product branding. The direct game switcher worked in both directions. A browser already controlled by the former Sudoku worker consumed its retirement worker and reopened under the root Brain Games scope. Desktop and 390×844 phone layouts had no observed horizontal overflow.
+- Rollback verification: `https://bicyclejeanre.github.io/strack/` and `https://bicyclejeanre.github.io/wtrack/` both continued to return HTTP 200 after the Brain Games release.
