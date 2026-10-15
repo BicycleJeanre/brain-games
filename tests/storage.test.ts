@@ -28,5 +28,5 @@ test("combined backup parser accepts both legacy formats", () => {
   assert.equal(parseBackup(JSON.stringify({ format: "wtrack-backup", data: { version: 1 } })).source, "wtrack-backup");
   const combined = parseBackup(JSON.stringify({ format: "brain-games-backup", version: 1, data: { sudoku: { version: 1 }, words: null } }));
   assert.equal(combined.source, "brain-games-backup");
-  assert.throws(() => parseBackup("{}"), /not a Brain Games/);
+  assert.throws(() => parseBackup("{}"), /not a supported Brain Games/);
 });

@@ -18,7 +18,7 @@ test("backup round-trip preserves progress and preferences", () => {
 
 test("backup parser rejects unrelated and unsupported JSON", () => {
   assert.throws(() => parseBackup("not json"), /valid JSON/);
-  assert.throws(() => parseBackup('{"format":"something-else"}'), /not a WTrack backup/);
+  assert.throws(() => parseBackup('{"format":"something-else"}'), /not a previous word-game backup/);
   assert.throws(() => parseBackup('{"format":"wtrack-backup","data":{"version":2,"preferences":{},"progress":{}}}'), /unsupported/);
   assert.throws(() => parseBackup('{"format":"wtrack-backup","data":{"version":1,"preferences":{},"progress":{"bad":{}},"deletedProgress":{}}}'), /incomplete/);
 });

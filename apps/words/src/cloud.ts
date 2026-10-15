@@ -142,7 +142,7 @@ export class CloudSync {
   }
 
   private fail(error: unknown) {
-    console.error("WTrack cloud sync failed", error);
+    console.error("Brain Games word sync failed", error);
     this.error = "Your changes remain saved on this device. Reconnect and retry from Settings.";
     this.changed();
   }

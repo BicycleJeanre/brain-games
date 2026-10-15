@@ -40,9 +40,11 @@ Started: 2026-10-15
 ### Stage 2 — Shared navigation and presentation
 
 - [x] Add consistent Brain Games navigation inside both modules.
-- [ ] Consolidate theme tokens, header, footer, update messaging, and responsive shell.
+- [x] Replace inherited app identities with one Brain Games header, game switcher, footer language, and responsive shell navigation.
+- [ ] Consolidate all remaining domain-specific theme tokens and update messaging.
 - [ ] Establish Play, Train, Learn, Progress, and Library routes.
 - [x] Add shell-level accessibility and mobile tests.
+- [x] Add a cross-game Progress dashboard for active sessions, completions, and recorded average times.
 
 ### Stage 3 — Local persistence and backups
 
@@ -62,8 +64,9 @@ Started: 2026-10-15
 
 ### Stage 5 — Shared services
 
-- [ ] Replace duplicate settings, authentication, cloud, backup, challenge summary, and progress implementations.
-- [ ] Consolidate service workers and update behavior.
+- [x] Use one Brain Games local database, combined backup surface, and cross-game progress summary.
+- [ ] Replace duplicate settings, authentication, cloud, and challenge implementations.
+- [x] Consolidate installation and offline caching under one Brain Games manifest and service worker.
 - [ ] Lazy-load HoDoKu and word-generation/parser dependencies.
 - [ ] Retain domain-specific rules, hints, catalogues, provenance, and tests.
 

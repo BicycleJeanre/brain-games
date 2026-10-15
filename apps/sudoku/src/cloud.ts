@@ -290,11 +290,11 @@ export class CloudSync {
 
   private fail(cause?: unknown) {
     const code = cause && typeof cause === "object" && "code" in cause ? String(cause.code) : "";
-    console.error("STrack cloud sync failed", cause);
+    console.error("Brain Games Sudoku cloud sync failed", cause);
     this.error = code.includes("permission-denied")
-      ? "Cloud permissions rejected this sync. Update STrack, then retry from Settings; your latest changes remain saved on this device."
+      ? "Cloud permissions rejected this sync. Update Brain Games, then retry from Settings; your latest changes remain saved on this device."
       : code.includes("failed-precondition")
-        ? "Cloud rejected a saved session. Update STrack, then retry from Settings; your complete puzzle remains saved on this device."
+        ? "Cloud rejected a saved session. Update Brain Games, then retry from Settings; your complete puzzle remains saved on this device."
       : code.includes("unavailable") || code.includes("network")
         ? "Cloud sync is temporarily unavailable. Your latest changes remain saved on this device; reconnect and retry from Settings."
         : "Sync failed. Your latest changes remain saved on this device; retry from Settings.";

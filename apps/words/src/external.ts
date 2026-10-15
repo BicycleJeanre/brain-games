@@ -47,7 +47,7 @@ export async function importCrosswordFile(data: ArrayBuffer, filename: string): 
   const grid = imported.grid.cells.map((row) => row.map((cell) => {
     if (cell.isBlack) return "#";
     const solution = cell.solution?.toUpperCase();
-    if (!solution || !/^[A-Z]$/.test(solution)) throw new Error("WTrack currently supports single-letter A–Z crossword cells only.");
+    if (!solution || !/^[A-Z]$/.test(solution)) throw new Error("Brain Games currently supports single-letter A–Z crossword cells only.");
     return solution;
   }).join(""));
   const clues = (["across", "down"] as const).flatMap((direction) => imported.clues[direction].map((clue) => {
@@ -66,7 +66,7 @@ export async function importCrosswordFile(data: ArrayBuffer, filename: string): 
   return {
     id: localId(fingerprint), kind: "crossword", title: imported.title?.trim() || filename.replace(/\.[^.]+$/, "") || "Imported crossword",
     subtitle: `Private local import · ${clues.length} clues`, difficulty: "Unrated", catalogueVersion: "local-import-1",
-    source: { name: imported.author?.trim() || "User-supplied crossword", url: "about:blank", licence: "Private user-supplied file", note: "The puzzle payload stays on this device. Synced progress requires the same file on another device; WTrack never publishes it." },
+    source: { name: imported.author?.trim() || "User-supplied crossword", url: "about:blank", licence: "Private user-supplied file", note: "The puzzle payload stays on this device. Synced progress requires the same file on another device; Brain Games never publishes it." },
     rows, columns, grid, clues,
   };
 }

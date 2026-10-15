@@ -169,7 +169,7 @@ function sourceFor(terms: WikidataTerm[], topic: string, kind: PuzzleKind, seed:
     name: "Wikipedia topic links + Wikidata terms",
     url: `https://en.wikipedia.org/wiki/${encodeURIComponent(topic.trim().replace(/\s+/g, "_"))}`,
     licence: "CC0-1.0 terms · CC BY-SA 4.0 topic page",
-    note: `Related item IDs discovered from the English Wikipedia topic page; labels${kind === "crossword" ? " and English descriptions used as clues" : " used as answers"} fetched from Wikidata: ${terms.map((term) => term.id).join(", ")}. Retrieved ${retrievedAt}. Generated locally by WTrack public-data generator ${GENERATOR_VERSION} with ${layout}; selection seed ${seed}. This private generated puzzle has not been editorially reviewed.`,
+    note: `Related item IDs discovered from the English Wikipedia topic page; labels${kind === "crossword" ? " and English descriptions used as clues" : " used as answers"} fetched from Wikidata: ${terms.map((term) => term.id).join(", ")}. Retrieved ${retrievedAt}. Generated locally by the Brain Games public-data generator ${GENERATOR_VERSION} with ${layout}; selection seed ${seed}. This private generated puzzle has not been editorially reviewed.`,
   };
 }
 

@@ -1,6 +1,6 @@
 {
-  "name": "STrack Sudoku",
-  "short_name": "STrack",
+  "name": "Brain Games · Sudoku",
+  "short_name": "Sudoku",
   "description": "Offline Sudoku with explanatory hints and transparent SE ratings.",
   "start_url": "./",
   "scope": "./",
