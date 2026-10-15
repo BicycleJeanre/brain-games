@@ -141,9 +141,13 @@ function normalizeGame(game: Game): Game {
   return game;
 }
 
-const database = openDB("strack-v1", 1, {
+const combinedBuild = import.meta.env?.VITE_BRAIN_GAMES === "true";
+const stateStore = combinedBuild ? "sudoku-state" : "state";
+const database = openDB(combinedBuild ? "brain-games-v1" : "strack-v1", 1, {
   upgrade(db) {
-    db.createObjectStore("state");
+    for (const store of combinedBuild ? ["meta", "sudoku-state", "words-state", "words-puzzle-cache"] : ["state"]) {
+      if (!db.objectStoreNames.contains(store)) db.createObjectStore(store);
+    }
   },
 });
 
@@ -153,7 +157,7 @@ export class Store {
   onSettingsSaved: (() => void) | null = null;
 
   async load() {
-    const saved = await (await database).get("state", "app");
+    const saved = await (await database).get(stateStore, "app");
     if (saved && saved.version === 1) {
       this.data = {
         ...emptyData(),
@@ -168,7 +172,7 @@ export class Store {
   }
 
   async save() {
-    await (await database).put("state", this.data, "app");
+    await (await database).put(stateStore, this.data, "app");
   }
 
   activeGame(): Game | null {

@@ -33,6 +33,8 @@ a { color:var(--accent); }
 .boot { max-width:720px; margin:20vh auto; color:var(--muted); text-align:center; }
 .app-header { position:sticky; z-index:20; top:0; display:flex; min-height:64px; align-items:center; gap:12px; padding:0 max(18px, calc((100vw - 1180px) / 2)); border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(18px); }
 .brand { display:flex; align-items:center; gap:9px; padding:0; border:0; background:transparent; font-size:19px; font-weight:850; letter-spacing:-.6px; }
+.suite-link { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-decoration:none; text-transform:uppercase; }
+.suite-link:hover,.suite-link:focus-visible { color:var(--accent); }
 .brand-grid,.kind-icon { display:grid; place-items:center; border:1px solid var(--accent); background:var(--accent-soft); color:var(--accent); font-weight:900; }
 .brand-grid { width:32px; height:32px; border-radius:8px; }
 .kind-icon { width:42px; height:42px; flex:0 0 auto; border-radius:10px; font-size:11px; letter-spacing:.4px; }

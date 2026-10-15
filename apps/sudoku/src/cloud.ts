@@ -198,8 +198,8 @@ export class CloudSync {
     this.ready = false;
     this.changed();
     if (!user || !database) return;
-    const games = collection(database, "users", user.uid, "games");
-    const settings = doc(database, "users", user.uid, "meta", "settings");
+    const games = collection(database, "users", user.uid, "sudokuGames");
+    const settings = doc(database, "users", user.uid, "sudokuMeta", "settings");
     this.stops.push(onSnapshot(games, { includeMetadataChanges: true }, async (snapshot) => {
       let updated = false;
       for (const change of snapshot.docChanges()) {
@@ -238,7 +238,7 @@ export class CloudSync {
 
   async syncGame(game: Game): Promise<boolean> {
     if (!this.user || !database) return true;
-    const reference = doc(database, "users", this.user.uid, "games", game.id);
+    const reference = doc(database, "users", this.user.uid, "sudokuGames", game.id);
     try {
       await runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
@@ -256,7 +256,7 @@ export class CloudSync {
   async deleteGame(id: string) {
     if (!this.user || !database) return true;
     try {
-      await deleteDoc(doc(database, "users", this.user.uid, "games", id));
+      await deleteDoc(doc(database, "users", this.user.uid, "sudokuGames", id));
       return true;
     } catch (error) {
       this.fail(error);
@@ -266,7 +266,7 @@ export class CloudSync {
 
   async syncSettings(): Promise<boolean> {
     if (!this.user || !database || !this.store.data.settingsUpdatedAt) return true;
-    const reference = doc(database, "users", this.user.uid, "meta", "settings");
+    const reference = doc(database, "users", this.user.uid, "sudokuMeta", "settings");
     const settings = encodeCloudSettings(this.store.data);
     try {
       await runTransaction(database, async (transaction) => {

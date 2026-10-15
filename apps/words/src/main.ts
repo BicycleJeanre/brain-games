@@ -11,6 +11,8 @@ import type { ChallengeCadence, CrosswordPuzzle, Difficulty, GridPoint, Preferen
 type View = "home" | "library" | "create" | "settings" | "help" | "player";
 type LibraryType = "all" | PuzzleKind | "letter-mix";
 const app = document.querySelector<HTMLDivElement>("#app")!;
+const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
+const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
 const store = new Store();
 let view: View = "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
@@ -68,6 +70,7 @@ function chrome(content: string) {
   return `
     <header class="app-header">
       <button class="brand" data-nav="home" aria-label="WTrack home"><span class="brand-grid">W</span><span>WTrack</span></button>
+      ${combinedBuild ? `<a class="suite-link" href="${brainGamesHome}">Brain Games</a>` : ""}
       <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
       <span class="cloud-state">${escapeHtml(cloud.status())}</span>
       <nav aria-label="Primary">
@@ -75,7 +78,7 @@ function chrome(content: string) {
       </nav>
     </header>
     <main id="main" class="${view === "player" ? "player-main" : ""}">${content}</main>
-    <footer class="app-footer"><span>Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/wtrack">Source & provenance</a></footer>`;
+    <footer class="app-footer"><span>Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/${combinedBuild ? "brain-games" : "wtrack"}">Source & provenance</a></footer>`;
 }
 
 function puzzleCard(puzzle: PuzzleSummary, sessionId = puzzle.id, removable = false) {

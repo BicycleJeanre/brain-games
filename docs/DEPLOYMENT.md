@@ -1,0 +1,36 @@
+# Brain Games deployment and route inventory
+
+## Active routes
+
+| Route | Owner | Source | Status | Retirement decision |
+| --- | --- | --- | --- | --- |
+| `https://bicyclejeanre.github.io/brain-games/` | Jeanre Van Wyk | `BicycleJeanre/brain-games`, `main` | Deployment candidate | None |
+| `https://bicyclejeanre.github.io/strack/` | Jeanre Van Wyk | `BicycleJeanre/strack` | Retained production rollback | Must remain active until explicit authorization |
+| `https://bicyclejeanre.github.io/wtrack/` | Jeanre Van Wyk | `BicycleJeanre/wtrack` | Retained production rollback | Must remain active until explicit authorization |
+
+First recorded: 2026-10-15.
+
+## Release order
+
+1. Merge a reviewed Brain Games release pull request into `main`.
+2. Confirm the required `Check` workflow succeeds.
+3. Deploy `firestore.rules` and `firestore.indexes.json` to `brain-games-jvw` before any matching client release.
+4. Run the manual **Deploy to GitHub Pages** workflow from `main`.
+5. Verify the launcher, both module routes, migration preview/import, sign-in, cross-device sync, and offline restart.
+6. Record the merge commit, workflow run, live verification, and rollback state in this file and the restart note.
+
+## Rollback
+
+- A Brain Games client rollback redeploys the previously accepted `main` commit through the Pages workflow.
+- The new client never deletes `strack-v1` or `wtrack`; those databases remain local recovery sources.
+- STrack and WTrack keep their independent Pages routes and Firebase projects. A Brain Games rollback does not require changing either legacy deployment.
+- Firestore rules may be rolled back only to a previously compiled Brain Games ruleset that retains owner isolation for all active client paths.
+
+## Production record
+
+- Firebase project: `brain-games-jvw` (Spark, no-cost, no billing account intended).
+- Firestore: `(default)`, `nam5`, Standard edition, free tier, deletion protection enabled.
+- Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized.
+- Cloud paths: `users/{uid}/sudokuGames/{id}`, `users/{uid}/sudokuMeta/settings`, and `users/{uid}/wordState/app`.
+- 2026-10-15 security smoke: disposable owner write/read succeeded; cross-user and unauthenticated reads were denied; disposable documents and accounts were removed.
+- Pages deployment: pending merge and manual workflow run.

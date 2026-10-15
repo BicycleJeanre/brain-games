@@ -1,10 +1,10 @@
 # Restart: Brain Games consolidation
 
-Status: Stage 1 complete
+Status: Deployment candidate in progress
 Owner: Jeanre Van Wyk  
 Date: 2026-10-15  
 Repo: `BicycleJeanre/brain-games`  
-Branch: `main`
+Branch: `codex/deploy-brain-games`
 
 ## Purpose
 
@@ -26,8 +26,11 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - The shared launcher and both complete game builds are available in one local `/brain-games/` artifact.
 - The production dependency audit is clean; 54 inherited unit tests and four desktop/mobile shell tests pass.
 - CI verifies the unit suites, combined build, base paths, and shell navigation.
-- No source application, Firebase project, or production route has been changed or retired.
+- The versioned `brain-games-v1` schema, previewable idempotent legacy import, and combined backups are implemented; legacy databases are retained.
+- Firebase project `brain-games-jvw` exists on Spark with protected free-tier Firestore, Email/Password Authentication, the GitHub Pages domain, and deployed owner-only namespaced rules.
+- A disposable production security smoke passed and removed its test users and data.
+- No source application or existing production route has been changed or retired.
 
 ## Next checkpoint
 
-Review and merge the Stage 1 pull request. Next, design the versioned shared local schema and an idempotent preview/import flow for `strack-v1` and `wtrack`. Do not deploy production or create the neutral Firebase project until the transition artifact and migration schema have been reviewed.
+Finish browser, offline, and base-path verification; merge the deployment pull request; enable GitHub Pages for workflow deployments; run the manual Pages workflow; and record the production run and live cross-device evidence. Keep `/strack/` and `/wtrack/` active.

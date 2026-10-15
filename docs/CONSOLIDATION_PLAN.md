@@ -39,24 +39,24 @@ Started: 2026-10-15
 
 ### Stage 2 — Shared navigation and presentation
 
-- [ ] Add consistent Brain Games navigation inside both modules.
+- [x] Add consistent Brain Games navigation inside both modules.
 - [ ] Consolidate theme tokens, header, footer, update messaging, and responsive shell.
 - [ ] Establish Play, Train, Learn, Progress, and Library routes.
 - [x] Add shell-level accessibility and mobile tests.
 
 ### Stage 3 — Local persistence and backups
 
-- [ ] Define a versioned Brain Games local schema.
-- [ ] Detect `strack-v1` and `wtrack` IndexedDB databases.
-- [ ] Preview and import legacy state idempotently.
-- [ ] Define a combined backup envelope and accept both legacy formats.
-- [ ] Keep legacy databases intact through a documented rollback period.
+- [x] Define a versioned Brain Games local schema.
+- [x] Detect `strack-v1` and `wtrack` IndexedDB databases.
+- [x] Preview and import legacy state idempotently.
+- [x] Define a combined backup envelope and accept both legacy formats.
+- [x] Keep legacy databases intact through a documented rollback period.
 
 ### Stage 4 — Accounts and cloud data
 
-- [ ] Create and document the neutral Firebase project.
-- [ ] Define and test owner-only namespaced Firestore rules.
-- [ ] Resolve duplicate emails and legacy UID mappings.
+- [x] Create and document the neutral Firebase project.
+- [x] Define and test owner-only namespaced Firestore rules.
+- [x] Resolve duplicate emails and legacy UID mappings.
 - [ ] Migrate test accounts and representative state first.
 - [ ] Validate one account across phone and desktop before production cutover.
 
@@ -69,7 +69,7 @@ Started: 2026-10-15
 
 ### Stage 6 — Production and retirement
 
-- [ ] Deploy compatible cloud rules before the client.
+- [x] Deploy compatible cloud rules before the client.
 - [ ] Deploy Brain Games without redirecting legacy routes.
 - [ ] Run fresh-profile, installed-PWA, offline, migration, and cross-device smoke tests.
 - [ ] Add migration notices to STrack and WTrack only after Brain Games is accepted.

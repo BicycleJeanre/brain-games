@@ -12,6 +12,8 @@
   "scripts": {
     "build": "node scripts/build-all.mjs",
     "build:shell": "tsc --noEmit && vite build",
+    "test:shared": "node --experimental-strip-types --test tests/storage.test.ts",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-brain-games \"node --test tests/rules.test.mjs\"",
     "test:unit": "npm run test:unit --workspace=strack && npm run test:unit --workspace=wtrack",
     "test:base-path": "node scripts/check-combined-build.mjs",
     "test:shell": "playwright test",
@@ -20,9 +22,14 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "dependencies": {
+    "idb": "^8.0.3"
+  },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.10.0",
+    "firebase-tools": "^15.30.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
   },

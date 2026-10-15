@@ -137,6 +137,8 @@ a { color: var(--accent); }
 .boot { max-width: 720px; margin: 20vh auto; text-align: center; color: var(--muted); }
 .app-header { position: sticky; z-index: 20; top: 0; display: flex; align-items: center; justify-content: space-between; min-height: calc(64px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(18px, calc((100vw - 1180px) / 2)) 0; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(18px); }
 .brand { display: flex; align-items: center; gap: 9px; padding: 0; border: 0; background: transparent; font-size: 19px; font-weight: 800; letter-spacing: -.6px; }
+.suite-link { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
+.suite-link:hover, .suite-link:focus-visible { color: var(--accent); }
 .brand-grid { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 15px; }
 .app-header nav { display: flex; align-self: stretch; gap: 5px; }
 .cloud-state { margin-left: auto; padding: 4px 9px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); font-size: 9px; font-weight: 800; }

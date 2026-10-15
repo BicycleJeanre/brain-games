@@ -14,9 +14,11 @@ run("npm", ["run", "build", "--workspace=strack"], {
   BASE_PATH: `${process.env.BASE_PATH || "/brain-games/"}sudoku/`,
   BUILD_OUT_DIR: "../../dist/sudoku",
   EMPTY_OUT_DIR: "false",
+  VITE_BRAIN_GAMES: "true",
 });
 run("npm", ["run", "build", "--workspace=wtrack"], {
   BASE_PATH: `${process.env.BASE_PATH || "/brain-games/"}words/`,
   BUILD_OUT_DIR: "../../dist/words",
   EMPTY_OUT_DIR: "false",
+  VITE_BRAIN_GAMES: "true",
 });
