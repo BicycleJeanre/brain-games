@@ -113,7 +113,8 @@ function challengeSection(cadence: ChallengeCadence) {
 }
 
 function puzzleProvenance(puzzle: Puzzle) {
-  return `<details class="puzzle-provenance"><summary>Source & generation details</summary><p><strong>${escapeHtml(puzzle.source.name)}</strong> · ${escapeHtml(puzzle.source.licence)}</p><p>${escapeHtml(puzzle.source.note)}</p>${puzzle.source.url !== "about:blank" ? `<a href="${escapeHtml(puzzle.source.url)}" target="_blank" rel="noreferrer">Open source record</a>` : ""}</details>`;
+  const present = (value: string) => combinedBuild ? value.replaceAll("WTrack", "Brain Games word games") : value;
+  return `<details class="puzzle-provenance"><summary>Source & generation details</summary><p><strong>${escapeHtml(present(puzzle.source.name))}</strong> · ${escapeHtml(puzzle.source.licence)}</p><p>${escapeHtml(present(puzzle.source.note))}</p>${puzzle.source.url !== "about:blank" ? `<a href="${escapeHtml(puzzle.source.url)}" target="_blank" rel="noreferrer">Open source record</a>` : ""}</details>`;
 }
 
 function home() {
@@ -459,7 +460,7 @@ function downloadBackup() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `wtrack-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `${combinedBuild ? "brain-games-word-games" : "wtrack"}-backup-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
