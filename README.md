@@ -6,7 +6,7 @@ It does not make cognitive, medical, therapeutic, educational-outcome, intellige
 
 ## Current migration stage
 
-The repository preserves the complete STrack and WTrack histories beneath `apps/sudoku/` and `apps/words/`. The active workstream is establishing one `/brain-games/` build and shared shell while leaving both existing production deployments untouched.
+The repository preserves the complete STrack and WTrack histories beneath `apps/sudoku/` and `apps/words/`. Stage 1 provides one verified `/brain-games/` build and shared shell while leaving both existing production deployments untouched. The next workstream is the versioned local schema and previewable import of legacy progress.
 
 See [the product brief](docs/PRODUCT_BRIEF.md) and [consolidation plan](docs/CONSOLIDATION_PLAN.md).
 

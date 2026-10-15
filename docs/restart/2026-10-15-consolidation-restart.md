@@ -1,10 +1,10 @@
 # Restart: Brain Games consolidation
 
-Status: Active  
+Status: Stage 1 complete
 Owner: Jeanre Van Wyk  
 Date: 2026-10-15  
 Repo: `BicycleJeanre/brain-games`  
-Branch: `codex/unified-shell`
+Branch: `main`
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - New public destination repository exists.
 - STrack and WTrack histories are preserved under `apps/sudoku/` and `apps/words/`.
 - Foundation `main` is pushed.
-- Combined shell/build work belongs to `codex/unified-shell`.
+- Pull request #1 merged the combined shell/build work into `main` at `34e3144`.
 - The shared launcher and both complete game builds are available in one local `/brain-games/` artifact.
 - The production dependency audit is clean; 54 inherited unit tests and four desktop/mobile shell tests pass.
 - CI verifies the unit suites, combined build, base paths, and shell navigation.
