@@ -37,6 +37,7 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - The combined UI uses one Brain Games identity, direct Sudoku/Word games switcher, cross-game Progress dashboard, combined local database and backup, and one root manifest/service worker. Tiny self-retiring compatibility workers remain only at the former module worker URLs for browsers upgrading from the transition release.
 - Live desktop and 390×844 phone checks passed for the shell and both modules. A browser with the former Sudoku worker upgraded successfully. Both independent legacy production routes still return HTTP 200 and remain rollback sources.
 - User-facing backup filenames and expanded puzzle provenance use Brain Games/Sudoku/word-games terminology; legacy format identifiers and original source URLs remain compatible and traceable internally.
+- Pull request #8 merged the final visible-label cleanup as `b6fb214`; Pages run `38727973803` is the current successful production deployment.
 
 ## Next checkpoint
 
