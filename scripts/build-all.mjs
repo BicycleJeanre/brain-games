@@ -31,8 +31,14 @@ for (const module of ["sudoku", "words"]) {
     .replace(/href="[^"]*manifest\.webmanifest"/, `href="${basePath}manifest.webmanifest"`)
     .replace(/href="[^"]*icon\.svg"/, `href="${basePath}icon.svg"`);
   writeFileSync(htmlPath, html);
-  rmSync(resolve(dist, module, "sw.js"), { force: true });
   rmSync(resolve(dist, module, "manifest.webmanifest"), { force: true });
+  const legacyCachePrefix = module === "sudoku" ? "strack-" : "wtrack-";
+  writeFileSync(resolve(dist, module, "sw.js"), `self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
+self.addEventListener('activate',event=>event.waitUntil(Promise.all([
+  caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(${JSON.stringify(legacyCachePrefix)})).map(key=>caches.delete(key)))),
+  self.registration.unregister()
+])));
+`);
 }
 
 const walk = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

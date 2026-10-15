@@ -33,7 +33,8 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - Live desktop/phone cross-device smoke restored representative Sudoku and Word Games sessions, then removed its disposable account and documents.
 - The live migration preview detected the owner's existing 30 STrack and 9 WTrack sessions without importing them.
 - No source application or existing production route has been changed or retired; `/strack/` and `/wtrack/` remain active.
-- The pending unified-experience release removes the inherited product names from the combined UI, adds a common Brain Games header and direct game switcher, exposes cross-game active/completed/average-time progress, and replaces the two module install/offline scopes with the single Brain Games manifest and service worker.
+- Pull request #5 merged the unified experience as `3668ffa` and Pages run `38726394578` deployed it. Live verification confirmed the new shell, then exposed that previously installed module-scoped workers could continue serving their older cached pages.
+- The pending worker-migration follow-up keeps tiny self-retiring scripts at the former module worker URLs. They clear only the obsolete module cache and unregister themselves so the single Brain Games manifest and service worker can control all routes on the next navigation.
 
 ## Next checkpoint
 

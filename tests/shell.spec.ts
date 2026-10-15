@@ -85,15 +85,13 @@ test("the installed shell and both visited game modules relaunch after the serve
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/brain-games/`);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   await page.getByRole("link", { name: /Open Sudoku/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
-  await page.evaluate(() => navigator.serviceWorker.ready);
   await page.getByRole("link", { name: "Brain Games home" }).click();
   await page.getByRole("link", { name: /Open Word Games/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
-  await page.evaluate(() => navigator.serviceWorker.ready);
   await page.getByRole("link", { name: "Brain Games home" }).click();
-  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   server.closeAllConnections();
   await new Promise<void>((closed) => server.close(() => closed()));
   await page.reload({ waitUntil: "domcontentloaded" });
