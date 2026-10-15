@@ -24,3 +24,4 @@ jobs:
       - run: npm run test:base-path
       - run: npx playwright install --with-deps chromium
       - run: npm run test:shell -- --project=chromium
+      - run: npm run test:profile

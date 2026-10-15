@@ -16,6 +16,7 @@
     "test:rules": "firebase emulators:exec --only firestore --project demo-brain-games \"node --test tests/rules.test.mjs\"",
     "test:unit": "npm run test:unit --workspace=strack && npm run test:unit --workspace=wtrack",
     "test:base-path": "node scripts/check-combined-build.mjs",
+    "test:profile": "firebase emulators:exec --only auth --project demo-brain-games \"playwright test --config playwright.profile.config.ts\"",
     "test:shell": "playwright test",
     "smoke:live": "node scripts/smoke-live.mjs",
     "dev": "vite"
@@ -24,6 +25,7 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
+    "firebase": "^12.19.0",
     "idb": "^8.0.3"
   },
   "devDependencies": {

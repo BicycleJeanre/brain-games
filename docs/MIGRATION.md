@@ -18,7 +18,7 @@ The legacy Firebase projects and the Brain Games Firebase project are intentiona
 
 1. On a device that can sign into the previous apps, open each one and allow it to finish syncing.
 2. Open Brain Games in the same browser profile and import the now-local legacy state.
-3. Create or sign into the Brain Games account. The same email address may be used, but it is a separate Firebase account.
+3. Open Brain Games **Settings** and create or sign into the single Brain Games profile. The same email address may be used, but it is a separate Firebase account from the previous apps. One sign-in covers Sudoku and every word game.
 4. Open Sudoku and Word Games once while online so both namespaces upload.
 5. Sign into Brain Games on the second device and confirm both game families restore.
 
