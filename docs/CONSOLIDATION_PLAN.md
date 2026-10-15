@@ -57,8 +57,8 @@ Started: 2026-10-15
 - [x] Create and document the neutral Firebase project.
 - [x] Define and test owner-only namespaced Firestore rules.
 - [x] Resolve duplicate emails and legacy UID mappings.
-- [ ] Migrate test accounts and representative state first.
-- [ ] Validate one account across phone and desktop before production cutover.
+- [x] Migrate test accounts and representative state first.
+- [x] Validate one account across phone and desktop before production cutover.
 
 ### Stage 5 — Shared services
 
@@ -70,7 +70,7 @@ Started: 2026-10-15
 ### Stage 6 — Production and retirement
 
 - [x] Deploy compatible cloud rules before the client.
-- [ ] Deploy Brain Games without redirecting legacy routes.
+- [x] Deploy Brain Games without redirecting legacy routes.
 - [ ] Run fresh-profile, installed-PWA, offline, migration, and cross-device smoke tests.
 - [ ] Add migration notices to STrack and WTrack only after Brain Games is accepted.
 - [ ] Record explicit retirement authorization before replacing either legacy application with a redirect.

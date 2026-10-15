@@ -1,10 +1,10 @@
 # Restart: Brain Games consolidation
 
-Status: Deployment candidate in progress
+Status: Brain Games deployed; legacy routes retained
 Owner: Jeanre Van Wyk  
 Date: 2026-10-15  
 Repo: `BicycleJeanre/brain-games`  
-Branch: `codex/deploy-brain-games`
+Branch: `codex/production-closeout`
 
 ## Purpose
 
@@ -29,8 +29,11 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - The versioned `brain-games-v1` schema, previewable idempotent legacy import, and combined backups are implemented; legacy databases are retained.
 - Firebase project `brain-games-jvw` exists on Spark with protected free-tier Firestore, Email/Password Authentication, the GitHub Pages domain, and deployed owner-only namespaced rules.
 - A disposable production security smoke passed and removed its test users and data.
-- No source application or existing production route has been changed or retired.
+- Pull request #3 merged as `22229d7`; Pages deployment run `38723638644` succeeded.
+- Live desktop/phone cross-device smoke restored representative Sudoku and Word Games sessions, then removed its disposable account and documents.
+- The live migration preview detected the owner's existing 30 STrack and 9 WTrack sessions without importing them.
+- No source application or existing production route has been changed or retired; `/strack/` and `/wtrack/` remain active.
 
 ## Next checkpoint
 
-Finish browser, offline, and base-path verification; merge the deployment pull request; enable GitHub Pages for workflow deployments; run the manual Pages workflow; and record the production run and live cross-device evidence. Keep `/strack/` and `/wtrack/` active.
+Have the owner review the detected counts, select **Import existing progress**, download a combined backup, and check a real installed PWA on both a PC and phone. Then continue Stage 5 shared-service extraction. Keep `/strack/` and `/wtrack/` active until explicit retirement authorization.

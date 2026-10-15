@@ -4,7 +4,7 @@
 
 | Route | Owner | Source | Status | Retirement decision |
 | --- | --- | --- | --- | --- |
-| `https://bicyclejeanre.github.io/brain-games/` | Jeanre Van Wyk | `BicycleJeanre/brain-games`, `main` | Deployment candidate | None |
+| `https://bicyclejeanre.github.io/brain-games/` | Jeanre Van Wyk | `BicycleJeanre/brain-games`, `main` | Live production | None |
 | `https://bicyclejeanre.github.io/strack/` | Jeanre Van Wyk | `BicycleJeanre/strack` | Retained production rollback | Must remain active until explicit authorization |
 | `https://bicyclejeanre.github.io/wtrack/` | Jeanre Van Wyk | `BicycleJeanre/wtrack` | Retained production rollback | Must remain active until explicit authorization |
 
@@ -33,4 +33,9 @@ First recorded: 2026-10-15.
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized.
 - Cloud paths: `users/{uid}/sudokuGames/{id}`, `users/{uid}/sudokuMeta/settings`, and `users/{uid}/wordState/app`.
 - 2026-10-15 security smoke: disposable owner write/read succeeded; cross-user and unauthenticated reads were denied; disposable documents and accounts were removed.
-- Pages deployment: pending merge and manual workflow run.
+- Release pull request: [#3](https://github.com/BicycleJeanre/brain-games/pull/3), merged as `22229d7`.
+- Pages deployment: [workflow run 38723638644](https://github.com/BicycleJeanre/brain-games/actions/runs/38723638644), successful on 2026-10-15.
+- Live release: `https://bicyclejeanre.github.io/brain-games/`.
+- Live verification: launcher and both module routes loaded; the existing-browser migration preview detected 30 STrack and 9 WTrack sessions without importing them.
+- Cross-device verification: a disposable account restored one Sudoku session and one Word Games session between isolated desktop and phone-sized touch profiles. Horizontal overflow was zero; the account and its test documents were removed.
+- Offline verification: the production artifact passed a real server-stop relaunch of the shell and both visited module scopes before deployment. A physical installed-PWA check remains an acceptance follow-up.
