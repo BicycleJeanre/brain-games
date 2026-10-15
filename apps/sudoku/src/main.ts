@@ -917,7 +917,7 @@ function renderSettings() {
   app.querySelector("#open-help")!.addEventListener("click", showHelp);
   app.querySelector("#export")!.addEventListener("click", () => {
     const blob = new Blob([store.exportJson()], { type: "application/json" });
-    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `strack-backup-${new Date().toISOString().slice(0,10)}.json`; link.click(); URL.revokeObjectURL(link.href);
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `${combinedBuild ? "brain-games-sudoku" : "strack"}-backup-${new Date().toISOString().slice(0,10)}.json`; link.click(); URL.revokeObjectURL(link.href);
   });
   app.querySelector<HTMLInputElement>("#backup-file")!.addEventListener("change", async (event) => {
     const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return;
