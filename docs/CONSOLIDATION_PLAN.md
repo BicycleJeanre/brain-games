@@ -45,6 +45,7 @@ Started: 2026-10-15
 - [ ] Establish Play, Train, Learn, Progress, and Library routes.
 - [x] Add shell-level accessibility and mobile tests.
 - [x] Add a cross-game Progress dashboard for active sessions, completions, and recorded average times.
+- [x] Replace the scrolling launcher anchors with distinct Home, Play, Progress, and Settings views, including browser history and direct settings deep links.
 
 ### Stage 3 — Local persistence and backups
 
@@ -65,7 +66,7 @@ Started: 2026-10-15
 ### Stage 5 — Shared services
 
 - [x] Use one Brain Games local database, combined backup surface, and cross-game progress summary.
-- [ ] Replace duplicate settings, authentication, cloud, and challenge implementations.
+- [ ] Replace the remaining game-specific authentication, cloud, and challenge implementations; the shared shell now owns top-level appearance, backup, migration, and settings discovery.
 - [x] Consolidate installation and offline caching under one Brain Games manifest and service worker, with self-retiring compatibility workers for browsers that previously installed a module scope.
 - [ ] Lazy-load HoDoKu and word-generation/parser dependencies.
 - [ ] Retain domain-specific rules, hints, catalogues, provenance, and tests.

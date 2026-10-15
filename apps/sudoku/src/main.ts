@@ -20,7 +20,8 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 const dialog = document.querySelector<HTMLDialogElement>("#dialog")!;
 const toast = document.querySelector<HTMLDivElement>("#toast")!;
 type View = "home" | "training" | "library" | "player" | "import" | "settings";
-let view: View = "home";
+const requestedView = new URLSearchParams(location.search).get("view");
+let view: View = requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let libraryBand: Difficulty | "All" = "All";
 let libraryCompletion: "all" | "new" | "started" | "complete" = "all";
@@ -101,7 +102,7 @@ function shell(content: string, title: string) {
         <button data-nav="training" class="${view === "training" ? "active" : ""}">Train</button>
         <button data-nav="library" class="${view === "library" ? "active" : ""}">Puzzles</button>
         <button data-nav="import" class="${view === "import" ? "active" : ""}">Open</button>
-        <button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">•••</button>
+        <button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">Settings</button>
       </nav>
     </header>
     <main id="main" class="${view === "player" ? "player-main" : ""}" tabindex="-1">

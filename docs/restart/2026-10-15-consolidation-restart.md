@@ -38,7 +38,8 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - Live desktop and 390×844 phone checks passed for the shell and both modules. A browser with the former Sudoku worker upgraded successfully. Both independent legacy production routes still return HTTP 200 and remain rollback sources.
 - User-facing backup filenames and expanded puzzle provenance use Brain Games/Sudoku/word-games terminology; legacy format identifiers and original source URLs remain compatible and traceable internally.
 - Pull request #8 merged the final visible-label cleanup as `b6fb214`; Pages run `38727973803` is the current successful production deployment.
+- A follow-up navigation/settings release is in progress on `codex/app-navigation-settings`. It replaces the root page's scrolling anchors with mutually exclusive Home, Play, Progress, and Settings views, preserves browser back/forward behavior, adds persistent system/light/dark shell themes, moves combined backup and migration into Settings, and deep-links into the complete Sudoku and word-game preference screens. The Sudoku module now labels its settings control explicitly instead of using an ellipsis.
 
 ## Next checkpoint
 
-Have the owner import the detected real-device progress, download a combined backup, and review the installed PWA on a physical PC and phone. Then continue shared account/settings/cloud extraction. Keep the previous `/strack/` and `/wtrack/` deployments active until explicit retirement authorization.
+Merge and deploy the reviewed navigation/settings release, then have the owner review its app-style navigation and Settings surface on a physical PC and phone. Continue shared account/cloud extraction afterward. Keep the previous `/strack/` and `/wtrack/` deployments active until explicit retirement authorization.
