@@ -1,0 +1,13 @@
+{
+  "name": "Brain Games",
+  "short_name": "Brain Games",
+  "description": "Offline-first Sudoku and word games for entertainment.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e1416",
+  "theme_color": "#0e1416",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

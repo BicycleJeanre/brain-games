@@ -1,0 +1,32 @@
+{
+  "name": "brain-games",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first entertainment games and personal performance tracking.",
+  "license": "AGPL-3.0-or-later",
+  "workspaces": [
+    "apps/sudoku",
+    "apps/words"
+  ],
+  "scripts": {
+    "build": "node scripts/build-all.mjs",
+    "build:shell": "tsc --noEmit && vite build",
+    "test:unit": "npm run test:unit --workspace=strack && npm run test:unit --workspace=wtrack",
+    "test:base-path": "node scripts/check-combined-build.mjs",
+    "test:shell": "playwright test",
+    "dev": "vite"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.10.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
+  }
+}

@@ -39,6 +39,7 @@ export default defineConfig({
   base: process.env.BASE_PATH || "./",
   define: { global: "globalThis" },
   plugins: [offline()],
+  build: { outDir: process.env.BUILD_OUT_DIR || "dist", emptyOutDir: process.env.EMPTY_OUT_DIR !== "false" },
   server: { host: "127.0.0.1", port: 5174, strictPort: true },
   preview: { host: "127.0.0.1", port: 4174, strictPort: true },
 });
