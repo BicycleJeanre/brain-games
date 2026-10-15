@@ -1,0 +1,25 @@
+# Firebase production setup
+
+WTrack's cloud path is optional for players but required for cross-device account synchronization. Production uses the dedicated, independent Firebase project `wtrack-9d4c7`; it is not shared with an unrelated application or Bicycle project.
+
+The project must remain on Firebase's no-cost Spark plan with no Cloud Billing account linked. Authentication and the default Firestore database use their Spark allowances; if a Spark quota is exhausted, the affected service stops until its quota resets rather than incurring usage charges. Do not enable paid Google Cloud services, link billing, upgrade to Blaze, or create additional Firestore databases. No service-account key belongs in this repository.
+
+## Provisioning checklist
+
+1. Create the isolated `wtrack-9d4c7` Firebase project on the default Spark plan, without linking a billing account. **Complete.**
+2. Register a Web app for the GitHub Pages client. **Complete:** app ID `1:283171656458:web:d26cce81a969ee907e60f3`.
+3. Enable Email/Password in Firebase Authentication and authorize `bicyclejeanre.github.io`. **Complete.**
+4. Create the Standard default Firestore database. **Complete:** `nam5`, `freeTier: true`, deletion protection enabled.
+5. Deploy `firestore.rules` and `firestore.indexes.json` from this repository. **Complete.**
+6. Add the Web app's public identifiers to GitHub Actions as `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID`. **Complete.**
+7. Run the manual GitHub Pages deployment workflow from `main`. **Complete:** [run 38377922212](https://github.com/BicycleJeanre/wtrack/actions/runs/38377922212).
+8. Validate production Authentication and Firestore using a disposable synthetic account and owner document, then remove both. **Complete:** account creation, owner write/read, unauthenticated denial, and cleanup passed on 2026-10-13. The two-browser progress-restoration journey also passes against the Auth and Firestore emulators in CI.
+9. Verify the underlying Google Cloud project has no billing account linked. **Complete:** Google Cloud reports that the project has no billing account; Firebase reports Spark, no cost (`$0/month`).
+
+The deploy workflow deliberately fails when any of the four public identifiers are absent. This prevents a release that appears account-enabled while silently falling back to device-only storage.
+
+## Security model
+
+Cloud state is stored only at `users/{uid}/state/app`. Firestore rules permit reads and writes only when the authenticated user's UID matches the path UID. CI tests both owner access and cross-user denial against the emulator before deployment.
+
+The Firebase Web configuration identifies the client application and is safe to expose in the built browser bundle. Administrative credentials and service-account keys are secret and must not be added to GitHub Actions or committed to the repository.

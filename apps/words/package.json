@@ -1,0 +1,49 @@
+{
+  "name": "wtrack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An offline-first word search and crossword PWA with optional private Firebase sync.",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "catalogue:generate": "node scripts/generate-catalogue.mjs",
+    "catalogue:export": "node scripts/export-catalogue.mjs",
+    "catalogue:check": "node scripts/check-catalogue.mjs",
+    "predev": "npm run catalogue:export",
+    "dev": "vite",
+    "prebuild": "npm run catalogue:export",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "playwright test",
+    "test:cloud": "firebase emulators:exec --only auth,firestore --project demo-wtrack \"playwright test --config playwright.cloud.config.ts\"",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-wtrack \"node --test tests/rules.test.mjs\"",
+    "test:base-path": "BASE_PATH=/wtrack/ npm run build && node scripts/check-base-path.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@blex41/word-search": "^1.2.0",
+    "@xwordly/xword-parser": "^1.1.0",
+    "buffer": "^6.0.3",
+    "crossword-layout-generator": "^0.1.1",
+    "firebase": "^12.19.0",
+    "idb": "^8.0.3",
+    "pure-rand": "^8.4.2"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.10.0",
+    "an-array-of-english-words": "2.0.0",
+    "fake-indexeddb": "^6.2.4",
+    "firebase-tools": "^15.30.0",
+    "subtlex-word-frequencies": "2.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
+  }
+}
