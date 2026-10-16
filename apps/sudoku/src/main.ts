@@ -32,6 +32,8 @@ let highlightMode = false;
 let highlightOperator: "or" | "and" = "or";
 let activeHint: Hint | null = null;
 let revealedHintId: string | null = null;
+let historicalHintReview: Hint | null = null;
+let historicalHintStage: "minimal" | "preview" = "minimal";
 let timerSaveCounter = 0;
 let cloudUser: CloudUser | null = null;
 let suppressCellClick = false;
@@ -125,6 +127,7 @@ function navigate(next: View) {
   view = next;
   activeHint = null;
   revealedHintId = null;
+  historicalHintReview = null;
   history.replaceState(null, "", location.pathname + (next === "import" && new URLSearchParams(location.search).has("p") ? location.search : ""));
   render();
 }
@@ -509,9 +512,18 @@ function showHintHistory(game: Game) {
   const items = [...game.hintHistory].reverse();
   showDialog(`<span class="eyebrow">Puzzle notebook</span><h2>Previous hints</h2>${items.length ? `<div class="hint-history">${items.map((hint) => {
     const outcome = hint.applied ? "Applied" : hint.dismissed ? "Dismissed" : hint.answerShown ? "Answer viewed" : "Viewed";
-    const preview = hintPreview(hint);
-    return `<article><div><strong>${escapeHtml(hint.technique)}</strong><small>${escapeHtml(outcome)} · ${escapeHtml(new Date(hint.viewedAt).toLocaleString())}</small></div><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p><details><summary>Show answer</summary><p class="hint-answer">${escapeHtml(hintAnswer(hint))}</p></details></article>`;
+    return `<article><div><strong>${escapeHtml(hint.technique)}</strong><small>${escapeHtml(outcome)} · ${escapeHtml(new Date(hint.viewedAt).toLocaleString())}</small></div><button class="secondary compact" data-review-hint="${escapeHtml(hint.id)}">Review hint</button></article>`;
   }).join("")}</div>` : `<p>No hints have been viewed for this puzzle yet.</p>`}`, "Close history");
+  dialog.querySelectorAll<HTMLElement>("[data-review-hint]").forEach((button) => button.addEventListener("click", () => {
+    const hint = recordedHint(game, button.dataset.reviewHint || null);
+    if (!hint) return;
+    historicalHintReview = hint;
+    historicalHintStage = "minimal";
+    activeHint = hint;
+    revealedHintId = null;
+    dialog.close();
+    renderPlayer();
+  }));
 }
 
 function renderPlayer() {
@@ -525,7 +537,9 @@ function renderPlayer() {
     highlightMode = false;
     highlightedDigits.clear();
   }
-  if (game.hintStage !== "none") {
+  const reviewingHistory = historicalHintReview !== null;
+  if (reviewingHistory) activeHint = historicalHintReview;
+  else if (game.hintStage !== "none") {
     const hintContext = { visibleCandidates: game.centre, solution: game.puzzle.solution };
     const recalculated = resolveGameHint(game);
     const isCurrent = recalculated && (!game.hintId || recalculated.id === game.hintId);
@@ -540,12 +554,12 @@ function renderPlayer() {
   const answerShown = activeHint?.id === revealedHintId;
   const preview = activeHint ? hintPreview(activeHint) : null;
   const nextChallenge = game.completedAt ? nextChallengePuzzle(catalogue, game) : null;
-  const patternShown = game.hintStage === "preview";
+  const patternShown = reviewingHistory ? historicalHintStage === "preview" : game.hintStage === "preview";
   const boardHint = patternShown ? activeHint : null;
   const hintPanel = activeHint && preview
-    ? game.hintStage === "minimal"
-      ? `<div class="hint-panel" role="status"><span class="eyebrow">Minimal hint</span><h3>${escapeHtml(activeHint.technique)}</h3><p>Look for this strategy in the current grid.</p><div class="actions"><button id="show-hint-pattern" class="secondary compact">Show pattern</button><button id="dismiss-hint" class="text-button">Dismiss hint</button></div></div>`
-      : `<div class="hint-panel" role="status"><span class="eyebrow">${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : `<button id="show-hint-answer" class="secondary compact">Show answer</button>`}<button id="dismiss-hint" class="text-button">Dismiss hint</button></div></div>`
+    ? !patternShown
+      ? `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}Minimal hint</span><h3>${escapeHtml(activeHint.technique)}</h3><p>Look for this strategy in the current grid.</p><div class="actions"><button id="show-hint-pattern" class="secondary compact">Show pattern</button><button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
+      : `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown && !reviewingHistory ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : !answerShown ? `<button id="show-hint-answer" class="secondary compact">Show answer</button>` : ""}<button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
     : "";
   const wrong = game.values.some((value, cell) => value && value !== game.puzzle.solution[cell]);
   const celebrating = celebratingGameId === game.id && Boolean(game.completedAt);
@@ -627,6 +641,7 @@ function bindPlayer(game: Game) {
   app.querySelector("#resume-board")?.addEventListener("click", () => changeGame(game, () => { game.paused = false; }));
   app.querySelector("#puzzle-info")?.addEventListener("click", () => showPuzzleInfo(game.puzzle));
   app.querySelector("#hint")?.addEventListener("click", async () => {
+    historicalHintReview = null;
     activeHint = resolveGameHint(game);
     revealedHintId = null;
     game.hintStage = activeHint ? "minimal" : "none";
@@ -649,6 +664,11 @@ function bindPlayer(game: Game) {
   });
   app.querySelector("#show-hint-pattern")?.addEventListener("click", async () => {
     if (!activeHint) return;
+    if (historicalHintReview) {
+      historicalHintStage = "preview";
+      renderPlayer();
+      return;
+    }
     game.hintStage = "preview";
     game.updatedAt = Date.now();
     await store.putGame(game);
@@ -675,6 +695,11 @@ function bindPlayer(game: Game) {
   });
   app.querySelector("#show-hint-answer")?.addEventListener("click", async () => {
     if (!activeHint) return;
+    if (historicalHintReview) {
+      revealedHintId = activeHint.id;
+      renderPlayer();
+      return;
+    }
     const record = recordedHint(game, activeHint.id); if (record) record.answerShown = true;
     revealedHintId = activeHint.id;
     game.updatedAt = Date.now();
@@ -682,6 +707,13 @@ function bindPlayer(game: Game) {
     renderPlayer();
   });
   app.querySelector("#dismiss-hint")?.addEventListener("click", async () => {
+    if (historicalHintReview) {
+      historicalHintReview = null;
+      activeHint = null;
+      revealedHintId = null;
+      renderPlayer();
+      return;
+    }
     if (activeHint) { const record = recordedHint(game, activeHint.id); if (record) record.dismissed = true; }
     activeHint = null; revealedHintId = null; game.hintStage = "none"; game.hintId = null; game.updatedAt = Date.now();
     await store.putGame(game);
@@ -836,6 +868,7 @@ async function changeGame(game: Game, change: () => unknown) {
   }
   activeHint = null;
   revealedHintId = null;
+  historicalHintReview = null;
   await store.putGame(game);
   renderPlayer();
 }
@@ -951,6 +984,7 @@ function showDialog(content: string, closeLabel = "Done") {
 function showHelp() {
   showDialog(`<span class="eyebrow">User guide</span><h2>Solving Sudoku</h2><h3>Training</h3><p>Train contains 20 lessons from singles through fish, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Every exercise is sourced from HoDoKu’s official regression or exemplar libraries and revalidated by the pinned local HoDoKu engine. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Exact strong and weak chain links come from HoDoKu’s step data, and progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Double-click or double-tap an empty cell with exactly one centre note to promote that note to the full digit. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint begins with only the HoDoKu technique name and leaves the grid untouched. Show pattern then highlights and explains the relevant cells without exposing the exact deduction. Show answer is a separate third reveal; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints. Brain Games rebuilds the current hint after every board or centre-note change and validates its pattern and target against the exact candidates displayed. Applying an elimination removes it from the visible notes too. All Easy, Medium, and Hard puzzles and half of the Diabolical catalogue have verified complete paths; the other Diabolical puzzles receive every available logical hint before the enabled engine limit is reported.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are friendly bands, not an official universal scale.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, cached hint paths, training progress, and preferences through Firestore so you can continue on another device. The current board and completion always sync; only regenerable hint data and the oldest cloud undo/redo entries are omitted when an extensively annotated session would otherwise exceed Firestore’s document limit. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
   dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. A weekly puzzle stays fixed for its full week and is not reused by a daily slot during that week. The eight current challenge puzzles are also reserved from regular automatic selection. Opening a challenge creates or resumes its dedicated challenge session; signed-in progress follows you between devices through the same private Firestore account. After a solve, continue to the next difficulty in that same day or week; finishing Diabolical returns to the challenge summary. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
+  dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Reviewing previous hints</h3><p>Previous hints start again at the minimal technique-only tier. Choose Show pattern to reveal the explanation and original grid location, then Show answer for the exact historical deduction. A historical review cannot apply an old deduction to the current board.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
 }

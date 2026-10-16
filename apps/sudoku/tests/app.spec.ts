@@ -609,9 +609,23 @@ test("hints can show answers, be dismissed, and remain available in history", as
   const history = page.getByRole("dialog");
   await expect(history).toContainText("Previous hints");
   await expect(history).toContainText("Dismissed");
-  await history.getByText("Show answer").click();
-  await expect(history.locator(".hint-answer")).toContainText(/(Place|Remove) [1-9]/);
-  await history.getByRole("button", { name: "Close history" }).click();
+  await expect(history.locator(".hint-answer")).toHaveCount(0);
+  await expect(history.getByRole("button", { name: "Show answer" })).toHaveCount(0);
+  await history.getByRole("button", { name: "Review hint" }).click();
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".hint-panel")).toContainText("Previous hint · Minimal hint");
+  await expect(page.locator(".hint-panel .hint-answer")).toHaveCount(0);
+  await expect(page.locator(".sudoku-cell.hint-target, .sudoku-cell.hint-focus, .sudoku-cell.hint-evidence")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show pattern" }).click();
+  await expect(page.locator(".hint-panel")).toContainText("Previous hint ·");
+  await expect.poll(() => page.locator(".sudoku-cell.hint-focus, .sudoku-cell.hint-evidence").count()).toBeGreaterThan(0);
+  await expect(page.locator(".hint-panel .hint-answer")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await expect(page.locator(".hint-panel .hint-answer")).toContainText(/(Place|Remove) [1-9]/);
+  await expect(page.getByRole("button", { name: "Apply deduction" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Close review" }).click();
+  await expect(page.locator(".hint-panel")).toHaveCount(0);
 });
 
 test("an already-applied saved hint is not reopened after restart", async ({ page }) => {
