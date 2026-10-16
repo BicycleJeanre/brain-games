@@ -5,6 +5,12 @@ export interface ContextualHintExplanation {
   steps: string[];
 }
 
+export interface ContextualHintContext {
+  values?: readonly string[];
+  givens?: string;
+  candidates?: readonly (readonly number[])[];
+}
+
 const compactCell = (cell: number) => `R${Math.floor(cell / 9) + 1}C${cell % 9 + 1}`;
 const rowOf = (cell: number) => Math.floor(cell / 9);
 const columnOf = (cell: number) => cell % 9;
@@ -83,9 +89,44 @@ function emptyRectangleExplanation(hint: Hint): ContextualHintExplanation | null
   };
 }
 
-export function contextualHintExplanation(hint: Hint): ContextualHintExplanation {
+function avoidableRectangleType1Explanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const target = hint.targets[0];
+  const cells = [...new Set([...hint.evidence, ...hint.targets.map(({ cell }) => cell)])].sort((a, b) => a - b);
+  const rows = [...new Set(cells.map(rowOf))];
+  const columns = [...new Set(cells.map(columnOf))];
+  const boxes = [...new Set(cells.map(boxOf))];
+  if (!target || hint.kind !== "eliminate" || cells.length !== 4 || rows.length !== 2 || columns.length !== 2 || boxes.length !== 2 || !context.values) return null;
+
+  const filledCorners = cells.filter((cell) => cell !== target.cell && context.values?.[cell]);
+  const digits = [...new Set(filledCorners.map((cell) => Number(context.values?.[cell])))];
+  const otherDigit = digits.find((digit) => digit !== target.digit);
+  if (filledCorners.length !== 3 || digits.length !== 2 || !otherDigit) return null;
+
+  const cornerValues = filledCorners.map((cell) => `${compactCell(cell)}=${context.values?.[cell]}`).join(", ");
+  const editable = context.givens ? filledCorners.every((cell) => context.givens?.[cell] === "0") : true;
+  const remaining = (context.candidates?.[target.cell] || []).filter((digit) => digit !== target.digit);
+  const result = remaining.length === 1
+    ? `With ${target.digit} removed, the only displayed candidate left is ${remaining[0]}, so ${compactCell(target.cell)} becomes ${remaining[0]}.`
+    : `Therefore ${target.digit} must be eliminated from ${compactCell(target.cell)}.`;
+
+  return {
+    title: "Why is this an Avoidable Rectangle Type 1?",
+    steps: [
+      `${cellList(cells)} are the four corners in Rows ${rows.map((row) => row + 1).join(" and ")} and Columns ${columns.map((column) => column + 1).join(" and ")}. The three filled corners are ${cornerValues}.`,
+      `If ${compactCell(target.cell)} were ${target.digit}, the rectangle would alternate ${target.digit}–${otherDigit} / ${otherDigit}–${target.digit}.`,
+      `${editable ? "Because the three filled corners are player entries rather than original givens, " : ""}all four ${target.digit}s and ${otherDigit}s could then be swapped while every row, column, box, and original clue still worked. That would give the puzzle a second solution. It is called “avoidable” because the filled editable corners let us prevent that ambiguity.`,
+      result,
+    ],
+  };
+}
+
+export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
   if (hint.technique === "Empty Rectangle") {
     const explanation = emptyRectangleExplanation(hint);
+    if (explanation) return explanation;
+  }
+  if (hint.technique === "Avoidable Rectangle Type 1") {
+    const explanation = avoidableRectangleType1Explanation(hint, context);
     if (explanation) return explanation;
   }
 

@@ -4,7 +4,7 @@ import { challengePeriodKey, challengeSet, challengeStats, nextChallengePuzzle, 
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
 import { contextualHintExplanation } from "./hint-explanation.ts";
-import { buildHintPath, nextHintFromPath } from "./hint-engine.ts";
+import { buildHintPath, hintRespectsGivens, nextHintFromPath } from "./hint-engine.ts";
 import { regularPuzzlePool, selectRegularPuzzle } from "./puzzle-selection.ts";
 import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
@@ -471,11 +471,11 @@ function annotationPalette(game: Game) {
 }
 
 function recordedHint(game: Game, id: string | null) {
-  return id ? [...game.hintHistory].reverse().find((hint) => hint.id === id) || null : null;
+  return id ? [...game.hintHistory].reverse().find((hint) => hint.id === id && hintRespectsGivens(hint, game.puzzle.givens)) || null : null;
 }
 
 function resolveGameHint(game: Game): Hint | null {
-  const context = { visibleCandidates: game.centre, solution: game.puzzle.solution };
+  const context = { visibleCandidates: game.centre, solution: game.puzzle.solution, givens: game.puzzle.givens };
   let hint = nextHintFromPath(game.hintPath, game.values, game.eliminated, context);
   if (!hint && !game.completedAt) {
     game.hintPath = buildHintPath(game.values, game.eliminated, context);
@@ -505,6 +505,7 @@ function hintPreview(hint: Hint) {
   if (hint.technique === "X-Wing") return { summary: "A candidate forms the same two-column pattern across two rows.", explanation: "Compare the four highlighted corners and consider where that candidate can still appear in the intersecting columns." };
   if (hint.technique === "Swordfish" || hint.technique === "Jellyfish") return { summary: `A candidate forms a ${hint.technique} across matching rows or columns.`, explanation: "The highlighted base lines restrict the candidate to the same cover lines, creating eliminations elsewhere in those cover lines." };
   if (hint.technique === "Empty Rectangle") return { summary: "A candidate forms an Empty Rectangle inside one box and connects to an outside strong link.", explanation: "The box candidates lie along one row and one column. Whichever end of the linked outside pair is true, the same target candidate is eliminated." };
+  if (hint.technique === "Avoidable Rectangle Type 1") return { summary: "Three editable values and one open cell form a two-digit rectangle.", explanation: "If the open corner took the highlighted candidate, the two digits could be swapped across all four corners without changing any original clue. The unique solution therefore rules out that candidate." };
   if (hint.technique.includes("Wing")) return { summary: `The highlighted candidates form a ${hint.technique}.`, explanation: "Trace how the pivot and wing cells constrain one another, then inspect the cells that can see the relevant endpoints." };
   if (hint.technique.includes("Chain") || hint.technique.includes("Loop") || hint.technique.includes("AIC")) return { summary: `The highlighted candidates form a ${hint.technique}.`, explanation: "Follow the alternating strong and weak links. Either endpoint state leads to the same verified deduction." };
   if (hint.technique.includes("Color")) return { summary: `The highlighted candidates form a ${hint.technique} pattern.`, explanation: "Follow the conjugate links as two alternating colors, then look for a contradiction or a cell that sees both colors." };
@@ -514,8 +515,8 @@ function hintPreview(hint: Hint) {
   return { summary: "The highlighted cells contain a logical next step.", explanation: "Review their candidates and shared units before revealing the exact deduction." };
 }
 
-function hintExplanationMarkup(hint: Hint): string {
-  const explanation = contextualHintExplanation(hint);
+function hintExplanationMarkup(hint: Hint, game: Game): string {
+  const explanation = contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre });
   return `<details class="hint-reasoning"><summary>${escapeHtml(explanation.title)}</summary><ol>${explanation.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></details>`;
 }
 
@@ -525,7 +526,7 @@ function hintTrainingMarkup(hint: Hint): string {
 }
 
 function showHintHistory(game: Game) {
-  const items = [...game.hintHistory].reverse();
+  const items = game.hintHistory.filter((hint) => hintRespectsGivens(hint, game.puzzle.givens)).reverse();
   showDialog(`<span class="eyebrow">Puzzle notebook</span><h2>Previous hints</h2>${items.length ? `<div class="hint-history">${items.map((hint) => {
     const outcome = hint.applied ? "Applied" : hint.dismissed ? "Dismissed" : hint.answerShown ? "Answer viewed" : "Viewed";
     return `<article><div><strong>${escapeHtml(hint.technique)}</strong><small>${escapeHtml(outcome)} · ${escapeHtml(new Date(hint.viewedAt).toLocaleString())}</small></div><button class="secondary compact" data-review-hint="${escapeHtml(hint.id)}">Review hint</button></article>`;
@@ -575,7 +576,7 @@ function renderPlayer() {
   const hintPanel = activeHint && preview
     ? !patternShown
       ? `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}Minimal hint</span><h3>${escapeHtml(activeHint.technique)}</h3><p>Look for this strategy in the current grid.</p><div class="actions"><button id="show-hint-pattern" class="secondary compact">Show pattern</button><button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
-      : `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${hintExplanationMarkup(activeHint)}${hintTrainingMarkup(activeHint)}${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown && !reviewingHistory ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : !answerShown ? `<button id="show-hint-answer" class="secondary compact">Show answer</button>` : ""}<button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
+      : `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${hintExplanationMarkup(activeHint, game)}${hintTrainingMarkup(activeHint)}${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown && !reviewingHistory ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : !answerShown ? `<button id="show-hint-answer" class="secondary compact">Show answer</button>` : ""}<button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
     : "";
   const wrong = game.values.some((value, cell) => value && value !== game.puzzle.solution[cell]);
   const celebrating = celebratingGameId === game.id && Boolean(game.completedAt);
@@ -591,7 +592,7 @@ function renderPlayer() {
       <aside class="controls" aria-label="Puzzle controls">
         <div class="toolbar"><button id="undo" aria-label="Undo" ${!game.history.length ? "disabled" : ""}>↶<small>Undo</small></button><button id="redo" aria-label="Redo" ${!game.future.length ? "disabled" : ""}>↷<small>Redo</small></button><button id="pause" aria-label="${game.paused ? "Resume" : "Pause"} puzzle">${game.paused ? "▶" : "Ⅱ"}<small>${game.paused ? "Resume" : "Pause"}</small></button><button id="hint" aria-label="Get a logical hint">?<small>Hint</small></button></div>
         ${hintPanel}
-        ${game.hintHistory.length ? `<button id="hint-history" class="history-button">Previous hints (${game.hintHistory.length})</button>` : ""}
+        ${game.hintHistory.some((hint) => hintRespectsGivens(hint, game.puzzle.givens)) ? `<button id="hint-history" class="history-button">Previous hints (${game.hintHistory.filter((hint) => hintRespectsGivens(hint, game.puzzle.givens)).length})</button>` : ""}
         ${wrong && !preferences.showMistakes ? `<p class="quiet-warning">Something on the board conflicts with the solution. Turn on mistake checks in Settings for cell-level cues.</p>` : ""}
         ${(() => { const modes: [EntryMode, string][] = [["normal", "Digit"], ...(preferences.noteStyle === "advanced" ? [["corner", "Corner"]] as [EntryMode, string][] : []), ["centre", preferences.noteStyle === "simple" ? "Notes" : "Centre"], ...(preferences.showColours ? [["colour", "Colour"]] as [EntryMode, string][] : []), ...(preferences.showLines ? [["line", "Lines"]] as [EntryMode, string][] : [])]; return `<div class="mode-switch" style="--mode-count:${modes.length}" role="group" aria-label="Entry mode">${modes.map(([mode,label]) => `<button data-mode="${mode}" class="${game.mode === mode ? "active" : ""}" aria-pressed="${game.mode === mode}">${label}</button>`).join("")}</div>`; })()}
         ${game.mode === "colour" || game.mode === "line" ? annotationPalette(game) : `<div class="number-pad" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9].map((digit) => { const complete = digitIsComplete(game.values, digit); const active = highlightedDigits.has(digit); return `<button data-digit="${digit}" class="${active ? "active-digit " : ""}${complete ? "complete-digit" : ""}" aria-pressed="${active}" aria-label="${digit}${complete ? ", all placed" : ""}">${digit}</button>`; }).join("")}<button id="clear" class="clear-key">Clear</button></div><div class="highlight-options ${highlightMode ? "" : "hidden"}"><p>Highlight cells containing:</p><div role="group" aria-label="Multiple digit matching"><button data-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>`}

@@ -2,11 +2,12 @@ import { Board, solve, type Hint as HoDoKuHint } from "../vendor/hodoku-ts/dist/
 import { candidateList, units } from "./sudoku.ts";
 import type { Hint, HintPath } from "./types.ts";
 
-export const HINT_ENGINE = "HoDoKu TS e5b01c91";
+export const HINT_ENGINE = "HoDoKu TS e5b01c91+fixed-givens.1";
 
 interface HintContext {
   visibleCandidates?: readonly (readonly number[])[];
   solution?: string;
+  givens?: string;
 }
 
 const forbiddenTechniques = new Set(["BRUTE_FORCE", "GIVE_UP", "INCOMPLETE"]);
@@ -30,17 +31,24 @@ function hintStateKey(
   values: readonly string[],
   eliminated: readonly number[][],
   visibleCandidates?: readonly (readonly number[])[],
+  givens?: string,
 ): string {
   const candidates = liveCandidates(values, eliminated, visibleCandidates);
-  return `${values.map((value) => value || "0").join("")}|${candidates.map((digits) => digits.join("")).join(".")}`;
+  return `${givens || ""}|${values.map((value) => value || "0").join("")}|${candidates.map((digits) => digits.join("")).join(".")}`;
 }
 
 function toBoard(
   values: readonly string[],
   eliminated: readonly number[][],
   visibleCandidates?: readonly (readonly number[])[],
+  givens?: string,
 ): Board | null {
   const board = Board.fromValues(values.map((value) => Number(value) || 0), false);
+  if (givens) {
+    for (let cell = 0; cell < 81; cell++) {
+      if (givens[cell] && givens[cell] !== "0" && values[cell] === givens[cell]) board.fixed[cell] = 1;
+    }
+  }
   const candidates = liveCandidates(values, eliminated, visibleCandidates);
   for (let cell = 0; cell < 81; cell++) {
     if (values[cell]) continue;
@@ -130,6 +138,8 @@ export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], c
     .filter((target) => targetMatchesContext(target, kind, context));
   if (!targets.length) return null;
   const technique = techniqueName(hint);
+  const evidence = evidenceFor(hint, targets, values, candidates);
+  if (technique.name.startsWith("Avoidable Rectangle") && context.givens && evidence.some((cell) => context.givens?.[cell] !== "0")) return null;
   const targetKey = targets.map(({ cell, digit }) => `${cell}-${digit}`).join("-");
   return {
     id: `hodoku-${hint.technique}-${targetKey}`,
@@ -138,7 +148,7 @@ export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], c
     summary: `${technique.name} produces the next logical ${kind === "place" ? "placement" : "candidate elimination"}.`,
     explanation: hint.explanation,
     kind,
-    evidence: evidenceFor(hint, targets, values, candidates),
+    evidence,
     targets,
     links: hint.links.map(({ from, to, strong }) => ({
       from: { cell: from.index, digit: from.value },
@@ -148,13 +158,17 @@ export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], c
   };
 }
 
+export function hintRespectsGivens(hint: Hint, givens: string): boolean {
+  return !hint.technique.startsWith("Avoidable Rectangle") || hint.evidence.every((cell) => givens[cell] === "0");
+}
+
 export function buildHintPath(values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): HintPath {
   const generatedAt = Date.now();
-  const stateKey = hintStateKey(values, eliminated, context.visibleCandidates);
+  const stateKey = hintStateKey(values, eliminated, context.visibleCandidates, context.givens);
   if (context.solution && values.some((value, cell) => value && value !== context.solution?.[cell])) {
     return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   }
-  const board = toBoard(values, eliminated, context.visibleCandidates);
+  const board = toBoard(values, eliminated, context.visibleCandidates, context.givens);
   if (!board) return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   const result = solve(board);
   const forbiddenIndex = result.steps.findIndex((step) => forbiddenTechniques.has(step.technique));
@@ -176,7 +190,7 @@ export function buildHintPath(values: readonly string[], eliminated: readonly nu
 }
 
 export function nextHintFromPath(path: HintPath | undefined, values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): Hint | null {
-  if (!path || path.engine !== HINT_ENGINE || path.stateKey !== hintStateKey(values, eliminated, context.visibleCandidates)) return null;
+  if (!path || path.engine !== HINT_ENGINE || path.stateKey !== hintStateKey(values, eliminated, context.visibleCandidates, context.givens)) return null;
   const hint = path.hints[0];
   if (!hint || !hint.targets.length || !hint.targets.every(({ cell, digit }) => {
     if (values[cell] || !candidateList(values, cell, eliminated).includes(digit)) return false;
