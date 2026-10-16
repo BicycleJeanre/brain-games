@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
+import { contextualHintExplanation } from "../src/hint-explanation.ts";
 import { buildHintPath, findHint, nextHintFromPath } from "../src/hint-engine.ts";
 import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
-import type { Puzzle } from "../src/types.ts";
+import type { Hint, Puzzle } from "../src/types.ts";
 
 const classic = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
 const solution = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
@@ -31,6 +32,26 @@ test("candidate calculation and logical hint identify a forced value", () => {
   assert.equal(hint?.technique, "Full house");
   assert.match(hint?.id || "", /^hodoku-/);
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
+});
+
+test("contextual Empty Rectangle explanation names the actual box, arms, link and target", () => {
+  const hint: Hint = {
+    id: "empty-rectangle-test",
+    technique: "Empty Rectangle",
+    summary: "test",
+    explanation: "test",
+    kind: "eliminate",
+    evidence: [4, 31, 0, 1, 9],
+    targets: [{ cell: 27, digit: 7 }],
+  };
+  const explanation = contextualHintExplanation(hint);
+  assert.equal(explanation.title, "Why is this an Empty Rectangle?");
+  assert.match(explanation.steps[0], /Box 1/);
+  assert.match(explanation.steps[0], /Row 1/);
+  assert.match(explanation.steps[0], /Column 1/);
+  assert.match(explanation.steps[1], /R1C5 and R4C5/);
+  assert.match(explanation.steps[1], /strong link for 7 in Column 5/);
+  assert.match(explanation.steps.at(-1) || "", /eliminate 7 from R4C1/);
 });
 
 test("an applied hint is no longer applicable and cannot be offered again", async () => {

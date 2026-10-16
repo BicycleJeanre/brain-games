@@ -90,6 +90,7 @@ The home screen places unfinished games under **Active puzzles** directly below 
 
 1. The first hint names only the technique, without changing or highlighting the grid.
 2. **Show pattern** highlights the evidence and focus cells and explains what to inspect, without naming the exact elimination or placement.
+   Open **Why is this a …?** for a grid-specific trace using the highlighted cell coordinates, candidates, houses, and links. For an Empty Rectangle, it identifies the row-and-column arms inside the box and the outside strong link that drives the deduction.
 3. **Show answer** explicitly exposes the exact placement or elimination without changing the grid.
 4. Only after that reveal, **Apply deduction** places the forced value or records candidate eliminations.
 

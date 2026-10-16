@@ -588,6 +588,11 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await page.getByRole("button", { name: "Show pattern" }).click();
   await expect.poll(() => page.locator(".sudoku-cell.hint-focus").count()).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
+  const reasoning = page.locator(".hint-reasoning");
+  await expect(reasoning.locator("summary")).toContainText("Why is this");
+  await reasoning.locator("summary").click();
+  await expect(reasoning.locator("li")).not.toHaveCount(0);
+  await expect(reasoning).toContainText(/R[1-9]C[1-9]/);
   await expect(page.getByRole("button", { name: "Dismiss hint" })).toBeVisible();
 
   await page.getByRole("button", { name: "Show answer" }).click();
