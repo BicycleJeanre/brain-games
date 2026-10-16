@@ -133,6 +133,14 @@ function normalizeGame(game: Game): Game {
   game.future = Array.isArray(game.future) ? game.future.map((item) => normalizeSnapshot(item)) : [];
   game.hintHistory = Array.isArray(game.hintHistory) ? game.hintHistory : [];
   game.hintPath = normalizeHintPath(game.hintPath);
+  let repairedCandidateState = false;
+  for (let cell = 0; cell < game.values.length; cell++) {
+    const visible = new Set(game.centre[cell] || []);
+    const reconciled = (game.eliminated[cell] || []).filter((digit) => !visible.has(digit));
+    if (reconciled.length !== (game.eliminated[cell] || []).length) repairedCandidateState = true;
+    game.eliminated[cell] = reconciled;
+  }
+  if (repairedCandidateState) game.hintPath = undefined;
   if (game.hintStage !== "minimal" && game.hintStage !== "preview") game.hintStage = "none";
   for (let cell = 0; cell < game.values.length; cell++) if (game.values[cell]) {
     game.corner[cell] = [];

@@ -648,7 +648,7 @@ test("an already-applied saved hint is not reopened after restart", async ({ pag
   await expect(page.getByRole("button", { name: "Previous hints (1)" })).toBeVisible();
 });
 
-test("locked-candidate hints use the right direction and never target absent centre notes", async ({ page }) => {
+test("hints follow the live candidate grid and never target absent centre notes", async ({ page }) => {
   const reportedPosition = "745280030010056007609070008004092000907010004000740000500020803400860010070035090";
   await page.getByRole("button", { name: "Open" }).click();
   await page.getByLabel("81-character puzzle").fill(reportedPosition);
@@ -658,9 +658,9 @@ test("locked-candidate hints use the right direction and never target absent cen
 
   await page.getByRole("button", { name: "Get a logical hint" }).click();
   await page.getByRole("button", { name: "Show pattern" }).click();
-  await expect(page.locator(".hint-panel")).toContainText("A candidate on a line is confined to one box.");
+  await expect(page.locator(".hint-panel")).toContainText("Locked pair");
   await page.getByRole("button", { name: "Show answer" }).click();
-  await expect(page.locator(".hint-answer")).toContainText("Remove 8 from Row 4, column 1");
+  await expect(page.locator(".hint-answer")).toContainText("Remove 3 from Row 3, column 6");
   await page.getByRole("button", { name: "Dismiss hint" }).click();
 
   const reportedCandidates = [
@@ -689,7 +689,15 @@ test("locked-candidate hints use the right direction and never target absent cen
   await page.locator("[data-game]").first().click();
   await expect(page.locator('[data-cell="27"] .centre-marks')).toHaveText("13");
   await page.getByRole("button", { name: "Get a logical hint" }).click();
-  await expect(page.locator(".hint-panel")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show pattern" }).click();
+  await page.getByRole("button", { name: "Show answer" }).click();
+  const answer = await page.locator(".hint-answer").innerText();
+  const eliminations = [...answer.matchAll(/Remove (\d) from Row (\d), column (\d)/g)];
+  expect(eliminations.length).toBeGreaterThan(0);
+  for (const [, digit, row, column] of eliminations) {
+    const cell = (Number(row) - 1) * 9 + Number(column) - 1;
+    await expect(page.locator(`[data-cell="${cell}"] .centre-marks`)).toContainText(digit);
+  }
 });
 
 test("settings persist theme and help explains notation, ratings, offline use and backups", async ({ page }) => {
