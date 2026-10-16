@@ -90,7 +90,7 @@ The home screen places unfinished games under **Active puzzles** directly below 
 
 1. The first hint names only the technique, without changing or highlighting the grid.
 2. **Show pattern** highlights the evidence and focus cells and explains what to inspect, without naming the exact elimination or placement.
-   Open **Why is this a …?** for a grid-specific trace using the highlighted cell coordinates, candidates, houses, and links. For an Empty Rectangle, it identifies the row-and-column arms inside the box and the outside strong link that drives the deduction. When a matching lesson is available, choose **Practice [strategy]** to open that technique directly in Training.
+   Open **Why is this a …?** for a grid-specific trace using the highlighted cell coordinates, candidates, houses, and links. For an Empty Rectangle, it identifies the row-and-column arms inside the box and the outside strong link that drives the deduction. For an Avoidable Rectangle Type 1, it identifies the four corners, shows the forbidden two-digit swap, and states the candidate to remove. When a matching lesson is available, choose **Practice [strategy]** to open that technique directly in Training.
 3. **Show answer** explicitly exposes the exact placement or elimination without changing the grid.
 4. Only after that reveal, **Apply deduction** places the forced value or records candidate eliminations.
 

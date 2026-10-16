@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
 import { contextualHintExplanation } from "../src/hint-explanation.ts";
-import { buildHintPath, findHint, nextHintFromPath } from "../src/hint-engine.ts";
+import { buildHintPath, findHint, hintRespectsGivens, nextHintFromPath } from "../src/hint-engine.ts";
 import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
 import type { Hint, Puzzle } from "../src/types.ts";
 
@@ -52,6 +52,62 @@ test("contextual Empty Rectangle explanation names the actual box, arms, link an
   assert.match(explanation.steps[1], /R1C5 and R4C5/);
   assert.match(explanation.steps[1], /strong link for 7 in Column 5/);
   assert.match(explanation.steps.at(-1) || "", /eliminate 7 from R4C1/);
+});
+
+test("contextual Avoidable Rectangle Type 1 explanation traces the shown corners and elimination", () => {
+  const values = Array.from({ length: 81 }, () => "");
+  values[4] = "4";
+  values[5] = "2";
+  values[49] = "2";
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[50] = [4, 8];
+  const hint: Hint = {
+    id: "avoidable-rectangle-test",
+    technique: "Avoidable Rectangle Type 1",
+    summary: "test",
+    explanation: "test",
+    kind: "eliminate",
+    evidence: [4, 5, 49],
+    targets: [{ cell: 50, digit: 4 }],
+  };
+  const explanation = contextualHintExplanation(hint, { values, givens: "0".repeat(81), candidates });
+  assert.equal(explanation.title, "Why is this an Avoidable Rectangle Type 1?");
+  assert.match(explanation.steps[0], /R1C5=4, R1C6=2, R6C5=2/);
+  assert.match(explanation.steps[0], /Rows 1 and 6/);
+  assert.match(explanation.steps[1], /R6C6 were 4/);
+  assert.match(explanation.steps[1], /4–2 \/ 2–4/);
+  assert.match(explanation.steps[2], /player entries rather than original givens/);
+  assert.match(explanation.steps[2], /second solution/);
+  assert.match(explanation.steps[3], /only displayed candidate left is 8/);
+  assert.match(explanation.steps[3], /R6C6 becomes 8/);
+});
+
+test("original clues cannot be used as editable corners of an Avoidable Rectangle", () => {
+  const position = "857642931090073000300809000023700610978361452000020003189437526245006387736285100";
+  const givens = "850000031000070000000809000003000600970301052000020000100407006205000307000080000";
+  const solution = "857642931492173865361859274523794618978361452614528793189437526245916387736285149";
+  const candidateRows = [
+    ["", "", "", "", "", "", "", "", ""],
+    ["46", "", "12", "15", "", "", "28", "46", "58"],
+    ["", "16", "124", "", "15", "", "27", "467", "45"],
+    ["45", "", "", "", "59", "48", "", "", "89"],
+    ["", "", "", "", "", "", "", "", ""],
+    ["456", "16", "14", "59", "", "48", "78", "79", ""],
+    ["", "", "", "", "35", "", "", "", ""],
+    ["", "", "", "19", "19", "", "", "", ""],
+    ["", "", "", "", "", "", "", "49", "49"],
+  ];
+  const values = [...position].map((value) => value === "0" ? "" : value);
+  const visibleCandidates = candidateRows.flat().map((digits) => [...digits].map(Number));
+
+  const wronglyMutable = findHint(values, [], { visibleCandidates, solution });
+  assert.equal(wronglyMutable?.technique, "Avoidable Rectangle Type 1", "the regression fixture reproduces the former false hint when clue metadata is omitted");
+  assert.equal(hintRespectsGivens(wronglyMutable!, givens), false);
+
+  const corrected = findHint(values, [], { visibleCandidates, solution, givens });
+  assert.ok(corrected, "the engine continues to a valid logical move");
+  assert.notEqual(corrected.technique, "Avoidable Rectangle Type 1");
+  assert.equal(hintRespectsGivens(corrected, givens), true);
 });
 
 test("an applied hint is no longer applicable and cannot be offered again", async () => {
