@@ -12,7 +12,7 @@ Every bundled puzzle works offline after the first successful production load. T
 
 ## Technique training
 
-Open **Train** to follow a 20-technique curriculum from singles to expert forcing logic. It includes naked and hidden singles; locked candidates; naked pairs and triples; X-Wing, Swordfish, and Jellyfish; Skyscraper and two-string kite; XY-, XYZ-, and W-Wings; simple coloring; X-Chains, XY-Chains, and alternating inference chains; unique rectangles; ALS-XZ; and forcing chains.
+Open **Train** to follow a 21-technique curriculum from singles to expert forcing logic. It includes naked and hidden singles; locked candidates; naked pairs and triples; X-Wing, Swordfish, and Jellyfish; Skyscraper, two-string kite, and Empty Rectangle; XY-, XYZ-, and W-Wings; simple coloring; X-Chains, XY-Chains, and alternating inference chains; unique rectangles; ALS-XZ; and forcing chains.
 
 The **Curriculum filters** at the bottom are interactive. Choose a family such as **Wings** or **Coloring & chains** to show only those lesson cards; the page returns to the filtered lesson list automatically. Choose the active family again or select **Show all techniques** to restore the complete curriculum.
 
@@ -90,7 +90,7 @@ The home screen places unfinished games under **Active puzzles** directly below 
 
 1. The first hint names only the technique, without changing or highlighting the grid.
 2. **Show pattern** highlights the evidence and focus cells and explains what to inspect, without naming the exact elimination or placement.
-   Open **Why is this a …?** for a grid-specific trace using the highlighted cell coordinates, candidates, houses, and links. For an Empty Rectangle, it identifies the row-and-column arms inside the box and the outside strong link that drives the deduction.
+   Open **Why is this a …?** for a grid-specific trace using the highlighted cell coordinates, candidates, houses, and links. For an Empty Rectangle, it identifies the row-and-column arms inside the box and the outside strong link that drives the deduction. When a matching lesson is available, choose **Practice [strategy]** to open that technique directly in Training.
 3. **Show answer** explicitly exposes the exact placement or elimination without changing the grid.
 4. Only after that reveal, **Apply deduction** places the forced value or records candidate eliminations.
 

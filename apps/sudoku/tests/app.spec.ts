@@ -74,13 +74,13 @@ test("a completed challenge continues to the next difficulty in the same period"
 test("training teaches a pattern before revealing its deduction and retains completion", async ({ page }) => {
   await page.getByRole("button", { name: "Train", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Technique lessons" })).toBeVisible();
-  await expect(page.locator("[data-training]")).toHaveCount(21);
+  await expect(page.locator("[data-training]")).toHaveCount(22);
   await page.getByRole("button", { name: /Fish & single-digit patterns/ }).click();
   await expect(page.getByRole("heading", { name: "Fish & single-digit patterns lessons" })).toBeVisible();
-  await expect(page.locator(".lesson-card")).toHaveCount(5);
+  await expect(page.locator(".lesson-card")).toHaveCount(6);
   await expect(page.getByRole("button", { name: /Fish & single-digit patterns/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Show all techniques" }).click();
-  await expect(page.locator(".lesson-card")).toHaveCount(20);
+  await expect(page.locator(".lesson-card")).toHaveCount(21);
   await page.getByRole("button", { name: /Naked single/ }).last().click();
   await expect(page.getByText("Step 1 · Learn")).toBeVisible();
   await page.getByRole("button", { name: "Practice this position" }).click();
@@ -631,6 +631,17 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect(page.getByRole("button", { name: "Apply deduction" })).toHaveCount(0);
   await page.getByRole("button", { name: "Close review" }).click();
   await expect(page.locator(".hint-panel")).toHaveCount(0);
+});
+
+test("a supported hint opens its matching strategy lesson", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show pattern" }).click();
+  const practice = page.getByRole("button", { name: /Practice Naked single/ });
+  await expect(practice).toBeVisible();
+  await practice.click();
+  await expect(page.getByRole("heading", { name: "Naked single", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Practice this position" })).toBeVisible();
 });
 
 test("an already-applied saved hint is not reopened after restart", async ({ page }) => {

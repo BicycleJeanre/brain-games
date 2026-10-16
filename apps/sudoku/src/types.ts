@@ -83,7 +83,7 @@ export interface Preferences {
 
 export type TrainingTechniqueId =
   | "naked-single" | "hidden-single" | "locked-candidates" | "naked-pair" | "naked-triple"
-  | "x-wing" | "swordfish" | "jellyfish" | "skyscraper" | "two-string-kite"
+  | "x-wing" | "swordfish" | "jellyfish" | "skyscraper" | "two-string-kite" | "empty-rectangle"
   | "xy-wing" | "xyz-wing" | "w-wing" | "simple-coloring" | "x-chain"
   | "xy-chain" | "aic" | "unique-rectangle" | "als-xz" | "forcing-chain";
 
