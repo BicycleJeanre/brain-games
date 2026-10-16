@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_TECHNIQUES, validateTrainingPosition } from "../src/training.ts";
+import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_TECHNIQUES, trainingTechniqueForHint, validateTrainingPosition } from "../src/training.ts";
 import type { Puzzle } from "../src/types.ts";
 
 const catalogue = JSON.parse(readFileSync(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
@@ -19,4 +19,10 @@ test("every lesson is a valid HoDoKu library position", () => {
     const wrongDigit = Array.from({ length: 9 }, (_, index) => index + 1).find((digit) => !position.hint.targets.some((target) => target.cell === position.hint.targets[0].cell && target.digit === digit))!;
     assert.equal(deductionMatches(position.hint.targets[0].cell, wrongDigit, position), false);
   }
+});
+
+test("hint names link to the matching training lesson", () => {
+  assert.equal(trainingTechniqueForHint("Empty Rectangle")?.id, "empty-rectangle");
+  assert.equal(trainingTechniqueForHint("Alternating Inference Chain")?.id, "aic");
+  assert.equal(trainingTechniqueForHint("Full house"), null);
 });

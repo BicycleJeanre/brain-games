@@ -20,6 +20,7 @@ const requested = [
   ["jellyfish", "0302", "JELLYFISH"],
   ["skyscraper", "0400", "SKYSCRAPER"],
   ["two-string-kite", "0401", "TWO_STRING_KITE"],
+  ["empty-rectangle", "0402", "EMPTY_RECTANGLE"],
   ["xy-wing", "0800", "XY_WING"],
   ["xyz-wing", "0801", "XYZ_WING"],
   ["w-wing", "0803", "W_WING"],

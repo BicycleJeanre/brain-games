@@ -51,6 +51,7 @@ const lessonCopy: Record<TrainingTechniqueId, LessonCopy> = {
   "jellyfish": { title: "Jellyfish", family: "Fish", prerequisite: "swordfish", concept: "Four rows restrict one digit to four columns. The larger fish removes that digit from those columns in all other rows.", findPrompt: "Select the pattern cells HoDoKu uses for the Jellyfish.", deductionPrompt: "Choose a candidate eliminated from one of its four cover columns." },
   "skyscraper": { title: "Skyscraper", family: "Single-digit patterns", prerequisite: "x-wing", concept: "Two rows each have a strong pair for one digit and share one base column. Any cell that sees both opposite roofs cannot contain the digit.", findPrompt: "Select the bases and roofs of the Skyscraper.", deductionPrompt: "Choose the candidate that sees both roofs." },
   "two-string-kite": { title: "Two-string kite", family: "Single-digit patterns", prerequisite: "skyscraper", concept: "A row strong link and a column strong link meet through one box. A cell seeing the two outer endpoints loses that digit.", findPrompt: "Select the endpoints of the row-and-column kite.", deductionPrompt: "Choose the candidate that sees both outer endpoints." },
+  "empty-rectangle": { title: "Empty Rectangle", family: "Single-digit patterns", prerequisite: "two-string-kite", concept: "Inside one box, every candidate for a digit lies along one row or one column. An outside strong link connects to those arms so that either endpoint eliminates the same target.", findPrompt: "Select the box arms and outside strong-link cells that form the Empty Rectangle.", deductionPrompt: "Choose the candidate eliminated by both possible ends of the outside link." },
   "xy-wing": { title: "XY-Wing", family: "Wings", prerequisite: "naked-pair", concept: "A bivalue pivot sees two bivalue wings. The wings share a third digit, which can be removed from every cell that sees both wings.", findPrompt: "Select the pivot and its two wings.", deductionPrompt: "Choose the shared wing candidate that can be eliminated." },
   "xyz-wing": { title: "XYZ-Wing", family: "Wings", prerequisite: "xy-wing", concept: "A three-candidate pivot sees two wings that each share one pivot digit and a common Z. Cells seeing all three lose Z.", findPrompt: "Select the XYZ pivot and its two wings.", deductionPrompt: "Choose the common Z candidate eliminated by the wing." },
   "w-wing": { title: "W-Wing", family: "Wings", prerequisite: "xy-wing", concept: "Two matching bivalue cells are joined by a strong link on one digit. Any cell seeing both wings loses their other digit.", findPrompt: "Select both wings and the cells of their strong link.", deductionPrompt: "Choose the other wing digit that can be eliminated." },
@@ -82,7 +83,7 @@ export const TRAINING_TECHNIQUES: TrainingTechnique[] = trainingCatalogue.lesson
 export const TRAINING_ROADMAP = [
   { id: "singles", title: "Singles", detail: "Naked and hidden singles", families: ["Foundations"] },
   { id: "subsets", title: "Intersections & subsets", detail: "Locked candidates, pairs, triples", families: ["Intersections & subsets"] },
-  { id: "fish", title: "Fish & single-digit patterns", detail: "X-Wing, Swordfish, Jellyfish, Skyscraper, two-string kite", families: ["Fish", "Single-digit patterns"] },
+  { id: "fish", title: "Fish & single-digit patterns", detail: "X-Wing, Swordfish, Jellyfish, Skyscraper, two-string kite, Empty Rectangle", families: ["Fish", "Single-digit patterns"] },
   { id: "wings", title: "Wings", detail: "XY-Wing, XYZ-Wing, W-Wing", families: ["Wings"] },
   { id: "chains", title: "Coloring & chains", detail: "Simple coloring, X-chains, XY-chains, AIC", families: ["Coloring & chains"] },
   { id: "expert", title: "Expert structures", detail: "Unique rectangles, ALS-XZ, forcing chains", families: ["Uniqueness & ALS", "Forcing"] },
@@ -91,6 +92,18 @@ export const TRAINING_ROADMAP = [
 const positionCache = new Map<TrainingTechniqueId, TrainingPosition>();
 
 export function trainingTechnique(id: TrainingTechniqueId) { return TRAINING_TECHNIQUES.find((technique) => technique.id === id)!; }
+
+const normalizeTechniqueName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const trainingByHintName = new Map<string, TrainingTechniqueId>(TRAINING_TECHNIQUES.map((technique) => [normalizeTechniqueName(technique.title), technique.id]));
+trainingByHintName.set("simple colors", "simple-coloring");
+trainingByHintName.set("alternating inference chain", "aic");
+trainingByHintName.set("forcing chain contradiction", "forcing-chain");
+trainingByHintName.set("forcing chain verity", "forcing-chain");
+
+export function trainingTechniqueForHint(technique: string): TrainingTechnique | null {
+  const id = trainingByHintName.get(normalizeTechniqueName(technique));
+  return id ? trainingTechnique(id) : null;
+}
 
 export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[]): TrainingPosition | null {
   const cached = positionCache.get(id);
