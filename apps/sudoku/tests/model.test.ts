@@ -39,18 +39,49 @@ test("an applied hint is no longer applicable and cannot be offered again", asyn
   assert.ok(puzzle);
   const values = puzzle.givens.split("").map((value) => value === "0" ? "" : value);
   const eliminated = Array.from({ length: 81 }, () => [] as number[]);
-  const path = buildHintPath(values, eliminated, { solution: puzzle.solution });
-  let hint = nextHintFromPath(path, values, eliminated, { solution: puzzle.solution });
+  let hint = findHint(values, eliminated, { solution: puzzle.solution });
   while (hint?.kind !== "eliminate") {
     assert.ok(hint, "fixture must reach a candidate-elimination hint");
     applyLogicalHint(values, eliminated, hint);
-    hint = nextHintFromPath(path, values, eliminated, { solution: puzzle.solution });
+    hint = findHint(values, eliminated, { solution: puzzle.solution });
   }
 
+  const path = buildHintPath(values, eliminated, { solution: puzzle.solution });
   assert.equal(isHintApplicable(values, eliminated, hint), true);
   applyLogicalHint(values, eliminated, hint);
   assert.equal(isHintApplicable(values, eliminated, hint), false);
-  assert.notEqual(nextHintFromPath(path, values, eliminated, { solution: puzzle.solution })?.id, hint.id);
+  assert.equal(nextHintFromPath(path, values, eliminated, { solution: puzzle.solution }), null, "a path belongs only to the state that generated it");
+  assert.notEqual(findHint(values, eliminated, { solution: puzzle.solution })?.id, hint.id);
+});
+
+test("a cached XY-Wing cannot survive a visible candidate change", () => {
+  const position = "850000031000070000000809000023700610970301052000020003100407006205006307000080100";
+  const values = [...position].map((value) => value === "0" ? "" : value);
+  const candidateRows = [
+    ["", "", "79", "26", "46", "24", "79", "", ""],
+    ["346", "1469", "12469", "15", "", "35", "2489", "24689", "489"],
+    ["3467", "1346", "12467", "", "13", "", "2457", "2467", "45"],
+    ["45", "", "", "", "59", "458", "", "", "489"],
+    ["", "", "468", "", "46", "", "48", "", ""],
+    ["456", "1468", "1468", "569", "", "458", "4789", "4789", ""],
+    ["", "389", "89", "", "35", "", "2589", "289", ""],
+    ["", "48", "", "19", "19", "", "", "48", ""],
+    ["3467", "3469", "4679", "25", "", "235", "", "49", "459"],
+  ];
+  const visibleCandidates = candidateRows.flat().map((digits) => [...digits].map(Number));
+  const eliminated = Array.from({ length: 81 }, () => [] as number[]);
+  eliminated[17] = [5];
+  eliminated[22] = [5];
+  const path = buildHintPath(values, eliminated, { visibleCandidates });
+  const original = nextHintFromPath(path, values, eliminated, { visibleCandidates });
+  assert.equal(original?.technique, "XY-Wing");
+  assert.deepEqual(original?.targets, [{ cell: 75, digit: 5 }]);
+
+  const changedCandidates = visibleCandidates.map((digits) => [...digits]);
+  changedCandidates[22] = [1, 3, 5];
+  assert.equal(nextHintFromPath(path, values, eliminated, { visibleCandidates: changedCandidates }), null);
+  const fresh = findHint(values, eliminated, { visibleCandidates: changedCandidates });
+  assert.notEqual(fresh?.id, original?.id, "the visibly invalid XY-Wing is recalculated instead of reused");
 });
 
 test("the reported live candidate grid cannot produce invisible hint targets", () => {
@@ -94,6 +125,19 @@ test("applying a hint keeps solver eliminations and visible notes in sync", () =
   assert.deepEqual(game.eliminated[2], [4]);
   assert.deepEqual(game.corner[2], [7]);
   assert.deepEqual(game.centre[2], [1, 9]);
+});
+
+test("adding a centre candidate restores it to solver state and invalidates cached hints", () => {
+  const game = createGame(fixture, 1);
+  game.centre[2] = [1, 2];
+  game.eliminated[2] = [4];
+  game.hintPath = { engine: "test", generatedAt: 1, stateKey: "old", complete: false, hints: [] };
+  selectCell(game, 2);
+  setMode(game, "centre");
+  enterDigit(game, 4);
+  assert.deepEqual(game.centre[2], [1, 2, 4]);
+  assert.deepEqual(game.eliminated[2], []);
+  assert.equal(game.hintPath, undefined);
 });
 
 test("separate notation modes, multi-cell entry, candidate cleanup, undo and redo are stable", () => {
@@ -266,10 +310,12 @@ test("catalogue has 20 valid, rated, provenance-complete puzzles in every band",
   for (const puzzle of [puzzles.find((item) => item.difficulty === "Easy")!, puzzles.find((item) => item.difficulty === "Hard")!]) {
     const values = puzzle.givens.split("").map((value) => value === "0" ? "" : value);
     const eliminated = Array.from({ length: 81 }, () => [] as number[]);
-    const path = buildHintPath(values, eliminated, { solution: puzzle.solution });
-    assert.ok(path.complete, `${puzzle.id} must have a complete local hint path`);
-    assert.ok(path.hints.length > 0);
-    for (const hint of path.hints) {
+    const initialPath = buildHintPath(values, eliminated, { solution: puzzle.solution });
+    assert.ok(initialPath.complete, `${puzzle.id} must have a complete local hint path`);
+    assert.ok(initialPath.hints.length > 0);
+    for (let step = 0; step < initialPath.hints.length; step++) {
+      const hint = findHint(values, eliminated, { solution: puzzle.solution });
+      assert.ok(hint, `${puzzle.id} must retain a current hint at step ${step + 1}`);
       assert.match(hint.id, /^hodoku-/, `${puzzle.id} must use the HoDoKu engine`);
       hintTechniques.add(hint.technique);
       applyLogicalHint(values, eliminated, hint);

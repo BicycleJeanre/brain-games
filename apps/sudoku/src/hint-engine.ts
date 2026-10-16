@@ -17,14 +17,22 @@ function liveCandidates(
   visibleCandidates?: readonly (readonly number[])[],
 ): number[][] {
   const calculated = values.map((value, cell) => value ? [] : candidateList(values, cell, eliminated));
+  const structural = values.map((value, cell) => value ? [] : candidateList(values, cell));
   const completeVisibleGrid = Boolean(visibleCandidates) && values.every((value, cell) => {
     if (value) return true;
     const shown = visibleCandidates?.[cell] || [];
-    return shown.length > 0 && shown.every((digit) => calculated[cell].includes(digit));
+    return shown.length > 0 && shown.every((digit) => structural[cell].includes(digit));
   });
-  return calculated.map((candidates, cell) => completeVisibleGrid
-    ? candidates.filter((digit) => visibleCandidates?.[cell]?.includes(digit))
-    : candidates);
+  return calculated.map((candidates, cell) => completeVisibleGrid ? [...(visibleCandidates?.[cell] || [])] : candidates);
+}
+
+function hintStateKey(
+  values: readonly string[],
+  eliminated: readonly number[][],
+  visibleCandidates?: readonly (readonly number[])[],
+): string {
+  const candidates = liveCandidates(values, eliminated, visibleCandidates);
+  return `${values.map((value) => value || "0").join("")}|${candidates.map((digits) => digits.join("")).join(".")}`;
 }
 
 function toBoard(
@@ -142,11 +150,12 @@ export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], c
 
 export function buildHintPath(values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): HintPath {
   const generatedAt = Date.now();
+  const stateKey = hintStateKey(values, eliminated, context.visibleCandidates);
   if (context.solution && values.some((value, cell) => value && value !== context.solution?.[cell])) {
-    return { engine: HINT_ENGINE, generatedAt, complete: false, hints: [] };
+    return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   }
   const board = toBoard(values, eliminated, context.visibleCandidates);
-  if (!board) return { engine: HINT_ENGINE, generatedAt, complete: false, hints: [] };
+  if (!board) return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   const result = solve(board);
   const forbiddenIndex = result.steps.findIndex((step) => forbiddenTechniques.has(step.technique));
   const logical = result.steps.slice(0, forbiddenIndex < 0 ? result.steps.length : forbiddenIndex);
@@ -163,17 +172,19 @@ export function buildHintPath(values: readonly string[], eliminated: readonly nu
       else if (!pathEliminated[cell].includes(digit)) pathEliminated[cell].push(digit);
     }
   }
-  return { engine: HINT_ENGINE, generatedAt, complete: result.solved && forbiddenIndex < 0, hints };
+  return { engine: HINT_ENGINE, generatedAt, stateKey, complete: result.solved && forbiddenIndex < 0, hints };
 }
 
 export function nextHintFromPath(path: HintPath | undefined, values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): Hint | null {
-  if (!path || path.engine !== HINT_ENGINE) return null;
-  return path.hints.find((hint) => hint.targets.length > 0 && hint.targets.every(({ cell, digit }) => {
+  if (!path || path.engine !== HINT_ENGINE || path.stateKey !== hintStateKey(values, eliminated, context.visibleCandidates)) return null;
+  const hint = path.hints[0];
+  if (!hint || !hint.targets.length || !hint.targets.every(({ cell, digit }) => {
     if (values[cell] || !candidateList(values, cell, eliminated).includes(digit)) return false;
     if (!targetMatchesContext({ cell, digit }, hint.kind, context)) return false;
     const shown = context.visibleCandidates?.[cell] || [];
     return hint.kind !== "eliminate" || shown.length === 0 || shown.includes(digit);
-  })) || null;
+  })) return null;
+  return hint;
 }
 
 export function findHint(values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): Hint | null {

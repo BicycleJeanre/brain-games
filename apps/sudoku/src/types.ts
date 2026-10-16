@@ -127,6 +127,7 @@ export interface Hint {
 export interface HintPath {
   engine: string;
   generatedAt: number;
+  stateKey?: string;
   complete: boolean;
   hints: Hint[];
 }

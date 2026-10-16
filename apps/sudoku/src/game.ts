@@ -24,6 +24,12 @@ function restore(game: Game, state: BoardSnapshot) {
   game.eliminated = clone2d(state.eliminated);
 }
 
+function invalidateHintState(game: Game) {
+  game.hintStage = "none";
+  game.hintId = null;
+  game.hintPath = undefined;
+}
+
 export function createGame(puzzle: Puzzle, now = Date.now()): Game {
   return {
     id: `${puzzle.id}-${now}`,
@@ -54,8 +60,7 @@ function startChange(game: Game) {
   game.history.push(snapshot(game));
   if (game.history.length > 80) game.history.shift();
   game.future = [];
-  game.hintStage = "none";
-  game.hintId = null;
+  invalidateHintState(game);
   game.updatedAt = Date.now();
 }
 
@@ -120,7 +125,10 @@ export function enterDigit(game: Game, digit: number, cleanCandidates = true, mu
       const marks = mode === "corner" ? game.corner[cell] : game.centre[cell];
       const index = marks.indexOf(digit);
       if (removeNote && index >= 0) marks.splice(index, 1);
-      else if (!removeNote && index < 0) marks.push(digit);
+      else if (!removeNote && index < 0) {
+        marks.push(digit);
+        if (mode === "centre") game.eliminated[cell] = game.eliminated[cell].filter((value) => value !== digit);
+      }
       marks.sort();
     }
   }
@@ -221,6 +229,7 @@ export function undo(game: Game): boolean {
   if (!previous) return false;
   game.future.push(snapshot(game));
   restore(game, previous);
+  invalidateHintState(game);
   game.completedAt = null;
   game.updatedAt = Date.now();
   return true;
@@ -231,6 +240,7 @@ export function redo(game: Game): boolean {
   if (!next) return false;
   game.history.push(snapshot(game));
   restore(game, next);
+  invalidateHintState(game);
   completeIfSolved(game);
   game.updatedAt = Date.now();
   return true;
