@@ -172,6 +172,7 @@ test("player settings support simple notes, compact tools and readable presets",
 test("the default three-mistake limit fails a puzzle on the fourth wrong digit", async ({ page }) => {
   await page.getByRole("button", { name: "Settings and help" }).click();
   await expect(page.locator('[data-preference="mistakeLimit"]')).toBeChecked();
+  await expect(page.locator('[data-preference="showMistakes"]')).not.toBeChecked();
   await page.getByRole("button", { name: "Close settings and help" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
 
@@ -194,6 +195,30 @@ test("the default three-mistake limit fails a puzzle on the fourth wrong digit",
   await expect(page.locator(".failure-banner")).toContainText("4 mistakes");
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.locator(".number-pad [data-digit]").first()).toBeDisabled();
+});
+
+test("immediate mistake highlighting is optional and accessible", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings and help" }).click();
+  const setting = page.locator('[data-preference="showMistakes"]');
+  await expect(setting).not.toBeChecked();
+  await setting.check();
+  await page.getByRole("button", { name: "Close settings and help" }).click();
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+
+  const wrong = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = data.games[data.activeGameId];
+    const answer = Number(game.puzzle.solution[game.anchor]);
+    db.close();
+    return [1, 2, 3, 4, 5].find((digit) => digit !== answer);
+  });
+
+  await page.getByRole("button", { name: String(wrong), exact: true }).click();
+  await expect(page.locator(".sudoku-cell.mistake")).toHaveCount(1);
+  await expect(page.locator(".sudoku-cell.mistake")).toHaveAttribute("aria-label", /incorrect/);
 });
 
 test("normal, corner, centre, colour, multi-select, undo and keyboard flows work", async ({ page }) => {

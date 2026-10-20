@@ -15,7 +15,9 @@ test("player preference presets migrate missing values and reject invalid values
   assert.equal(preferences.noteSize, "medium");
   assert.equal(preferences.highlightColour, "green");
   assert.equal(preferences.showColours, true);
+  assert.equal(preferences.showMistakes, false, "immediate mistake highlighting defaults off for existing profiles");
   assert.equal(preferences.mistakeLimit, true, "the three-mistake limit defaults on for existing profiles");
+  assert.equal(normalizePreferences({ showMistakes: true }).showMistakes, true);
   assert.equal(normalizePreferences({ mistakeLimit: false }).mistakeLimit, false);
 });
 
