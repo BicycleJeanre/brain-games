@@ -22,8 +22,8 @@ In the puzzle grid, double-click or double-tap an empty cell containing exactly 
 
 Every available lesson uses a genuine position derived from the bundled, documented puzzle catalogue and has four stages:
 
-1. **Learn** explains the pattern on a fully marked example. For advanced chains, the link path is drawn directly on the grid.
-2. **Find** removes the answer markings and asks you to select the cells that make the pattern. **Show a clue** identifies those cells without revealing the candidate deduction.
+1. **Learn** explains the pattern on a fully marked worked example. For advanced chains, the link path is drawn directly on the grid.
+2. **Find** opens a different HoDoKu-verified position, removes the answer markings, and asks you to select the cells that make the pattern. **Show a clue** identifies those cells without revealing the candidate deduction.
 3. **Deduce** asks you to choose the candidate to place or eliminate. **Show the answer** is an explicit fallback and never changes a puzzle.
 4. **Complete** records the session and offers repetition or the next technique.
 

@@ -89,7 +89,8 @@ export const TRAINING_ROADMAP = [
   { id: "expert", title: "Expert structures", detail: "Unique rectangles, ALS-XZ, forcing chains", families: ["Uniqueness & ALS", "Forcing"] },
 ] as const;
 
-const positionCache = new Map<TrainingTechniqueId, TrainingPosition>();
+const positionCache = new Map<string, TrainingPosition>();
+export type TrainingPositionKind = "example" | "practice";
 
 export function trainingTechnique(id: TrainingTechniqueId) { return TRAINING_TECHNIQUES.find((technique) => technique.id === id)!; }
 
@@ -105,22 +106,24 @@ export function trainingTechniqueForHint(technique: string): TrainingTechnique |
   return id ? trainingTechnique(id) : null;
 }
 
-export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[]): TrainingPosition | null {
-  const cached = positionCache.get(id);
+export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[], kind: TrainingPositionKind = "practice"): TrainingPosition | null {
+  const cacheKey = `${id}-${kind}`;
+  const cached = positionCache.get(cacheKey);
   if (cached) return cached;
-  const source = trainingCatalogue.lessons.find((lesson) => lesson.id === id);
-  if (!source) return null;
+  const lesson = trainingCatalogue.lessons.find((item) => item.id === id);
+  if (!lesson) return null;
+  const source = lesson[kind];
   const board = Board.fromString(source.record);
   const values = Array.from(board.values, (value) => value ? String(value) : "");
   const candidates = Array.from({ length: 81 }, (_, cell) => values[cell] ? [] : [...board.getCandidates(cell)]);
   const eliminated = Array.from({ length: 81 }, (_, cell) => values[cell] ? [] : candidateList(values, cell).filter((digit) => !candidates[cell].includes(digit)));
-  const step = findTechnique(board, source.technique as SolutionType);
+  const step = findTechnique(board, lesson.technique as SolutionType);
   if (!step) return null;
   const hint = convertHoDoKuHint(step, values, candidates);
   if (!hint) return null;
   const position: TrainingPosition = {
     puzzle: null,
-    origin: `HoDoKu ${source.library} · ${source.technique} · source line ${source.sourceLine}`,
+    origin: `HoDoKu ${source.library} · ${lesson.technique} · source line ${source.sourceLine}`,
     sourceUrl: `${trainingCatalogue.sourceUrl}/blob/${trainingCatalogue.sourceCommit}/${source.library}.txt#L${source.sourceLine}`,
     values,
     givens: Array.from(board.fixed, Boolean),
@@ -128,7 +131,7 @@ export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle
     candidates,
     hint,
   };
-  positionCache.set(id, position);
+  positionCache.set(cacheKey, position);
   return position;
 }
 

@@ -82,8 +82,10 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await page.getByRole("button", { name: "Show all techniques" }).click();
   await expect(page.locator(".lesson-card")).toHaveCount(21);
   await page.getByRole("button", { name: /Naked single/ }).last().click();
-  await expect(page.getByText("Step 1 · Learn")).toBeVisible();
-  await page.getByRole("button", { name: "Practice this position" }).click();
+  await expect(page.getByText("Step 1 · Worked example")).toBeVisible();
+  const workedExample = await page.getByRole("grid", { name: "Training Sudoku grid" }).innerText();
+  await page.getByRole("button", { name: "Practice with a new position" }).click();
+  await expect.poll(() => page.getByRole("grid", { name: "Training Sudoku grid" }).innerText()).not.toBe(workedExample);
   await page.getByRole("button", { name: "Show a clue" }).click();
   await expect(page.locator(".training-candidate.training-answer")).toHaveCount(0);
   await page.locator(".training-focus[data-training-select]").click();
@@ -706,7 +708,7 @@ test("a supported hint opens its matching strategy lesson", async ({ page }) => 
   await expect(practice).toBeVisible();
   await practice.click();
   await expect(page.getByRole("heading", { name: "Naked single", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Practice this position" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Practice with a new position" })).toBeVisible();
 });
 
 test("an already-applied saved hint is not reopened after restart", async ({ page }) => {

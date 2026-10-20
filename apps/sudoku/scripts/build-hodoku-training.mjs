@@ -39,6 +39,10 @@ function exactStep(record, technique) {
   return new StepFinder(board).getStep(technique);
 }
 
+function valueSignature(record) {
+  return Array.from(Board.fromString(record).values).join("");
+}
+
 function serialize(board, code) {
   let values = "";
   const deleted = [];
@@ -56,17 +60,23 @@ function serialize(board, code) {
 }
 
 const lessons = requested.map(([id, code, technique]) => {
-  const match = regLines
+  const matches = regLines
     .map((record, index) => ({ record, line: index + 1 }))
-    .find(({ record }) => record.startsWith(`:${code}:`) && exactStep(record, technique));
-  if (!match) throw new Error(`No passing HoDoKu regression record for ${id} (${code}/${technique})`);
-  return { id, technique, library: "reglib-1.3", sourceLine: match.line, record: match.record };
+    .filter(({ record }) => record.startsWith(`:${code}:`) && exactStep(record, technique));
+  const example = matches[0];
+  const practice = matches.find(({ record }) => valueSignature(record) !== valueSignature(example?.record || record));
+  if (!example || !practice) throw new Error(`Need two visually distinct passing HoDoKu regression records for ${id} (${code}/${technique})`);
+  return {
+    id, technique,
+    example: { library: "reglib-1.3", sourceLine: example.line, record: example.record },
+    practice: { library: "reglib-1.3", sourceLine: practice.line, record: practice.record },
+  };
 });
 
 const exemplarText = readFileSync(resolve(sourceDir, "exemplars-1.0.txt")).toString("utf16le").replace(/^\uFEFF/, "");
 const exemplarLines = exemplarText.split(/\r?\n/);
-let forcing = null;
-for (let sourceLine = 0; sourceLine < exemplarLines.length && !forcing; sourceLine++) {
+const forcingPositions = [];
+for (let sourceLine = 0; sourceLine < exemplarLines.length && forcingPositions.length < 2; sourceLine++) {
   const puzzle = exemplarLines[sourceLine].split("#")[0].trim();
   if (!/^[.1-9]{81}$/.test(puzzle) || !exemplarLines[sourceLine].includes("fcv(")) continue;
   const board = Board.fromString(puzzle);
@@ -81,23 +91,27 @@ for (let sourceLine = 0; sourceLine < exemplarLines.length && !forcing; sourceLi
     }
     if (!found || !config || found.type === "GIVE_UP" || found.type === "BRUTE_FORCE") break;
     if (found.type === "FORCING_CHAIN_CONTRADICTION" || found.type === "FORCING_CHAIN_VERITY") {
-      forcing = {
-        id: "forcing-chain",
+      forcingPositions.push({
         technique: found.type,
         library: "exemplars-1.0",
         sourceLine: sourceLine + 1,
         record: serialize(board, found.type === "FORCING_CHAIN_VERITY" ? "1302" : "1301"),
-      };
+      });
       break;
     }
     finder.doStep(found);
   }
 }
-if (!forcing) throw new Error("No HoDoKu forcing-chain exemplar reached by the enabled solver path");
-lessons.push(forcing);
+if (forcingPositions.length < 2) throw new Error("Need two HoDoKu forcing-chain exemplars reached by the enabled solver path");
+lessons.push({
+  id: "forcing-chain",
+  technique: forcingPositions[0].technique,
+  example: forcingPositions[0],
+  practice: forcingPositions[1],
+});
 
 process.stdout.write(`${JSON.stringify({
-  schemaVersion: 1,
+  schemaVersion: 2,
   source: "HoDoKu2 official regression and exemplar libraries",
   sourceUrl: "https://github.com/wyzelli/Hodoku2",
   sourceCommit: SOURCE_COMMIT,
