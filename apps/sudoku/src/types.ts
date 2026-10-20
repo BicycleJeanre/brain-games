@@ -47,6 +47,8 @@ export interface Game extends BoardSnapshot {
   startedAt: number;
   updatedAt: number;
   completedAt: number | null;
+  failedAt: number | null;
+  mistakes: number;
   paused: boolean;
   hintStage: "none" | "minimal" | "preview";
   hintId: string | null;
@@ -72,6 +74,7 @@ export interface Preferences {
   highlightPeers: boolean;
   highlightMatches: boolean;
   showMistakes: boolean;
+  mistakeLimit: boolean;
   noteSize: "small" | "medium" | "large";
   menuSize: "small" | "medium" | "large";
   digitSize: "small" | "medium" | "large";

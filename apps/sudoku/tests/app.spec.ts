@@ -169,6 +169,33 @@ test("player settings support simple notes, compact tools and readable presets",
   await expect(page.locator("html")).toHaveAttribute("data-digit-colour", "amber");
 });
 
+test("the default three-mistake limit fails a puzzle on the fourth wrong digit", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings and help" }).click();
+  await expect(page.locator('[data-preference="mistakeLimit"]')).toBeChecked();
+  await page.getByRole("button", { name: "Close settings and help" }).click();
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+
+  const wrongDigits = await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = data.games[data.activeGameId];
+    const answer = Number(game.puzzle.solution[game.anchor]);
+    db.close();
+    return [1, 2, 3, 4, 5].filter((digit) => digit !== answer).slice(0, 4);
+  });
+
+  for (const digit of wrongDigits.slice(0, 3)) await page.getByRole("button", { name: String(digit), exact: true }).click();
+  await expect(page.locator(".board-status")).toContainText("Mistakes 3/3");
+  await expect(page.locator(".failure-banner")).toHaveCount(0);
+  await page.getByRole("button", { name: String(wrongDigits[3]), exact: true }).click();
+  await expect(page.locator(".failure-banner")).toContainText("Puzzle failed");
+  await expect(page.locator(".failure-banner")).toContainText("4 mistakes");
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.locator(".number-pad [data-digit]").first()).toBeDisabled();
+});
+
 test("normal, corner, centre, colour, multi-select, undo and keyboard flows work", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const rowTracks = await page.getByRole("grid", { name: "Sudoku board" }).evaluate((board) => getComputedStyle(board).gridTemplateRows.split(" ").map(Number.parseFloat));

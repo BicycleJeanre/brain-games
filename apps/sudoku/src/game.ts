@@ -3,6 +3,7 @@ import type { AnnotationColour, BoardSnapshot, EntryMode, Game, Hint, Puzzle } f
 
 const clone2d = (items: number[][]) => items.map((item) => [...item]);
 const cloneColours = (items: AnnotationColour[][]) => items.map((item) => [...item]);
+export const MAX_MISTAKES = 3;
 
 export function snapshot(game: Game): BoardSnapshot {
   return {
@@ -49,6 +50,8 @@ export function createGame(puzzle: Puzzle, now = Date.now()): Game {
     startedAt: now,
     updatedAt: now,
     completedAt: null,
+    failedAt: null,
+    mistakes: 0,
     paused: false,
     hintStage: "none",
     hintId: null,
@@ -97,7 +100,7 @@ export function fillAllCandidates(game: Game) {
   return true;
 }
 
-export function enterDigit(game: Game, digit: number, cleanCandidates = true, multipleNoteMode: "corner" | "centre" = "corner") {
+export function enterDigit(game: Game, digit: number, cleanCandidates = true, multipleNoteMode: "corner" | "centre" = "corner", mistakeLimit = true) {
   const editable = game.selected.filter((cell) => game.puzzle.givens[cell] === "0");
   if (!editable.length) return;
   const mode = game.mode === "normal" && editable.length > 1 ? multipleNoteMode : game.mode;
@@ -111,6 +114,7 @@ export function enterDigit(game: Game, digit: number, cleanCandidates = true, mu
   startChange(game);
   for (const cell of targets) {
     if (mode === "normal") {
+      const changedValue = game.values[cell] !== String(digit);
       game.values[cell] = String(digit);
       game.corner[cell] = [];
       game.centre[cell] = [];
@@ -121,6 +125,7 @@ export function enterDigit(game: Game, digit: number, cleanCandidates = true, mu
           game.centre[peer] = game.centre[peer].filter((value) => value !== digit);
         }
       }
+      if (mistakeLimit && changedValue && digit !== Number(game.puzzle.solution[cell])) recordMistake(game);
     } else if (mode === "corner" || mode === "centre") {
       const marks = mode === "corner" ? game.corner[cell] : game.centre[cell];
       const index = marks.indexOf(digit);
@@ -135,7 +140,7 @@ export function enterDigit(game: Game, digit: number, cleanCandidates = true, mu
   completeIfSolved(game);
 }
 
-export function promoteSoleCentre(game: Game, cell: number, cleanCandidates = true) {
+export function promoteSoleCentre(game: Game, cell: number, cleanCandidates = true, mistakeLimit = true) {
   if (cell < 0 || cell > 80 || game.puzzle.givens[cell] !== "0" || game.values[cell] || game.centre[cell].length !== 1) return false;
   const digit = game.centre[cell][0];
   if (!digit) return false;
@@ -151,6 +156,7 @@ export function promoteSoleCentre(game: Game, cell: number, cleanCandidates = tr
       game.centre[peer] = game.centre[peer].filter((value) => value !== digit);
     }
   }
+  if (mistakeLimit && digit !== Number(game.puzzle.solution[cell])) recordMistake(game);
   completeIfSolved(game);
   return true;
 }
@@ -279,8 +285,17 @@ export function revealCell(game: Game) {
 }
 
 export function completeIfSolved(game: Game) {
-  if (isSolved(game.values, game.puzzle.solution) && !game.completedAt) {
+  if (!game.failedAt && isSolved(game.values, game.puzzle.solution) && !game.completedAt) {
     game.completedAt = Date.now();
+    game.paused = true;
+  }
+}
+
+function recordMistake(game: Game) {
+  game.mistakes += 1;
+  if (game.mistakes > MAX_MISTAKES && !game.failedAt) {
+    game.failedAt = Date.now();
+    game.completedAt = null;
     game.paused = true;
   }
 }

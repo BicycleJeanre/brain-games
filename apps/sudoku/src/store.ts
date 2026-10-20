@@ -15,6 +15,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   highlightPeers: true,
   highlightMatches: true,
   showMistakes: false,
+  mistakeLimit: true,
   noteSize: "medium",
   menuSize: "medium",
   digitSize: "medium",
@@ -38,7 +39,7 @@ const preferenceValues = {
 
 const booleanPreferenceKeys = [
   "showTimer", "showColours", "showLines", "showValueSelection", "showCandidateCalculation", "showControlHelp",
-  "autoCandidates", "cleanCandidates", "highlightPeers", "highlightMatches", "showMistakes",
+  "autoCandidates", "cleanCandidates", "highlightPeers", "highlightMatches", "showMistakes", "mistakeLimit",
 ] as const;
 
 export function normalizePreferences(value: unknown): Preferences {
@@ -129,6 +130,12 @@ function normalizeHintPath(value: unknown): HintPath | undefined {
 
 function normalizeGame(game: Game): Game {
   normalizeSnapshot(game);
+  game.mistakes = Math.max(0, Math.floor(Number(game.mistakes) || 0));
+  game.failedAt = Number.isFinite(game.failedAt) && Number(game.failedAt) >= game.startedAt ? Number(game.failedAt) : null;
+  if (game.failedAt) {
+    game.completedAt = null;
+    game.paused = true;
+  }
   game.history = Array.isArray(game.history) ? game.history.map((item) => normalizeSnapshot(item)) : [];
   game.future = Array.isArray(game.future) ? game.future.map((item) => normalizeSnapshot(item)) : [];
   game.hintHistory = Array.isArray(game.hintHistory) ? game.hintHistory : [];
