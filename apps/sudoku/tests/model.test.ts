@@ -85,6 +85,27 @@ test("contextual Empty Rectangle explanation names the actual box, arms, link an
   assert.match(explanation.steps.at(-1) || "", /eliminate 7 from R4C1/);
 });
 
+test("contextual Skyscraper explanation traces both strong links, the shared base and every elimination", () => {
+  const hint: Hint = {
+    id: "skyscraper-test",
+    technique: "Skyscraper",
+    summary: "test",
+    explanation: "test",
+    kind: "eliminate",
+    evidence: [41, 53, 23, 26],
+    targets: [{ cell: 42, digit: 6 }, { cell: 43, digit: 6 }, { cell: 48, digit: 6 }, { cell: 49, digit: 6 }],
+  };
+  const explanation = contextualHintExplanation(hint);
+  assert.equal(explanation.title, "Why does this Skyscraper eliminate these candidates?");
+  assert.match(explanation.steps[0], /Column 6.*R3C6 or R5C6/);
+  assert.match(explanation.steps[0], /Column 9.*R3C9 or R6C9/);
+  assert.match(explanation.steps[1], /R3C6 and R3C9.*Row 3/);
+  assert.match(explanation.steps[2], /at least one roof is 6/);
+  assert.match(explanation.steps[3], /R5C7 sees R5C6 through Row 5 and R6C9 through Box 6/);
+  assert.match(explanation.steps[3], /R6C4 sees R5C6 through Box 5 and R6C9 through Row 6/);
+  assert.match(explanation.steps[4], /remove 6 from R5C7, R5C8, R6C4 and R6C5/);
+});
+
 test("contextual Avoidable Rectangle Type 1 explanation traces the shown corners and elimination", () => {
   const values = Array.from({ length: 81 }, () => "");
   values[4] = "4";

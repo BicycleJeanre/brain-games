@@ -101,6 +101,19 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await expect(page.getByRole("link", { name: /HoDoKu reglib-1.3 · X_CHAIN/ })).toBeVisible();
 });
 
+test("Skyscraper training explains the shown strong links and eliminations in plain language", async ({ page }) => {
+  await page.getByRole("button", { name: "Train", exact: true }).click();
+  await page.locator('[data-training="skyscraper"]').last().click();
+  const explanation = page.locator(".lesson-explanation");
+  await expect(explanation).toContainText("Column 6");
+  await expect(explanation).toContainText("R3C6 or R5C6");
+  await expect(explanation).toContainText("Column 9");
+  await expect(explanation).toContainText("R3C9 or R6C9");
+  await expect(explanation).toContainText("at least one roof is 6");
+  await expect(explanation).toContainText("remove 6 from R5C7, R5C8, R6C4 and R6C5");
+  await expect(explanation).not.toContainText("r5c6,r6c9");
+});
+
 test("the settings menu toggles back to the screen it opened from", async ({ page }) => {
   await page.getByRole("button", { name: "Settings and help" }).click();
   await expect(page.getByRole("heading", { name: "Settings & help" })).toBeVisible();
