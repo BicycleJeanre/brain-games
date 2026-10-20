@@ -85,7 +85,9 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await expect(page.getByText("Step 1 · Worked example")).toBeVisible();
   const workedExample = await page.getByRole("grid", { name: "Training Sudoku grid" }).innerText();
   await page.getByRole("button", { name: "Practice with a new position" }).click();
+  await expect(page.getByText(/Exercise 1 of 4/)).toBeVisible();
   await expect.poll(() => page.getByRole("grid", { name: "Training Sudoku grid" }).innerText()).not.toBe(workedExample);
+  const firstPractice = await page.getByRole("grid", { name: "Training Sudoku grid" }).innerText();
   await page.getByRole("button", { name: "Show a clue" }).click();
   await expect(page.locator(".training-candidate.training-answer")).toHaveCount(0);
   await page.locator(".training-focus[data-training-select]").click();
@@ -95,7 +97,10 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await page.getByRole("button", { name: "Show the answer" }).click();
   await page.locator(".training-candidate.training-answer").click();
   await expect(page.getByRole("heading", { name: "You used Naked single." })).toBeVisible();
-  await page.getByRole("button", { name: "All lessons" }).click();
+  await page.getByRole("button", { name: "Practice another position" }).click();
+  await expect(page.getByText(/Exercise 2 of 4/)).toBeVisible();
+  await expect.poll(() => page.getByRole("grid", { name: "Training Sudoku grid" }).innerText()).not.toBe(firstPractice);
+  await page.getByRole("button", { name: "← All training" }).click();
   await expect(page.getByRole("button", { name: /Naked single/ }).last()).toContainText("1 completed");
   await page.getByRole("button", { name: /X-Chain/ }).click();
   await expect(page.locator(".training-links .strong")).toHaveCount(3);

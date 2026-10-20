@@ -29,6 +29,8 @@ Every available lesson uses a genuine position derived from the bundled, documen
 
 Three independent completions with at least two-thirds independent accuracy mark a technique as mastered. Assisted completions still count as explored practice. Training progress saves to IndexedDB, is included in JSON backups, and synchronizes between signed-in devices with preferences.
 
+Every technique has one worked example and four different HoDoKu-verified practice positions. The exercise counter shows which position is active. After completing one, choose **Practice another position** to move directly to the next grid; reopening the lesson also resumes with the next exercise based on your completion count.
+
 ## Enter digits, notes, and colours
 
 Select a cell, choose an entry mode, then choose a number:

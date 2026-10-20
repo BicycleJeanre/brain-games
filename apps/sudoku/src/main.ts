@@ -8,7 +8,7 @@ import { buildHintPath, hintRespectsGivens, nextHintFromPath } from "./hint-engi
 import { regularPuzzlePool, selectRegularPuzzle } from "./puzzle-selection.ts";
 import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
 import { Store } from "./store.ts";
-import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingTechnique, trainingTechniqueForHint, type TrainingPosition } from "./training.ts";
+import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_ROADMAP, TRAINING_TECHNIQUES, trainingPracticeCount, trainingTechnique, trainingTechniqueForHint, type TrainingPosition } from "./training.ts";
 import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, TrainingTechniqueId } from "./types.ts";
 
 const catalogue = catalogueJson as Puzzle[];
@@ -50,6 +50,7 @@ let trainingFeedback = "";
 let trainingAssisted = false;
 let trainingPatternRevealed = false;
 let trainingAnswerRevealed = false;
+let trainingPracticeIndex = 0;
 type TrainingTrackId = typeof TRAINING_ROADMAP[number]["id"];
 let trainingTrack: TrainingTrackId | null = null;
 let challengeCadence: ChallengeCadence = "daily";
@@ -269,6 +270,7 @@ function openTraining(id: TrainingTechniqueId) {
   revealedHintId = null;
   historicalHintReview = null;
   activeTraining = id;
+  trainingPracticeIndex = (store.data.trainingProgress[id]?.completed || 0) % trainingPracticeCount(id);
   trainingStage = "learn";
   trainingSelection = new Set();
   trainingFeedback = "";
@@ -305,16 +307,17 @@ function trainingBoard(position: TrainingPosition, stage: typeof trainingStage, 
 function renderTrainingLesson() {
   if (!activeTraining) return renderTrainingHub();
   const technique = trainingTechnique(activeTraining);
-  const position = findTrainingPosition(activeTraining, catalogue, trainingStage === "learn" ? "example" : "practice");
+  const practiceCount = trainingPracticeCount(activeTraining);
+  const position = findTrainingPosition(activeTraining, catalogue, trainingStage === "learn" ? "example" : "practice", trainingPracticeIndex);
   if (!position) { activeTraining = null; notify("That lesson position is unavailable"); return renderTrainingHub(); }
   const stageNumber = trainingStage === "learn" ? 1 : trainingStage === "find" ? 2 : trainingStage === "deduce" ? 3 : 4;
   const reveal = trainingStage === "find" ? trainingPatternRevealed : trainingStage === "deduce" ? trainingAnswerRevealed : false;
   const lessonReasoning = contextualHintExplanation(position.hint, { values: position.values, candidates: position.candidates });
   let panel = "";
   if (trainingStage === "learn") panel = `<span class="eyebrow">Step 1 · Worked example</span><h2>${escapeHtml(technique.title)}</h2><p class="lesson-concept">${escapeHtml(technique.concept)}</p><div class="lesson-explanation"><strong>${escapeHtml(lessonReasoning.title)}</strong><ol>${lessonReasoning.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></div><button class="primary" id="training-practice">Practice with a new position</button>`;
-  else if (trainingStage === "find") panel = `<span class="eyebrow">Step 2 · Find the pattern</span><h2>${escapeHtml(technique.findPrompt)}</h2><p>Tap cells to select or deselect them, then check your pattern.</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<div class="stack-actions"><button class="primary" id="training-check-pattern">Check pattern</button><button class="secondary" id="training-clue">${reveal ? "Clue shown" : "Show a clue"}</button></div>`;
-  else if (trainingStage === "deduce") panel = `<span class="eyebrow">Step 3 · Make the deduction</span><h2>${escapeHtml(technique.deductionPrompt)}</h2><p>Tap a candidate in the grid. ${position.hint.kind === "place" ? "A correct choice places it." : "A correct choice removes it."}</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<button class="secondary" id="training-answer">${reveal ? "Answer shown" : "Show the answer"}</button>`;
-  else panel = `<span class="eyebrow">Lesson complete</span><h2>You used ${escapeHtml(technique.title)}.</h2><p>${trainingAssisted ? "You completed the reasoning with guidance. Repeat it without a clue to build independent mastery." : "You found the pattern and made the deduction independently."}</p><div class="training-complete-mark" aria-hidden="true">✓</div><div class="stack-actions"><button class="primary" id="training-repeat">Practice again</button><button class="secondary" id="training-next">Next technique</button><button class="text-button" id="training-all">All lessons</button></div>`;
+  else if (trainingStage === "find") panel = `<span class="eyebrow">Step 2 · Find the pattern · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.findPrompt)}</h2><p>Tap cells to select or deselect them, then check your pattern.</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<div class="stack-actions"><button class="primary" id="training-check-pattern">Check pattern</button><button class="secondary" id="training-clue">${reveal ? "Clue shown" : "Show a clue"}</button></div>`;
+  else if (trainingStage === "deduce") panel = `<span class="eyebrow">Step 3 · Make the deduction · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.deductionPrompt)}</h2><p>Tap a candidate in the grid. ${position.hint.kind === "place" ? "A correct choice places it." : "A correct choice removes it."}</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<button class="secondary" id="training-answer">${reveal ? "Answer shown" : "Show the answer"}</button>`;
+  else panel = `<span class="eyebrow">Lesson complete · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>You used ${escapeHtml(technique.title)}.</h2><p>${trainingAssisted ? "You completed the reasoning with guidance. Repeat it without a clue to build independent mastery." : "You found the pattern and made the deduction independently."}</p><div class="training-complete-mark" aria-hidden="true">✓</div><div class="stack-actions"><button class="primary" id="training-repeat">Practice another position</button><button class="secondary" id="training-next">Next technique</button><button class="text-button" id="training-all">All lessons</button></div>`;
   shell(`<div class="lesson-toolbar"><button class="text-button" id="training-back">← All training</button><div class="lesson-steps" aria-label="Lesson progress">${[1,2,3,4].map((step) => `<i class="${step <= stageNumber ? "active" : ""}">${step}</i>`).join("")}</div></div><section class="lesson-player"><div>${trainingBoard(position, trainingStage, reveal)}</div><aside class="lesson-panel card">${panel}</aside></section><p class="training-source"><a href="${escapeHtml(position.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(position.origin)}</a> · verified locally by the pinned HoDoKu engine</p>`, `${technique.title} training`);
   app.querySelector("#training-back")?.addEventListener("click", () => { activeTraining = null; renderTrainingHub(); });
   app.querySelector("#training-practice")?.addEventListener("click", () => { trainingStage = "find"; trainingSelection.clear(); trainingFeedback = ""; renderTrainingLesson(); });
@@ -329,7 +332,16 @@ function renderTrainingLesson() {
     if (!deductionMatches(Number(candidate.dataset.trainingCell), Number(candidate.dataset.trainingDigit), position)) { trainingFeedback = "That candidate is not justified by this pattern. Follow the highlighted cells through their shared unit."; return renderTrainingLesson(); }
     await completeTraining(activeTraining!);
   }));
-  app.querySelector("#training-repeat")?.addEventListener("click", () => openTraining(activeTraining!));
+  app.querySelector("#training-repeat")?.addEventListener("click", () => {
+    trainingPracticeIndex = (trainingPracticeIndex + 1) % practiceCount;
+    trainingStage = "find";
+    trainingSelection.clear();
+    trainingFeedback = "";
+    trainingAssisted = false;
+    trainingPatternRevealed = false;
+    trainingAnswerRevealed = false;
+    renderTrainingLesson();
+  });
   app.querySelector("#training-all")?.addEventListener("click", () => { activeTraining = null; renderTrainingHub(); });
   app.querySelector("#training-next")?.addEventListener("click", () => { const index = TRAINING_TECHNIQUES.findIndex((item) => item.id === activeTraining); openTraining(TRAINING_TECHNIQUES[(index + 1) % TRAINING_TECHNIQUES.length].id); });
 }

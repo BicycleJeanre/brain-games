@@ -106,13 +106,19 @@ export function trainingTechniqueForHint(technique: string): TrainingTechnique |
   return id ? trainingTechnique(id) : null;
 }
 
-export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[], kind: TrainingPositionKind = "practice"): TrainingPosition | null {
-  const cacheKey = `${id}-${kind}`;
+export function trainingPracticeCount(id: TrainingTechniqueId) {
+  return trainingCatalogue.lessons.find((item) => item.id === id)?.practices.length || 0;
+}
+
+export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[], kind: TrainingPositionKind = "practice", practiceIndex = 0): TrainingPosition | null {
+  const cacheKey = `${id}-${kind}-${practiceIndex}`;
   const cached = positionCache.get(cacheKey);
   if (cached) return cached;
   const lesson = trainingCatalogue.lessons.find((item) => item.id === id);
   if (!lesson) return null;
-  const source = lesson[kind];
+  const sources = kind === "example" ? [lesson.example] : lesson.practices;
+  if (!sources.length) return null;
+  const source = sources[((practiceIndex % sources.length) + sources.length) % sources.length];
   const board = Board.fromString(source.record);
   const values = Array.from(board.values, (value) => value ? String(value) : "");
   const candidates = Array.from({ length: 81 }, (_, cell) => values[cell] ? [] : [...board.getCandidates(cell)]);
