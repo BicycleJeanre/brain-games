@@ -2,7 +2,7 @@ import "./style.css";
 import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, nextChallengePuzzle, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
-import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, moveSelection, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
+import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, moveSelection, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
 import { contextualHintExplanation } from "./hint-explanation.ts";
 import { buildHintPath, hintRespectsGivens, nextHintFromPath } from "./hint-engine.ts";
 import { regularPuzzlePool, selectRegularPuzzle } from "./puzzle-selection.ts";
@@ -25,7 +25,7 @@ const requestedView = new URLSearchParams(location.search).get("view");
 let view: View = requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let libraryBand: Difficulty | "All" = "All";
-let libraryCompletion: "all" | "new" | "started" | "complete" = "all";
+let libraryCompletion: "all" | "new" | "started" | "complete" | "failed" = "all";
 let minRating = "";
 let maxRating = "";
 let multiSelect = false;
@@ -136,7 +136,8 @@ function navigate(next: View) {
 function puzzleStatus(puzzle: Puzzle) {
   const games = Object.values(store.data.games).filter((game) => game.puzzle.id === puzzle.id);
   if (games.some((game) => game.completedAt)) return "complete";
-  if (games.length) return "started";
+  if (games.some((game) => !game.failedAt)) return "started";
+  if (games.some((game) => game.failedAt)) return "failed";
   return "new";
 }
 
@@ -151,8 +152,9 @@ function metaPill(puzzle: Puzzle) {
 function renderHome() {
   const active = store.activeGame();
   const games = Object.values(store.data.games).sort((a, b) => b.updatedAt - a.updatedAt);
-  const recent = games.filter((game) => !game.completedAt).slice(0, 4);
+  const recent = games.filter((game) => !game.completedAt && !game.failedAt).slice(0, 4);
   const completed = games.filter((game) => game.completedAt).slice(0, 4);
+  const failed = games.filter((game) => game.failedAt).slice(0, 4);
   const challenges = challengeSet(catalogue, challengeCadence);
   const periodKey = challengePeriodKey(challengeCadence);
   const dailyStats = challengeStats(games, "daily");
@@ -167,18 +169,19 @@ function renderHome() {
     const current = challengeGame(puzzle);
     if (!current) return "Not started";
     if (current.completedAt) return `Completed · ${formatTime(current.elapsed)}`;
+    if (current.failedAt) return `Failed · ${current.mistakes} mistakes`;
     return `Continue · ${Math.round(current.values.filter(Boolean).length / 81 * 100)}% filled`;
   };
   const statsCard = (cadence: ChallengeCadence, stats: ReturnType<typeof challengeStats>) => {
     const unit = cadence === "daily" ? "day" : "week";
     return `<article class="challenge-stat card"><div class="challenge-stat-heading"><span class="challenge-stat-icon" aria-hidden="true">${cadence === "daily" ? "D" : "W"}</span><div><strong>${cadence === "daily" ? "Daily" : "Weekly"} progress</strong><small>${stats.currentPeriodCompleted} of 4 ${cadence === "daily" ? "today" : "this week"}</small></div></div><progress value="${stats.currentPeriodCompleted}" max="4" aria-label="${stats.currentPeriodCompleted} of 4 ${cadence} challenges completed"></progress><dl><div><dt>Streak</dt><dd>${stats.streak} ${unit}${stats.streak === 1 ? "" : "s"}</dd></div><div><dt>Average</dt><dd>${stats.averageSeconds === null ? "—" : formatTime(stats.averageSeconds)}</dd></div><div><dt>Solved</dt><dd>${stats.completed}</dd></div></dl></article>`;
   };
-  const gameCards = (items: Game[], complete = false) => items.map((game) => `<article class="recent-card"><button class="recent-open" data-game="${game.id}" aria-label="${complete ? "Review" : "Open"} ${escapeHtml(game.puzzle.difficulty)} puzzle"><span>${metaPill(game.puzzle)}</span><strong>${complete ? `Completed · ${formatTime(game.elapsed)}` : `${Math.round(game.values.filter(Boolean).length / 81 * 100)}% filled`}</strong><small>${game.challenge ? `${game.challenge.cadence === "daily" ? "Daily" : "Weekly"} challenge · ` : ""}${new Date(game.updatedAt).toLocaleDateString()}</small></button><button class="recent-delete" data-delete-game="${game.id}" aria-label="Delete ${complete ? "completed" : "recent"} ${escapeHtml(game.puzzle.difficulty)} puzzle">×</button></article>`).join("");
+  const gameCards = (items: Game[], state: "active" | "complete" | "failed" = "active") => items.map((game) => `<article class="recent-card"><button class="recent-open" data-game="${game.id}" aria-label="${state === "active" ? "Open" : "Review"} ${escapeHtml(game.puzzle.difficulty)} puzzle"><span>${metaPill(game.puzzle)}</span><strong>${state === "complete" ? `Completed · ${formatTime(game.elapsed)}` : state === "failed" ? `Failed · ${game.mistakes} mistakes` : `${Math.round(game.values.filter(Boolean).length / 81 * 100)}% filled`}</strong><small>${game.challenge ? `${game.challenge.cadence === "daily" ? "Daily" : "Weekly"} challenge · ` : ""}${new Date(game.updatedAt).toLocaleDateString()}</small></button><button class="recent-delete" data-delete-game="${game.id}" aria-label="Delete ${state === "complete" ? "completed" : state === "failed" ? "failed" : "recent"} ${escapeHtml(game.puzzle.difficulty)} puzzle">×</button></article>`).join("");
   shell(`
     <section class="hero card">
       <div><span class="eyebrow">Sudoku, thoughtfully</span><h2>${active ? "Your grid is waiting." : "A quieter way to solve."}</h2>
       <p>Transparent difficulty, explanatory hints, and every puzzle available without a connection.${cloudUser ? " Your signed-in progress follows you between devices." : " Sign in from Settings to continue on another device."}</p></div>
-      ${active ? `<button class="primary" id="resume">${active.completedAt ? "Review puzzle" : "Resume puzzle"}<small>${escapeHtml(active.puzzle.difficulty)} · ${rating(active.puzzle)} · ${formatTime(active.elapsed)}</small></button>` : `<button class="primary" id="quick-start">Start an Easy puzzle<small>Chosen from the offline collection</small></button>`}
+      ${active ? `<button class="primary" id="resume">${active.failedAt ? "Review failed puzzle" : active.completedAt ? "Review puzzle" : "Resume puzzle"}<small>${escapeHtml(active.puzzle.difficulty)} · ${rating(active.puzzle)} · ${formatTime(active.elapsed)}</small></button>` : `<button class="primary" id="quick-start">Start an Easy puzzle<small>Chosen from the offline collection</small></button>`}
     </section>
     <section class="active-section" aria-labelledby="recent-title"><div class="section-heading"><div><span class="eyebrow">Continue playing</span><h2 id="recent-title">Active puzzles</h2></div></div>
       ${recent.length ? `<div class="recent-list">${gameCards(recent)}</div>` : `<div class="empty card"><span aria-hidden="true">⌁</span><h3>No puzzles in progress</h3><p>Start a puzzle and it will appear here.</p></div>`}
@@ -194,14 +197,15 @@ function renderHome() {
       <div class="challenge-stats-grid" aria-label="Challenge statistics">${statsCard("daily", dailyStats)}${statsCard("weekly", weeklyStats)}</div>
       <div class="challenge-grid">${challenges.map((puzzle) => {
         const current = challengeGame(puzzle);
-        const status = current?.completedAt ? "complete" : current ? "started" : "new";
+        const status = current?.completedAt ? "complete" : current?.failedAt ? "failed" : current ? "started" : "new";
         return `<button class="challenge-card card ${status}" data-challenge-puzzle="${puzzle.id}" aria-label="${escapeHtml(puzzle.difficulty)} ${challengeCadence} challenge, ${challengeStatus(puzzle)}"><span class="challenge-calendar" aria-hidden="true"><i>${challengeCadence === "daily" ? "DAY" : "WK"}</i><b>${challengeCadence === "daily" ? periodKey.slice(-2) : Number(periodKey.slice(-2))}</b></span><span><span>${metaPill(puzzle)}</span><strong>${escapeHtml(puzzle.difficulty)} challenge</strong><small>${challengeStatus(puzzle)}</small></span><span class="challenge-arrow" aria-hidden="true">→</span></button>`;
       }).join("")}</div>
     </section>
     <section class="training-callout card" aria-labelledby="training-home-title"><div><span class="eyebrow">HoDoKu technique training</span><h2 id="training-home-title">Learn the logic, not the answer</h2><p>Guided lessons use verified positions from HoDoKu’s official regression and exemplar libraries. Your progress works offline and syncs when you sign in.</p></div><button class="primary compact" data-nav="training">Start training</button></section>
     <section class="completed-section" aria-labelledby="completed-title"><div class="section-heading"><div><span class="eyebrow">Finished</span><h2 id="completed-title">Completed puzzles</h2></div></div>
-      ${completed.length ? `<div class="recent-list">${gameCards(completed, true)}</div>` : `<div class="empty card"><span aria-hidden="true">✓</span><h3>No completed puzzles yet</h3><p>Finished puzzles are kept separate from games in progress.</p></div>`}
-    </section>`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}`);
+      ${completed.length ? `<div class="recent-list">${gameCards(completed, "complete")}</div>` : `<div class="empty card"><span aria-hidden="true">✓</span><h3>No completed puzzles yet</h3><p>Finished puzzles are kept separate from games in progress.</p></div>`}
+    </section>
+    ${failed.length ? `<section class="completed-section" aria-labelledby="failed-title"><div class="section-heading"><div><span class="eyebrow">Attempts ended</span><h2 id="failed-title">Failed puzzles</h2></div></div><div class="recent-list">${gameCards(failed, "failed")}</div></section>` : ""}`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}`);
   app.querySelector("#resume")?.addEventListener("click", () => { view = "player"; render(); });
   app.querySelector("#quick-start")?.addEventListener("click", () => startPuzzle(pickPuzzle("Easy")));
   app.querySelectorAll<HTMLElement>("[data-band]").forEach((button) => button.addEventListener("click", () => startPuzzle(pickPuzzle(button.dataset.band as Difficulty))));
@@ -215,7 +219,7 @@ async function openChallenge(puzzleId: string, cadence: ChallengeCadence, period
   const puzzle = catalogue.find((item) => item.id === puzzleId);
   if (!puzzle) return;
   const games = Object.values(store.data.games).sort((left, right) => right.updatedAt - left.updatedAt);
-  const exact = games.find((game) => game.puzzle.id === puzzle.id && game.challenge?.cadence === cadence && game.challenge.periodKey === periodKey);
+  const exact = games.find((game) => game.puzzle.id === puzzle.id && game.challenge?.cadence === cadence && game.challenge.periodKey === periodKey && !game.failedAt);
   const game = exact || createGame(puzzle);
   if (!game.challenge) {
     game.challenge = { cadence, periodKey };
@@ -366,7 +370,7 @@ async function startPuzzle(puzzle: Puzzle) {
       return;
     }
   }
-  const existing = Object.values(store.data.games).find((game) => game.puzzle.id === puzzle.id && !game.completedAt);
+  const existing = Object.values(store.data.games).find((game) => game.puzzle.id === puzzle.id && !game.completedAt && !game.failedAt);
   const game = existing || createGame(puzzle);
   highlightMode = false;
   celebratingGameId = null;
@@ -387,14 +391,14 @@ function renderLibrary() {
   shell(`
     <section class="filters card" aria-label="Puzzle filters">
       <label>Difficulty<select id="band-filter">${["All", "Easy", "Medium", "Hard", "Diabolical"].map((value) => `<option ${value === libraryBand ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-      <label>Progress<select id="completion-filter">${[["all", "All"], ["new", "Not started"], ["started", "In progress"], ["complete", "Completed"]].map(([value, label]) => `<option value="${value}" ${value === libraryCompletion ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+      <label>Progress<select id="completion-filter">${[["all", "All"], ["new", "Not started"], ["started", "In progress"], ["complete", "Completed"], ["failed", "Failed"]].map(([value, label]) => `<option value="${value}" ${value === libraryCompletion ? "selected" : ""}>${label}</option>`).join("")}</select></label>
       <label>Min SE<input id="min-rating" inputmode="decimal" value="${escapeHtml(minRating)}" placeholder="1.0" /></label>
       <label>Max SE<input id="max-rating" inputmode="decimal" value="${escapeHtml(maxRating)}" placeholder="9.9" /></label>
     </section>
     <div class="library-summary"><p><strong>${filtered.length}</strong> puzzles · bundled and available offline</p><button id="surprise" class="secondary">Surprise me</button></div>
     <section class="puzzle-list" aria-label="Puzzle library">${filtered.map((puzzle) => {
       const status = puzzleStatus(puzzle);
-      return `<article class="puzzle-card card"><div><span>${metaPill(puzzle)}</span><h2>Puzzle ${puzzle.id.slice(-6).toUpperCase()}</h2><p>${status === "complete" ? "Completed on this device" : status === "started" ? "In progress" : puzzle.fullHints ? "Verified full hint path" : "Hints available through the engine limit"}</p></div><div class="puzzle-actions"><button class="info-button" data-info="${puzzle.id}" aria-label="Puzzle details">i</button><button class="primary compact" data-puzzle="${puzzle.id}">${status === "started" ? "Continue" : status === "complete" ? "Play again" : "Play"}</button></div></article>`;
+      return `<article class="puzzle-card card"><div><span>${metaPill(puzzle)}</span><h2>Puzzle ${puzzle.id.slice(-6).toUpperCase()}</h2><p>${status === "complete" ? "Completed on this device" : status === "failed" ? "Previous attempt failed" : status === "started" ? "In progress" : puzzle.fullHints ? "Verified full hint path" : "Hints available through the engine limit"}</p></div><div class="puzzle-actions"><button class="info-button" data-info="${puzzle.id}" aria-label="Puzzle details">i</button><button class="primary compact" data-puzzle="${puzzle.id}">${status === "started" ? "Continue" : status === "complete" || status === "failed" ? "Play again" : "Play"}</button></div></article>`;
     }).join("") || `<div class="empty card"><h3>No puzzles match</h3><p>Try widening the rating or progress filters.</p></div>`}</section>`, "Puzzle library");
   const rerender = () => renderLibrary();
   app.querySelector<HTMLSelectElement>("#band-filter")!.addEventListener("change", (event) => { libraryBand = (event.target as HTMLSelectElement).value as typeof libraryBand; rerender(); });
@@ -580,22 +584,26 @@ function renderPlayer() {
     : "";
   const wrong = game.values.some((value, cell) => value && value !== game.puzzle.solution[cell]);
   const celebrating = celebratingGameId === game.id && Boolean(game.completedAt);
+  const failed = Boolean(game.failedAt);
+  const terminal = Boolean(game.completedAt || game.failedAt);
+  const mistakeStatus = preferences.mistakeLimit ? ` · Mistakes ${game.mistakes}/${MAX_MISTAKES}` : "";
   shell(`
     <section class="player-meta"><button class="back-button" data-nav="home">← Home</button><div>${metaPill(game.puzzle)}</div><button class="info-button" id="puzzle-info" aria-label="Puzzle details">i</button></section>
     <section class="player-layout">
       <div class="board-column">
-        <div class="board-status"><span id="timer" class="timer ${preferences.showTimer ? "" : "hidden"}">${formatTime(game.elapsed)}</span><span>${game.completedAt ? "Solved" : game.paused ? "Paused" : navigator.onLine ? "Saved on device" : "Saved · offline"}</span></div>
-        <div class="sudoku-board ${game.mode === "line" ? "drawing-lines" : ""} ${game.paused && !game.completedAt ? "paused" : ""} ${celebrating ? "celebrating" : ""}" role="grid" aria-label="Sudoku board">${Array.from({ length: 81 }, (_, cell) => cellMarkup(game, cell, boardHint, answerShown)).join("")}${lineMarkup(game)}${game.paused && !game.completedAt ? `<button class="pause-cover" id="resume-board"><strong>Paused</strong><span>Tap to continue</span></button>` : ""}</div>
+        <div class="board-status"><span id="timer" class="timer ${preferences.showTimer ? "" : "hidden"}">${formatTime(game.elapsed)}</span><span>${game.completedAt ? "Solved" : failed ? "Failed" : game.paused ? "Paused" : navigator.onLine ? "Saved on device" : "Saved · offline"}${mistakeStatus}</span></div>
+        <div class="sudoku-board ${game.mode === "line" ? "drawing-lines" : ""} ${game.paused && !terminal ? "paused" : ""} ${failed ? "failed" : ""} ${celebrating ? "celebrating" : ""}" role="grid" aria-label="Sudoku board">${Array.from({ length: 81 }, (_, cell) => cellMarkup(game, cell, boardHint, answerShown)).join("")}${lineMarkup(game)}${game.paused && !terminal ? `<button class="pause-cover" id="resume-board"><strong>Paused</strong><span>Tap to continue</span></button>` : failed ? `<div class="pause-cover failure-cover" role="status"><strong>Puzzle failed</strong><span>The fourth mistake ended this attempt.</span></div>` : ""}</div>
         ${celebrating ? `<div class="completion-confetti" aria-hidden="true">${Array.from({ length: 14 }, () => "<i></i>").join("")}</div>` : ""}
         ${game.completedAt ? `<div class="completion-banner ${celebrating ? "celebrating" : ""}" role="status"><span aria-hidden="true">★</span><div><strong>Puzzle complete!</strong><small>${game.puzzle.difficulty} · ${rating(game.puzzle)} · ${formatTime(game.elapsed)}</small></div><button id="next-puzzle">${nextChallenge ? `Next: ${escapeHtml(nextChallenge.difficulty)}` : game.challenge ? "Challenge summary" : "Next puzzle"}</button></div>` : ""}
+        ${failed ? `<div class="completion-banner failure-banner" role="status"><span aria-hidden="true">×</span><div><strong>Puzzle failed</strong><small>${game.mistakes} mistakes · ${formatTime(game.elapsed)}</small></div><button id="retry-puzzle">Try again</button></div>` : ""}
       </div>
       <aside class="controls" aria-label="Puzzle controls">
-        <div class="toolbar"><button id="undo" aria-label="Undo" ${!game.history.length ? "disabled" : ""}>↶<small>Undo</small></button><button id="redo" aria-label="Redo" ${!game.future.length ? "disabled" : ""}>↷<small>Redo</small></button><button id="pause" aria-label="${game.paused ? "Resume" : "Pause"} puzzle">${game.paused ? "▶" : "Ⅱ"}<small>${game.paused ? "Resume" : "Pause"}</small></button><button id="hint" aria-label="Get a logical hint">?<small>Hint</small></button></div>
+        <div class="toolbar"><button id="undo" aria-label="Undo" ${terminal || !game.history.length ? "disabled" : ""}>↶<small>Undo</small></button><button id="redo" aria-label="Redo" ${terminal || !game.future.length ? "disabled" : ""}>↷<small>Redo</small></button><button id="pause" aria-label="${game.paused ? "Resume" : "Pause"} puzzle" ${terminal ? "disabled" : ""}>${game.paused ? "▶" : "Ⅱ"}<small>${game.paused ? "Resume" : "Pause"}</small></button><button id="hint" aria-label="Get a logical hint" ${terminal ? "disabled" : ""}>?<small>Hint</small></button></div>
         ${hintPanel}
         ${game.hintHistory.some((hint) => hintRespectsGivens(hint, game.puzzle.givens)) ? `<button id="hint-history" class="history-button">Previous hints (${game.hintHistory.filter((hint) => hintRespectsGivens(hint, game.puzzle.givens)).length})</button>` : ""}
         ${wrong && !preferences.showMistakes ? `<p class="quiet-warning">Something on the board conflicts with the solution. Turn on mistake checks in Settings for cell-level cues.</p>` : ""}
         ${(() => { const modes: [EntryMode, string][] = [["normal", "Digit"], ...(preferences.noteStyle === "advanced" ? [["corner", "Corner"]] as [EntryMode, string][] : []), ["centre", preferences.noteStyle === "simple" ? "Notes" : "Centre"], ...(preferences.showColours ? [["colour", "Colour"]] as [EntryMode, string][] : []), ...(preferences.showLines ? [["line", "Lines"]] as [EntryMode, string][] : [])]; return `<div class="mode-switch" style="--mode-count:${modes.length}" role="group" aria-label="Entry mode">${modes.map(([mode,label]) => `<button data-mode="${mode}" class="${game.mode === mode ? "active" : ""}" aria-pressed="${game.mode === mode}">${label}</button>`).join("")}</div>`; })()}
-        ${game.mode === "colour" || game.mode === "line" ? annotationPalette(game) : `<div class="number-pad" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9].map((digit) => { const complete = digitIsComplete(game.values, digit); const active = highlightedDigits.has(digit); return `<button data-digit="${digit}" class="${active ? "active-digit " : ""}${complete ? "complete-digit" : ""}" aria-pressed="${active}" aria-label="${digit}${complete ? ", all placed" : ""}">${digit}</button>`; }).join("")}<button id="clear" class="clear-key">Clear</button></div><div class="highlight-options ${highlightMode ? "" : "hidden"}"><p>Highlight cells containing:</p><div role="group" aria-label="Multiple digit matching"><button data-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>`}
+        ${game.mode === "colour" || game.mode === "line" ? annotationPalette(game) : `<div class="number-pad" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9].map((digit) => { const complete = digitIsComplete(game.values, digit); const active = highlightedDigits.has(digit); return `<button data-digit="${digit}" class="${active ? "active-digit " : ""}${complete ? "complete-digit" : ""}" aria-pressed="${active}" aria-label="${digit}${complete ? ", all placed" : ""}" ${terminal ? "disabled" : ""}>${digit}</button>`; }).join("")}<button id="clear" class="clear-key" ${terminal ? "disabled" : ""}>Clear</button></div><div class="highlight-options ${highlightMode ? "" : "hidden"}"><p>Highlight cells containing:</p><div role="group" aria-label="Multiple digit matching"><button data-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>`}
         <div class="selection-tools ${preferences.showValueSelection ? "" : "single"}"><button id="multi" class="multi-toggle ${multiSelect ? "active" : ""}" aria-pressed="${multiSelect}"><span aria-hidden="true">▦</span> Multi-select ${multiSelect ? "on" : "off"}</button>${preferences.showValueSelection ? `<button id="highlight-mode" class="multi-toggle ${highlightMode ? "active" : ""}" aria-label="Highlight multiple values" aria-pressed="${highlightMode}"><span aria-hidden="true">◎</span> Highlight values ${highlightMode ? "on" : "off"}</button>` : ""}</div>
         ${preferences.showCandidateCalculation ? `<button id="fill-candidates" class="secondary candidate-action">Calculate all candidates</button>` : ""}
         ${preferences.showControlHelp ? `<p class="control-help">Keyboard: arrows move · 1–9 enter · ${preferences.noteStyle === "advanced" ? "C corner · " : ""}M notes · ${preferences.showColours ? "V colour · " : ""}${preferences.showLines ? "L lines · " : ""}Shift extends selection · Ctrl/⌘ Z undo. Digit entry clears notes.${preferences.showValueSelection ? " Highlight values lets number keys select several matches without editing cells." : ""}</p>` : ""}
@@ -621,7 +629,7 @@ function bindPlayer(game: Game) {
   app.querySelectorAll<HTMLElement>("[data-digit]").forEach((button) => button.addEventListener("click", () => {
     const digit = Number(button.dataset.digit);
     if (highlightMode || !game.selected.length) { highlightMode = true; toggleHighlight(digit); renderPlayer(); return; }
-    void changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, preferences.cleanCandidates, preferences.noteStyle === "simple" ? "centre" : "corner"); });
+    void changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, preferences.cleanCandidates, preferences.noteStyle === "simple" ? "centre" : "corner", preferences.mistakeLimit); });
   }));
   app.querySelectorAll<HTMLElement>("[data-colour]").forEach((button) => button.addEventListener("click", () => {
     const colour = button.dataset.colour as AnnotationColour;
@@ -750,6 +758,13 @@ function bindPlayer(game: Game) {
     }
     void startPuzzle(pickPuzzle(game.puzzle.difficulty as Difficulty));
   });
+  app.querySelector("#retry-puzzle")?.addEventListener("click", async () => {
+    const retry = createGame(game.puzzle);
+    if (game.challenge) retry.challenge = { ...game.challenge };
+    await store.putGame(retry);
+    highlightOnly(Number(retry.values[retry.anchor]) || null);
+    renderPlayer();
+  });
   app.querySelectorAll("#main, .app-header").forEach((surface) => surface.addEventListener("click", async (event) => {
     const target = event.target as HTMLElement;
     if ((!game.selected.length && !highlightedDigits.size && !highlightMode) || target.closest(".sudoku-board, button, a, input, select, textarea, dialog")) return;
@@ -818,7 +833,7 @@ function bindCellDrag(game: Game) {
       : null;
     if (promotedDigit) {
       highlightOnly(promotedDigit);
-      void changeGame(game, () => promoteSoleCentre(game, tappedCell, store.data.preferences.cleanCandidates));
+      void changeGame(game, () => promoteSoleCentre(game, tappedCell, store.data.preferences.cleanCandidates, store.data.preferences.mistakeLimit));
       setTimeout(() => { suppressCellClick = false; }, 0);
       return;
     }
@@ -879,8 +894,10 @@ function bindCellDrag(game: Game) {
 }
 
 async function changeGame(game: Game, change: () => unknown) {
-  if (game.paused && !game.completedAt) return;
+  if (game.failedAt || game.paused && !game.completedAt) return;
   const wasCompleted = Boolean(game.completedAt);
+  const wasFailed = Boolean(game.failedAt);
+  const previousMistakes = game.mistakes;
   change();
   if (!wasCompleted && game.completedAt) {
     celebratingGameId = game.id;
@@ -888,6 +905,10 @@ async function changeGame(game: Game, change: () => unknown) {
     if (celebrationTimer !== null) window.clearTimeout(celebrationTimer);
     celebrationTimer = window.setTimeout(() => { if (celebratingGameId === game.id) celebratingGameId = null; celebrationTimer = null; }, 2400);
   }
+  if (!wasFailed && game.failedAt) {
+    navigator.vibrate?.([120, 70, 120]);
+    notify("Puzzle failed after the fourth mistake");
+  } else if (game.mistakes > previousMistakes) notify(`Mistake ${game.mistakes} of ${MAX_MISTAKES} allowed`);
   activeHint = null;
   revealedHintId = null;
   historicalHintReview = null;
@@ -934,7 +955,7 @@ function renderSettings() {
       <div class="card settings-card"><span class="eyebrow">Appearance</span><h2>Make the desk yours</h2>${selectSetting("theme", "Theme", "Follow the device or keep one theme.", preferences.theme, [["system", "System"], ["light", "Light"], ["dark", "Dark"]], "theme")}${toggle("showTimer", "Show timer", "Keep time available without turning it into a score.", preferences.showTimer)}${toggle("highlightPeers", "Highlight peers", "Shade cells sharing a row, column, or box.", preferences.highlightPeers)}${toggle("highlightMatches", "Highlight matching digits", "Show every copy of the selected digit.", preferences.highlightMatches)}</div>
       <div class="card settings-card"><span class="eyebrow">Player layout</span><h2>Choose what stays visible</h2>${selectSetting("noteStyle", "Notes", "Simple uses centre notes only. Advanced adds separate corner notes.", preferences.noteStyle, [["simple", "Simple · centre only"], ["advanced", "Advanced · corner + centre"]])}${toggle("showColours", "Show cell colours", "Keep the Colour entry mode in the player.", preferences.showColours)}${toggle("showLines", "Show drawn lines", "Keep the Lines entry mode in the player.", preferences.showLines)}${toggle("showValueSelection", "Show value selections", "Allow selecting several digits for AND/OR highlighting.", preferences.showValueSelection)}${toggle("showCandidateCalculation", "Show candidate calculation", "Keep the calculate-all-candidates action visible.", preferences.showCandidateCalculation)}${toggle("showControlHelp", "Show help text", "Keep the keyboard and entry reminder under the controls.", preferences.showControlHelp)}</div>
       <div class="card settings-card"><span class="eyebrow">Readability</span><h2>Type size and colour</h2><p>Choose from a few tested, high-contrast options. No fine-tuning required.</p>${selectSetting("digitSize", "Sudoku digit size", "Size of givens and entered values.", preferences.digitSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("digitColour", "Entered digit colour", "Givens remain neutral for a clear distinction.", preferences.digitColour, [["cyan", "Cyan"], ["mono", "Monochrome"], ["amber", "Amber"]])}${selectSetting("noteSize", "Note size", "Applies to corner, centre, and automatic candidates.", preferences.noteSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("noteColour", "Note colour", "Classic separates corner and centre notes; the others use one colour.", preferences.noteColour, [["classic", "Classic · amber + neutral"], ["mono", "Monochrome"], ["cyan", "Cyan"], ["amber", "Amber"]])}${selectSetting("menuSize", "Menu text size", "Player controls and top navigation.", preferences.menuSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}${selectSetting("menuColour", "Menu text colour", "Inactive controls stay distinguishable from active controls.", preferences.menuColour, [["standard", "Standard"], ["bright", "Bright neutral"], ["cyan", "Cyan"], ["amber", "Amber"]])}${selectSetting("highlightColour", "Cell highlight colour", "Used for selected cells and matching values or notes.", preferences.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}</div>
-      <div class="card settings-card"><span class="eyebrow">Assistance</span><h2>Candidates and checks</h2>${toggle("autoCandidates", "Automatic candidates", "Show canonical candidates in empty cells with no notes.", preferences.autoCandidates)}${toggle("cleanCandidates", "Clean notes after entry", "Remove a placed digit from peer notes.", preferences.cleanCandidates)}${toggle("showMistakes", "Show conflicts with solution", "Add a symbol and outline; never rely on colour alone.", preferences.showMistakes)}</div>
+      <div class="card settings-card"><span class="eyebrow">Assistance</span><h2>Candidates and checks</h2>${toggle("autoCandidates", "Automatic candidates", "Show canonical candidates in empty cells with no notes.", preferences.autoCandidates)}${toggle("cleanCandidates", "Clean notes after entry", "Remove a placed digit from peer notes.", preferences.cleanCandidates)}${toggle("showMistakes", "Show conflicts with solution", "Add a symbol and outline; never rely on colour alone.", preferences.showMistakes)}${toggle("mistakeLimit", "Three-mistake limit", "Allow three incorrect digit entries; a fourth ends the attempt. Turn this off for unlimited mistakes.", preferences.mistakeLimit)}</div>
       <div class="card settings-card"><span class="eyebrow">Backup</span><h2>Your device data</h2><p>Browser storage can be cleared or evicted. Cloud sync keeps signed-in sessions current across devices; JSON export remains the independent backup and the only backup for device-only play.</p><div class="stack-actions"><button id="export" class="secondary">Download JSON backup</button><label class="file-button">Import JSON backup<input type="file" id="backup-file" accept="application/json" /></label><button id="reset-current" class="danger-quiet">Reset current puzzle</button><button id="reset-history" class="danger-quiet">Clear completed history</button><button id="reset-all" class="danger-quiet">Erase all local Sudoku data</button></div><p class="storage-note">Local reset actions do not delete signed-in cloud copies; sign out first if you want a blank device-only workspace.</p></div>
       <div class="card settings-card"><span class="eyebrow">Help</span><h2>How Sudoku works</h2><button id="open-help" class="secondary">Open user guide</button><p class="storage-note"><strong>${navigator.onLine ? "Online" : "Offline"}.</strong> The app shell, catalogue, help, preferences, solver, and saved progress work without a connection after the first production load.</p></div>
     </section>`, "Settings & help");
@@ -1007,7 +1028,7 @@ function showHelp() {
   showDialog(`<span class="eyebrow">User guide</span><h2>Solving Sudoku</h2><h3>Training</h3><p>Train contains 21 lessons from singles through fish, Empty Rectangles, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Every exercise is sourced from HoDoKu’s official regression or exemplar libraries and revalidated by the pinned local HoDoKu engine. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Exact strong and weak chain links come from HoDoKu’s step data, and progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Double-click or double-tap an empty cell with exactly one centre note to promote that note to the full digit. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint begins with only the HoDoKu technique name and leaves the grid untouched. Show pattern then highlights and explains the relevant cells without exposing the exact deduction. Open the grid-specific explanation and choose Practice strategy when a matching lesson is available. Show answer is a separate third reveal; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints. Brain Games rebuilds the current hint after every board or centre-note change and validates its pattern and target against the exact candidates displayed. Applying an elimination removes it from the visible notes too. All Easy, Medium, and Hard puzzles and half of the Diabolical catalogue have verified complete paths; the other Diabolical puzzles receive every available logical hint before the enabled engine limit is reported.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are friendly bands, not an official universal scale.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, cached hint paths, training progress, and preferences through Firestore so you can continue on another device. The current board and completion always sync; only regenerable hint data and the oldest cloud undo/redo entries are omitted when an extensively annotated session would otherwise exceed Firestore’s document limit. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
   dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. A weekly puzzle stays fixed for its full week and is not reused by a daily slot during that week. The eight current challenge puzzles are also reserved from regular automatic selection. Opening a challenge creates or resumes its dedicated challenge session; signed-in progress follows you between devices through the same private Firestore account. After a solve, continue to the next difficulty in that same day or week; finishing Diabolical returns to the challenge summary. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Reviewing previous hints</h3><p>Previous hints start again at the minimal technique-only tier. Choose Show pattern to reveal the explanation and original grid location. Open Why is this a …? for a cell-by-cell trace based on that grid, then Show answer for the exact historical deduction. A historical review cannot apply an old deduction to the current board.</p>`);
-  dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
+  dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. The three-mistake limit is on by default: three incorrect full digits are allowed, while a fourth fails the attempt; notes do not count, and the limit can be turned off. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
 }
 
@@ -1047,7 +1068,7 @@ document.addEventListener("keydown", async (event) => {
     event.preventDefault();
     const digit = Number(event.key);
     if (highlightMode || !game.selected.length) { highlightMode = true; toggleHighlight(digit); renderPlayer(); }
-    else await changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, store.data.preferences.cleanCandidates, store.data.preferences.noteStyle === "simple" ? "centre" : "corner"); });
+    else await changeGame(game, () => { highlightOnly(digit); enterDigit(game, digit, store.data.preferences.cleanCandidates, store.data.preferences.noteStyle === "simple" ? "centre" : "corner", store.data.preferences.mistakeLimit); });
   }
   else if (["Backspace", "Delete", "0"].includes(event.key)) {
     event.preventDefault();
@@ -1067,7 +1088,7 @@ document.addEventListener("keydown", async (event) => {
 
 setInterval(async () => {
   const game = store.activeGame();
-  if (view !== "player" || !game || game.paused || game.completedAt || document.hidden) return;
+  if (view !== "player" || !game || game.paused || game.completedAt || game.failedAt || document.hidden) return;
   game.elapsed++;
   const timer = document.querySelector("#timer"); if (timer) timer.textContent = formatTime(game.elapsed);
   if (++timerSaveCounter % 10 === 0) await store.putGame(game);

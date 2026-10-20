@@ -10,7 +10,7 @@ service cloud.firestore {
     function validGame(id) {
       let d = request.resource.data;
       return d.keys().hasAll(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId'])
-        && d.keys().hasOnly(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId', 'challenge'])
+        && d.keys().hasOnly(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'failedAt', 'mistakes', 'paused', 'hintStage', 'hintId', 'challenge'])
         && d.version == 1
         && d.id == id && validId(id)
         && d.puzzle is map && validId(d.puzzle.id)
@@ -33,6 +33,8 @@ service cloud.firestore {
         && d.startedAt is number && d.startedAt > 0
         && d.updatedAt is number && d.updatedAt >= d.startedAt
         && (d.completedAt == null || (d.completedAt is number && d.completedAt >= d.startedAt))
+        && (!('failedAt' in d) || d.failedAt == null || (d.failedAt is number && d.failedAt >= d.startedAt))
+        && (!('mistakes' in d) || (d.mistakes is int && d.mistakes >= 0 && d.mistakes <= 10000))
         && d.paused is bool
         && d.hintStage in ['none', 'minimal', 'preview']
         && (d.hintId == null || (d.hintId is string && d.hintId.size() <= 240))
@@ -85,7 +87,7 @@ service cloud.firestore {
         && d.version == 1
         && d.preferences is map
         && d.preferences.keys().hasAll(['theme', 'showTimer', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes'])
-        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
+        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'mistakeLimit', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
         && d.preferences.theme in ['system', 'light', 'dark']
         && (!('noteStyle' in d.preferences) || d.preferences.noteStyle in ['simple', 'advanced'])
         && d.preferences.showTimer is bool
@@ -99,6 +101,7 @@ service cloud.firestore {
         && d.preferences.highlightPeers is bool
         && d.preferences.highlightMatches is bool
         && d.preferences.showMistakes is bool
+        && (!('mistakeLimit' in d.preferences) || d.preferences.mistakeLimit is bool)
         && (!('noteSize' in d.preferences) || d.preferences.noteSize in ['small', 'medium', 'large'])
         && (!('menuSize' in d.preferences) || d.preferences.menuSize in ['small', 'medium', 'large'])
         && (!('digitSize' in d.preferences) || d.preferences.digitSize in ['small', 'medium', 'large'])

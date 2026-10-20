@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
+import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
 import { contextualHintExplanation } from "../src/hint-explanation.ts";
 import { buildHintPath, findHint, hintRespectsGivens, nextHintFromPath } from "../src/hint-engine.ts";
 import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
@@ -32,6 +32,37 @@ test("candidate calculation and logical hint identify a forced value", () => {
   assert.equal(hint?.technique, "Full house");
   assert.match(hint?.id || "", /^hodoku-/);
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
+});
+
+test("the default mistake limit allows three wrong digits and fails on the fourth", () => {
+  const game = createGame(fixture, 100);
+  selectCell(game, 2);
+  for (const digit of [1, 2, 3]) enterDigit(game, digit);
+  assert.equal(game.mistakes, MAX_MISTAKES);
+  assert.equal(game.failedAt, null);
+  enterDigit(game, 5);
+  assert.equal(game.mistakes, MAX_MISTAKES + 1);
+  assert.ok(game.failedAt);
+  assert.equal(game.paused, true);
+  assert.equal(game.completedAt, null);
+  undo(game);
+  assert.equal(game.mistakes, MAX_MISTAKES + 1, "undo does not erase a recorded mistake");
+  assert.ok(game.failedAt, "a failed attempt remains failed after board history changes");
+});
+
+test("notes never count as mistakes and the limit can be disabled", () => {
+  const notes = createGame(fixture, 200);
+  selectCell(notes, 2);
+  setMode(notes, "centre");
+  for (const digit of [1, 2, 3, 5]) enterDigit(notes, digit);
+  assert.equal(notes.mistakes, 0);
+  assert.equal(notes.failedAt, null);
+
+  const unlimited = createGame(fixture, 300);
+  selectCell(unlimited, 2);
+  for (const digit of [1, 2, 3, 5, 6]) enterDigit(unlimited, digit, true, "corner", false);
+  assert.equal(unlimited.mistakes, 0);
+  assert.equal(unlimited.failedAt, null);
 });
 
 test("contextual Empty Rectangle explanation names the actual box, arms, link and target", () => {

@@ -15,6 +15,8 @@ test("player preference presets migrate missing values and reject invalid values
   assert.equal(preferences.noteSize, "medium");
   assert.equal(preferences.highlightColour, "green");
   assert.equal(preferences.showColours, true);
+  assert.equal(preferences.mistakeLimit, true, "the three-mistake limit defaults on for existing profiles");
+  assert.equal(normalizePreferences({ mistakeLimit: false }).mistakeLimit, false);
 });
 
 test("IndexedDB persists active progress and backup import preserves existing IDs", async () => {
@@ -93,6 +95,9 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   assert.equal("hintPath" in encodedWithoutHints, false, "absent hint paths are omitted instead of sent as undefined");
   const game = createGame(puzzle, 700);
   game.challenge = { cadence: "daily", periodKey: "2026-10-10" };
+  game.mistakes = 4;
+  game.failedAt = 703;
+  game.paused = true;
   game.colours[0] = ["cyan", "amber", "indigo"];
   game.lines = [{ from: 0, to: 10, colour: "rose" }];
   game.hintPath = {
@@ -109,6 +114,8 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   assert.deepEqual(decoded?.colours[0], ["cyan", "amber", "indigo"]);
   assert.deepEqual(decoded?.lines, [{ from: 0, to: 10, colour: "rose" }]);
   assert.deepEqual(decoded?.challenge, { cadence: "daily", periodKey: "2026-10-10" });
+  assert.equal(decoded?.mistakes, 4, "the mistake count syncs with the puzzle session");
+  assert.equal(decoded?.failedAt, 703, "the failed-at timestamp syncs across devices");
   assert.deepEqual(decoded?.hintPath, game.hintPath, "cached logical paths sync with the puzzle session");
   game.hintPath.engine = "x".repeat(200_001);
   assert.equal("hintPath" in encodeCloudGame(game), false, "oversized regenerable hint paths cannot block puzzle progress sync");

@@ -286,6 +286,7 @@ textarea { min-height: 122px; padding: 12px; resize: vertical; font-family: ui-m
 .sudoku-board.drawing-lines { cursor: crosshair; }
 .pause-cover { position: absolute; z-index: 10; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; background: #11191ded; color: #fff; }
 .pause-cover strong { font-size: 27px; }.pause-cover span { margin-top: 7px; color: #afc0c6; font-size: 12px; }
+.failure-cover { background: color-mix(in srgb, var(--danger) 18%, #11191df2); }
 .controls { display: grid; gap: 12px; }
 .toolbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
 .toolbar button { min-height: 58px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); font-size: 21px; }
@@ -346,6 +347,8 @@ textarea { min-height: 122px; padding: 12px; resize: vertical; font-family: ui-m
 .completion-banner.celebrating { animation: completion-arrive .75s .15s cubic-bezier(.2,.9,.25,1.2) both; box-shadow: 0 0 34px color-mix(in srgb, var(--success) 35%, transparent); }
 .completion-banner > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: var(--success); color: #092117; font-weight: 900; }
 .completion-banner strong, .completion-banner small { display: block; }.completion-banner small { margin-top: 3px; color: var(--muted); }.completion-banner button { margin-left: auto; border: 0; background: transparent; color: var(--accent); font-weight: 800; }
+.completion-banner.failure-banner { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, var(--panel)); }
+.completion-banner.failure-banner > span { background: var(--danger); color: #fff; }
 @keyframes board-celebration { 0% { transform: scale(1); } 35% { transform: scale(1.018); box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 35%, transparent), 0 24px 70px #0008; } 100% { transform: scale(1); } }
 @keyframes completion-arrive { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes confetti-burst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0); } 12% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(620deg); } }

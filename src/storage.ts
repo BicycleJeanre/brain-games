@@ -71,10 +71,11 @@ async function readCombinedState(database: IDBPDatabase, store: string) {
 function stateCounts(value: RecordValue | null, collection: "games" | "progress") {
   const entries = Object.values(recordOrEmpty(value?.[collection]));
   const completed = entries.filter((entry) => isRecord(entry) && numeric(entry.completedAt) > 0);
+  const failed = entries.filter((entry) => isRecord(entry) && numeric(entry.failedAt) > 0);
   const recordedTimes = completed.map((entry) => numeric((entry as RecordValue).elapsedSeconds)).filter((seconds) => seconds > 0);
   return {
     total: entries.length,
-    active: entries.length - completed.length,
+    active: Math.max(0, entries.length - completed.length - failed.length),
     completed: completed.length,
     averageSeconds: recordedTimes.length ? Math.round(recordedTimes.reduce((sum, seconds) => sum + seconds, 0) / recordedTimes.length) : null,
   };
