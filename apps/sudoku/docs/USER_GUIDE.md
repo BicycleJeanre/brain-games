@@ -16,14 +16,14 @@ Open **Train** to follow a 21-technique curriculum from singles to expert forcin
 
 The **Curriculum filters** at the bottom are interactive. Choose a family such as **Wings** or **Coloring & chains** to show only those lesson cards; the page returns to the filtered lesson list automatically. Choose the active family again or select **Show all techniques** to restore the complete curriculum.
 
-Every lesson uses a compact position from HoDoKu2's official regression or exemplar library, pinned to a specific upstream commit. STrack rebuilds the candidate state from the original HoDoKu record and asks the local HoDoKu engine for that exact technique before showing the exercise. The source link below each board opens the precise upstream record. Chain diagrams use HoDoKu's structured links: solid for strong links and dashed for weak links. The records and engine are bundled, so training works offline.
+Every lesson uses a compact position from HoDoKu2's official regression or exemplar library, pinned to a specific upstream commit. STrack rebuilds the candidate state from the original HoDoKu record and asks the local HoDoKu engine for that exact technique before showing the exercise. The Learn step translates the engine result into grid-specific reasoning with named cells, units, branches, and conclusions instead of exposing HoDoKu's compact notation. The source link below each board opens the precise upstream record. Chain diagrams use HoDoKu's structured links: solid for strong links and dashed for weak links. The records and engine are bundled, so training works offline.
 
 In the puzzle grid, double-click or double-tap an empty cell containing exactly one centre note to promote that note to the full digit. The action clears both note types in the cell, cleans the digit from peer notes when candidate cleanup is enabled, and can be undone normally. Cells with no centre notes or more than one centre note are left unchanged.
 
 Every available lesson uses a genuine position derived from the bundled, documented puzzle catalogue and has four stages:
 
-1. **Learn** explains the pattern on a fully marked example. For advanced chains, the link path is drawn directly on the grid.
-2. **Find** removes the answer markings and asks you to select the cells that make the pattern. **Show a clue** identifies those cells without revealing the candidate deduction.
+1. **Learn** explains the pattern on a fully marked worked example. For advanced chains, the link path is drawn directly on the grid.
+2. **Find** opens a different HoDoKu-verified position, removes the answer markings, and asks you to select the cells that make the pattern. **Show a clue** identifies those cells without revealing the candidate deduction.
 3. **Deduce** asks you to choose the candidate to place or eliminate. **Show the answer** is an explicit fallback and never changes a puzzle.
 4. **Complete** records the session and offers repetition or the next technique.
 

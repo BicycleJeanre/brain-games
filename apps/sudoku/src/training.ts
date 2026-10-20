@@ -49,7 +49,7 @@ const lessonCopy: Record<TrainingTechniqueId, LessonCopy> = {
   "x-wing": { title: "X-Wing", family: "Fish", prerequisite: "naked-triple", concept: "A digit appears in the same two columns in two rows. Whichever corners are true, that digit cannot appear elsewhere in those columns.", findPrompt: "Select the four corners that form the X-Wing.", deductionPrompt: "Choose one candidate that the X-Wing eliminates." },
   "swordfish": { title: "Swordfish", family: "Fish", prerequisite: "x-wing", concept: "Three rows restrict one digit to the same three columns. Those columns are covered, so the digit can leave every other row there.", findPrompt: "Select the pattern cells HoDoKu uses for the Swordfish.", deductionPrompt: "Choose a candidate eliminated from a cover column." },
   "jellyfish": { title: "Jellyfish", family: "Fish", prerequisite: "swordfish", concept: "Four rows restrict one digit to four columns. The larger fish removes that digit from those columns in all other rows.", findPrompt: "Select the pattern cells HoDoKu uses for the Jellyfish.", deductionPrompt: "Choose a candidate eliminated from one of its four cover columns." },
-  "skyscraper": { title: "Skyscraper", family: "Single-digit patterns", prerequisite: "x-wing", concept: "Two rows each have a strong pair for one digit and share one base column. Any cell that sees both opposite roofs cannot contain the digit.", findPrompt: "Select the bases and roofs of the Skyscraper.", deductionPrompt: "Choose the candidate that sees both roofs." },
+  "skyscraper": { title: "Skyscraper", family: "Single-digit patterns", prerequisite: "x-wing", concept: "Two rows or two columns each contain a strong pair for one digit. One endpoint from each pair forms the shared base; any cell that sees both opposite roofs cannot contain the digit.", findPrompt: "Select the bases and roofs of the Skyscraper.", deductionPrompt: "Choose the candidate that sees both roofs." },
   "two-string-kite": { title: "Two-string kite", family: "Single-digit patterns", prerequisite: "skyscraper", concept: "A row strong link and a column strong link meet through one box. A cell seeing the two outer endpoints loses that digit.", findPrompt: "Select the endpoints of the row-and-column kite.", deductionPrompt: "Choose the candidate that sees both outer endpoints." },
   "empty-rectangle": { title: "Empty Rectangle", family: "Single-digit patterns", prerequisite: "two-string-kite", concept: "Inside one box, every candidate for a digit lies along one row or one column. An outside strong link connects to those arms so that either endpoint eliminates the same target.", findPrompt: "Select the box arms and outside strong-link cells that form the Empty Rectangle.", deductionPrompt: "Choose the candidate eliminated by both possible ends of the outside link." },
   "xy-wing": { title: "XY-Wing", family: "Wings", prerequisite: "naked-pair", concept: "A bivalue pivot sees two bivalue wings. The wings share a third digit, which can be removed from every cell that sees both wings.", findPrompt: "Select the pivot and its two wings.", deductionPrompt: "Choose the shared wing candidate that can be eliminated." },
@@ -89,7 +89,8 @@ export const TRAINING_ROADMAP = [
   { id: "expert", title: "Expert structures", detail: "Unique rectangles, ALS-XZ, forcing chains", families: ["Uniqueness & ALS", "Forcing"] },
 ] as const;
 
-const positionCache = new Map<TrainingTechniqueId, TrainingPosition>();
+const positionCache = new Map<string, TrainingPosition>();
+export type TrainingPositionKind = "example" | "practice";
 
 export function trainingTechnique(id: TrainingTechniqueId) { return TRAINING_TECHNIQUES.find((technique) => technique.id === id)!; }
 
@@ -105,22 +106,24 @@ export function trainingTechniqueForHint(technique: string): TrainingTechnique |
   return id ? trainingTechnique(id) : null;
 }
 
-export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[]): TrainingPosition | null {
-  const cached = positionCache.get(id);
+export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle[], kind: TrainingPositionKind = "practice"): TrainingPosition | null {
+  const cacheKey = `${id}-${kind}`;
+  const cached = positionCache.get(cacheKey);
   if (cached) return cached;
-  const source = trainingCatalogue.lessons.find((lesson) => lesson.id === id);
-  if (!source) return null;
+  const lesson = trainingCatalogue.lessons.find((item) => item.id === id);
+  if (!lesson) return null;
+  const source = lesson[kind];
   const board = Board.fromString(source.record);
   const values = Array.from(board.values, (value) => value ? String(value) : "");
   const candidates = Array.from({ length: 81 }, (_, cell) => values[cell] ? [] : [...board.getCandidates(cell)]);
   const eliminated = Array.from({ length: 81 }, (_, cell) => values[cell] ? [] : candidateList(values, cell).filter((digit) => !candidates[cell].includes(digit)));
-  const step = findTechnique(board, source.technique as SolutionType);
+  const step = findTechnique(board, lesson.technique as SolutionType);
   if (!step) return null;
   const hint = convertHoDoKuHint(step, values, candidates);
   if (!hint) return null;
   const position: TrainingPosition = {
     puzzle: null,
-    origin: `HoDoKu ${source.library} · ${source.technique} · source line ${source.sourceLine}`,
+    origin: `HoDoKu ${source.library} · ${lesson.technique} · source line ${source.sourceLine}`,
     sourceUrl: `${trainingCatalogue.sourceUrl}/blob/${trainingCatalogue.sourceCommit}/${source.library}.txt#L${source.sourceLine}`,
     values,
     givens: Array.from(board.fixed, Boolean),
@@ -128,7 +131,7 @@ export function findTrainingPosition(id: TrainingTechniqueId, _catalogue: Puzzle
     candidates,
     hint,
   };
-  positionCache.set(id, position);
+  positionCache.set(cacheKey, position);
   return position;
 }
 

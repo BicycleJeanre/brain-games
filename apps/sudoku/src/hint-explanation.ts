@@ -16,6 +16,16 @@ const rowOf = (cell: number) => Math.floor(cell / 9);
 const columnOf = (cell: number) => cell % 9;
 const boxOf = (cell: number) => Math.floor(rowOf(cell) / 3) * 3 + Math.floor(columnOf(cell) / 3);
 
+function lineHouse(a: number, b: number): string | null {
+  if (rowOf(a) === rowOf(b)) return `Row ${rowOf(a) + 1}`;
+  if (columnOf(a) === columnOf(b)) return `Column ${columnOf(a) + 1}`;
+  return null;
+}
+
+function sharedHouse(a: number, b: number): string | null {
+  return lineHouse(a, b) || (boxOf(a) === boxOf(b) ? `Box ${boxOf(a) + 1}` : null);
+}
+
 function cellList(cells: readonly number[]): string {
   const labels = [...new Set(cells)].map(compactCell);
   if (labels.length <= 1) return labels[0] || "the highlighted cell";
@@ -24,6 +34,51 @@ function cellList(cells: readonly number[]): string {
 
 function targets(hint: Hint): string {
   return hint.targets.map(({ cell, digit }) => `${digit} at ${compactCell(cell)}`).join(", ");
+}
+
+function skyscraperExplanation(hint: Hint): ContextualHintExplanation | null {
+  const digit = hint.targets[0]?.digit;
+  const evidence = [...new Set(hint.evidence)];
+  if (!digit || hint.kind !== "eliminate" || evidence.length !== 4 || hint.targets.some((target) => target.digit !== digit)) return null;
+
+  let shape: { bases: [number, number]; roofs: [number, number]; strongHouses: [string, string]; baseHouse: string } | null = null;
+  for (let first = 0; first < evidence.length && !shape; first++) {
+    for (let second = first + 1; second < evidence.length && !shape; second++) {
+      const bases: [number, number] = [evidence[first], evidence[second]];
+      const baseHouse = lineHouse(...bases);
+      if (!baseHouse) continue;
+      const remaining = evidence.filter((cell) => !bases.includes(cell));
+      for (const roofs of [remaining, [...remaining].reverse()] as number[][]) {
+        const firstHouse = lineHouse(bases[0], roofs[0]);
+        const secondHouse = lineHouse(bases[1], roofs[1]);
+        if (!firstHouse || !secondHouse || firstHouse === baseHouse || secondHouse === baseHouse || firstHouse === secondHouse) continue;
+        shape = { bases, roofs: roofs as [number, number], strongHouses: [firstHouse, secondHouse], baseHouse };
+        break;
+      }
+    }
+  }
+  if (!shape) return null;
+
+  const [firstBase, secondBase] = shape.bases;
+  const [firstRoof, secondRoof] = shape.roofs;
+  const sightLines = hint.targets.map(({ cell }) => {
+    const firstView = sharedHouse(cell, firstRoof);
+    const secondView = sharedHouse(cell, secondRoof);
+    return firstView && secondView
+      ? `${compactCell(cell)} sees ${compactCell(firstRoof)} through ${firstView} and ${compactCell(secondRoof)} through ${secondView}`
+      : `${compactCell(cell)} sees both roofs`;
+  });
+
+  return {
+    title: "Why does this Skyscraper eliminate these candidates?",
+    steps: [
+      `In ${shape.strongHouses[0]}, ${digit} is restricted to ${compactCell(firstBase)} or ${compactCell(firstRoof)}. In ${shape.strongHouses[1]}, it is restricted to ${compactCell(secondBase)} or ${compactCell(secondRoof)}. These are the two strong links.`,
+      `${compactCell(firstBase)} and ${compactCell(secondBase)} are the bases. They share ${shape.baseHouse}, so they cannot both be ${digit}; at least one base must be false.`,
+      `If ${compactCell(firstBase)} is not ${digit}, its strong link forces ${compactCell(firstRoof)} to be ${digit}. If ${compactCell(secondBase)} is not ${digit}, its strong link forces ${compactCell(secondRoof)} to be ${digit}. Therefore at least one roof is ${digit}.`,
+      `${sightLines.join("; ")}. Because every target sees both roofs, it sees whichever roof becomes ${digit}.`,
+      `Therefore remove ${digit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
+    ],
+  };
 }
 
 function emptyRectangleExplanation(hint: Hint): ContextualHintExplanation | null {
@@ -121,6 +176,10 @@ function avoidableRectangleType1Explanation(hint: Hint, context: ContextualHintC
 }
 
 export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
+  if (hint.technique === "Skyscraper") {
+    const explanation = skyscraperExplanation(hint);
+    if (explanation) return explanation;
+  }
   if (hint.technique === "Empty Rectangle") {
     const explanation = emptyRectangleExplanation(hint);
     if (explanation) return explanation;

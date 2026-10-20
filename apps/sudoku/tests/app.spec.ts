@@ -82,8 +82,10 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await page.getByRole("button", { name: "Show all techniques" }).click();
   await expect(page.locator(".lesson-card")).toHaveCount(21);
   await page.getByRole("button", { name: /Naked single/ }).last().click();
-  await expect(page.getByText("Step 1 · Learn")).toBeVisible();
-  await page.getByRole("button", { name: "Practice this position" }).click();
+  await expect(page.getByText("Step 1 · Worked example")).toBeVisible();
+  const workedExample = await page.getByRole("grid", { name: "Training Sudoku grid" }).innerText();
+  await page.getByRole("button", { name: "Practice with a new position" }).click();
+  await expect.poll(() => page.getByRole("grid", { name: "Training Sudoku grid" }).innerText()).not.toBe(workedExample);
   await page.getByRole("button", { name: "Show a clue" }).click();
   await expect(page.locator(".training-candidate.training-answer")).toHaveCount(0);
   await page.locator(".training-focus[data-training-select]").click();
@@ -99,6 +101,19 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await expect(page.locator(".training-links .strong")).toHaveCount(3);
   await expect(page.locator(".training-links .weak")).toHaveCount(2);
   await expect(page.getByRole("link", { name: /HoDoKu reglib-1.3 · X_CHAIN/ })).toBeVisible();
+});
+
+test("Skyscraper training explains the shown strong links and eliminations in plain language", async ({ page }) => {
+  await page.getByRole("button", { name: "Train", exact: true }).click();
+  await page.locator('[data-training="skyscraper"]').last().click();
+  const explanation = page.locator(".lesson-explanation");
+  await expect(explanation).toContainText("Column 6");
+  await expect(explanation).toContainText("R3C6 or R5C6");
+  await expect(explanation).toContainText("Column 9");
+  await expect(explanation).toContainText("R3C9 or R6C9");
+  await expect(explanation).toContainText("at least one roof is 6");
+  await expect(explanation).toContainText("remove 6 from R5C7, R5C8, R6C4 and R6C5");
+  await expect(explanation).not.toContainText("r5c6,r6c9");
 });
 
 test("the settings menu toggles back to the screen it opened from", async ({ page }) => {
@@ -693,7 +708,7 @@ test("a supported hint opens its matching strategy lesson", async ({ page }) => 
   await expect(practice).toBeVisible();
   await practice.click();
   await expect(page.getByRole("heading", { name: "Naked single", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Practice this position" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Practice with a new position" })).toBeVisible();
 });
 
 test("an already-applied saved hint is not reopened after restart", async ({ page }) => {
