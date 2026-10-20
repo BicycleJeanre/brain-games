@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_TECHNIQUES, trainingTechniqueForHint, validateTrainingPosition } from "../src/training.ts";
+import { deductionMatches, findTrainingPosition, patternCells, patternMatches, TRAINING_TECHNIQUES, trainingPracticeCount, trainingTechniqueForHint, validateTrainingPosition } from "../src/training.ts";
 import type { Puzzle } from "../src/types.ts";
 
 const catalogue = JSON.parse(readFileSync(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
@@ -9,12 +9,15 @@ const catalogue = JSON.parse(readFileSync(new URL("../src/data/puzzles.json", im
 test("every lesson is a valid HoDoKu library position", () => {
   for (const technique of TRAINING_TECHNIQUES) {
     const example = findTrainingPosition(technique.id, catalogue, "example");
-    const practice = findTrainingPosition(technique.id, catalogue, "practice");
+    const practiceCount = trainingPracticeCount(technique.id);
+    const practices = Array.from({ length: practiceCount }, (_, index) => findTrainingPosition(technique.id, catalogue, "practice", index));
     assert.ok(example, `${technique.title} needs a worked example`);
-    assert.ok(practice, `${technique.title} needs a practice position`);
-    assert.notDeepEqual(example.values, practice.values, `${technique.title} must use a different practice grid`);
-    assert.notEqual(example.sourceUrl, practice.sourceUrl, `${technique.title} positions must have separate provenance links`);
-    for (const position of [example, practice]) {
+    assert.equal(practiceCount, 4, `${technique.title} needs four practice positions`);
+    assert.ok(practices.every(Boolean), `${technique.title} needs every practice position`);
+    const positions = [example, ...practices] as NonNullable<typeof example>[];
+    assert.equal(new Set(positions.map((position) => position.values.join(""))).size, positions.length, `${technique.title} grids must all be visually distinct`);
+    assert.equal(new Set(positions.map((position) => position.sourceUrl)).size, positions.length, `${technique.title} positions must have separate provenance links`);
+    for (const position of positions) {
       assert.match(position.origin, /^HoDoKu (reglib-1\.3|exemplars-1\.0)/);
       assert.match(position.sourceUrl, /^https:\/\/github\.com\/wyzelli\/Hodoku2\/blob\/405a6843/);
       assert.equal(position.givens.length, 81);

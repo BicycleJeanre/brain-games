@@ -7,6 +7,7 @@ import {
 } from "../vendor/hodoku-ts/dist/index.js";
 
 const SOURCE_COMMIT = "405a68437af277ad31a37106b489079295ad1fca";
+const PRACTICE_COUNT = 4;
 const sourceDir = resolve(process.argv[2] || "../Hodoku2");
 
 const requested = [
@@ -63,20 +64,20 @@ const lessons = requested.map(([id, code, technique]) => {
   const matches = regLines
     .map((record, index) => ({ record, line: index + 1 }))
     .filter(({ record }) => record.startsWith(`:${code}:`) && exactStep(record, technique));
-  const example = matches[0];
-  const practice = matches.find(({ record }) => valueSignature(record) !== valueSignature(example?.record || record));
-  if (!example || !practice) throw new Error(`Need two visually distinct passing HoDoKu regression records for ${id} (${code}/${technique})`);
+  const distinct = [...new Map(matches.map((match) => [valueSignature(match.record), match])).values()];
+  const [example, ...practices] = distinct;
+  if (!example || practices.length < PRACTICE_COUNT) throw new Error(`Need ${PRACTICE_COUNT + 1} visually distinct passing HoDoKu regression records for ${id} (${code}/${technique})`);
   return {
     id, technique,
     example: { library: "reglib-1.3", sourceLine: example.line, record: example.record },
-    practice: { library: "reglib-1.3", sourceLine: practice.line, record: practice.record },
+    practices: practices.slice(0, PRACTICE_COUNT).map((practice) => ({ library: "reglib-1.3", sourceLine: practice.line, record: practice.record })),
   };
 });
 
 const exemplarText = readFileSync(resolve(sourceDir, "exemplars-1.0.txt")).toString("utf16le").replace(/^\uFEFF/, "");
 const exemplarLines = exemplarText.split(/\r?\n/);
 const forcingPositions = [];
-for (let sourceLine = 0; sourceLine < exemplarLines.length && forcingPositions.length < 2; sourceLine++) {
+for (let sourceLine = 0; sourceLine < exemplarLines.length && forcingPositions.length < PRACTICE_COUNT + 1; sourceLine++) {
   const puzzle = exemplarLines[sourceLine].split("#")[0].trim();
   if (!/^[.1-9]{81}$/.test(puzzle) || !exemplarLines[sourceLine].includes("fcv(")) continue;
   const board = Board.fromString(puzzle);
@@ -102,16 +103,16 @@ for (let sourceLine = 0; sourceLine < exemplarLines.length && forcingPositions.l
     finder.doStep(found);
   }
 }
-if (forcingPositions.length < 2) throw new Error("Need two HoDoKu forcing-chain exemplars reached by the enabled solver path");
+if (forcingPositions.length < PRACTICE_COUNT + 1) throw new Error(`Need ${PRACTICE_COUNT + 1} HoDoKu forcing-chain exemplars reached by the enabled solver path`);
 lessons.push({
   id: "forcing-chain",
   technique: forcingPositions[0].technique,
   example: forcingPositions[0],
-  practice: forcingPositions[1],
+  practices: forcingPositions.slice(1),
 });
 
 process.stdout.write(`${JSON.stringify({
-  schemaVersion: 2,
+  schemaVersion: 3,
   source: "HoDoKu2 official regression and exemplar libraries",
   sourceUrl: "https://github.com/wyzelli/Hodoku2",
   sourceCommit: SOURCE_COMMIT,
