@@ -322,8 +322,7 @@ textarea { min-height: 122px; padding: 12px; resize: vertical; font-family: ui-m
 .highlight-options div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .highlight-options button { min-height: 38px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--menu-user-colour); font-size: var(--menu-text-size); font-weight: 800; }
 .highlight-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-.control-help, .quiet-warning { margin: 0; padding: 10px 12px; border-left: 2px solid var(--border-strong); color: var(--menu-user-colour); font-size: var(--menu-text-size); line-height: 1.6; }
-.quiet-warning { border-color: #eaa94a; }
+.control-help { margin: 0; padding: 10px 12px; border-left: 2px solid var(--border-strong); color: var(--menu-user-colour); font-size: var(--menu-text-size); line-height: 1.6; }
 .hint-panel { padding: 16px; border: 1px solid #b9852e; border-radius: 10px; background: #e9a93812; }
 .hint-panel p { margin: 6px 0 12px; }.hint-panel .actions { display: flex; gap: 12px; align-items: center; }
 .hint-answer { padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--text); }
