@@ -59,6 +59,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
     game.values = game.puzzle.solution.split("");
     game.completedAt = completedAt;
     game.updatedAt = completedAt;
+    game.cloudDirty = true;
     store.put(data, "app");
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();

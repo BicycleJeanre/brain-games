@@ -41,6 +41,31 @@ test("IndexedDB persists active progress and backup import preserves existing ID
   assert.equal(second.activeGame(), null);
 });
 
+test("local UI saves stay off the cloud queue while durable changes retain retry state", async () => {
+  const { Store } = await import("../src/store.ts");
+  const store = new Store();
+  await store.clear("all");
+  let queuedGames = 0;
+  store.onGameSaved = () => { queuedGames++; };
+  const game = createGame(puzzle, 150);
+
+  game.selected = [12];
+  game.mode = "centre";
+  await store.putGame(game, false, false);
+  assert.equal(queuedGames, 0);
+  assert.equal(game.cloudDirty, undefined);
+
+  game.values[0] = "1";
+  game.updatedAt = 160;
+  await store.putGame(game, false, true);
+  assert.equal(queuedGames, 1);
+  assert.equal(game.cloudDirty, true, "an interrupted upload remains discoverable after restart");
+
+  await store.markGameSynced(game.id, 4, 160);
+  assert.equal(game.cloudRevision, 4);
+  assert.equal(game.cloudDirty, false);
+});
+
 test("cloud merge keeps the newest puzzle and settings versions", async () => {
   const { Store } = await import("../src/store.ts");
   const store = new Store();
@@ -49,14 +74,16 @@ test("cloud merge keeps the newest puzzle and settings versions", async () => {
   local.updatedAt = 300;
   local.values[0] = "1";
   await store.putGame(local);
+  await store.markGameSynced(local.id, 1, local.updatedAt);
   const older = structuredClone(local); older.updatedAt = 250; older.values[0] = "2";
   assert.equal(await store.mergeCloudGame(older), false);
   assert.equal(store.data.games[local.id].values[0], "1");
-  const newer = structuredClone(local); newer.updatedAt = 350; newer.values[0] = "3";
+  const newer = structuredClone(local); newer.cloudRevision = 2; newer.updatedAt = 350; newer.values[0] = "3";
   assert.equal(await store.mergeCloudGame(newer), true);
   assert.equal(store.data.games[local.id].values[0], "3");
+  await store.markSettingsSynced(1, store.data.settingsUpdatedAt);
   const remotePreferences = { ...store.data.preferences, theme: "dark" as const };
-  assert.equal(await store.mergeCloudSettings({ preferences: remotePreferences, activeGameId: local.id, trainingProgress: { "naked-single": { attempts: 3, correct: 3, completed: 3, mastered: true, lastPracticedAt: 123 } }, updatedAt: store.data.settingsUpdatedAt + 10 }), true);
+  assert.equal(await store.mergeCloudSettings({ cloudRevision: 2, preferences: remotePreferences, activeGameId: local.id, trainingProgress: { "naked-single": { attempts: 3, correct: 3, completed: 3, mastered: true, lastPracticedAt: 123 } }, updatedAt: store.data.settingsUpdatedAt + 10 }), true);
   assert.equal(store.data.preferences.theme, "dark");
   assert.equal(store.data.trainingProgress["naked-single"]?.mastered, true);
 });
@@ -96,6 +123,11 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   const encodedWithoutHints = encodeCloudGame(gameWithoutHints);
   assert.equal("hintPath" in encodedWithoutHints, false, "absent hint paths are omitted instead of sent as undefined");
   const game = createGame(puzzle, 700);
+  game.cloudRevision = 7;
+  game.cloudDirty = true;
+  game.selected = [4, 5];
+  game.anchor = 5;
+  game.mode = "centre";
   game.challenge = { cadence: "daily", periodKey: "2026-10-10" };
   game.mistakes = 4;
   game.failedAt = 703;
@@ -109,6 +141,11 @@ test("cloud encoding preserves multiple colours and line annotations without nes
     hints: [{ id: "hodoku-test", technique: "Naked single", summary: "Test", explanation: "Test", kind: "place", evidence: [1], targets: [{ cell: 0, digit: 1 }] }],
   };
   const encoded = encodeCloudGame(game);
+  assert.equal(encoded.cloudRevision, 7);
+  assert.equal("selected" in encoded, false, "transient selection state is not uploaded");
+  assert.equal("anchor" in encoded, false, "the local cursor is not uploaded");
+  assert.equal("mode" in encoded, false, "the local input mode is not uploaded");
+  assert.equal("cloudDirty" in encoded, false, "local queue metadata is not uploaded");
   assert.equal(encoded.colours[0], "cyan|amber|indigo");
   assert.deepEqual(encoded.lines, [{ from: 0, to: 10, colour: "rose" }]);
   assert.equal(typeof encoded.hintPath, "string", "nested hint data is serialized for Firestore");
@@ -119,6 +156,10 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   assert.equal(decoded?.mistakes, 4, "the mistake count syncs with the puzzle session");
   assert.equal(decoded?.failedAt, 703, "the failed-at timestamp syncs across devices");
   assert.deepEqual(decoded?.hintPath, game.hintPath, "cached logical paths sync with the puzzle session");
+  assert.equal(decoded?.cloudRevision, 7);
+  assert.deepEqual(decoded?.selected, []);
+  assert.equal(decoded?.anchor, -1);
+  assert.equal(decoded?.mode, "normal");
   game.hintPath.engine = "x".repeat(200_001);
   assert.equal("hintPath" in encodeCloudGame(game), false, "oversized regenerable hint paths cannot block puzzle progress sync");
 

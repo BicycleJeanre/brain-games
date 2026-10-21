@@ -60,6 +60,8 @@ export function emptyData(): AppData {
     version: 1,
     catalogueVersion: CATALOGUE_VERSION,
     settingsUpdatedAt: 0,
+    settingsCloudRevision: 0,
+    settingsCloudDirty: false,
     preferences: { ...DEFAULT_PREFERENCES },
     trainingProgress: {},
     games: {},
@@ -130,6 +132,8 @@ function normalizeHintPath(value: unknown): HintPath | undefined {
 
 function normalizeGame(game: Game): Game {
   normalizeSnapshot(game);
+  game.cloudRevision = Math.max(0, Math.floor(Number(game.cloudRevision) || 0));
+  game.cloudDirty = Boolean(game.cloudDirty);
   game.mistakes = Math.max(0, Math.floor(Number(game.mistakes) || 0));
   game.failedAt = Number.isFinite(game.failedAt) && Number(game.failedAt) >= game.startedAt ? Number(game.failedAt) : null;
   if (game.failedAt) {
@@ -178,6 +182,8 @@ export class Store {
         ...emptyData(),
         ...saved,
         settingsUpdatedAt: saved.settingsUpdatedAt || 0,
+        settingsCloudRevision: Math.max(0, Math.floor(Number(saved.settingsCloudRevision) || 0)),
+        settingsCloudDirty: Boolean(saved.settingsCloudDirty),
         preferences: normalizePreferences(saved.preferences),
         trainingProgress: normalizeTrainingProgress(saved.trainingProgress),
         games: Object.fromEntries(Object.entries(saved.games || {}).map(([id, game]) => [id, normalizeGame(game as Game)])),
@@ -194,35 +200,60 @@ export class Store {
     return this.data.activeGameId ? this.data.games[this.data.activeGameId] || null : null;
   }
 
-  async putGame(game: Game, active = true) {
+  async putGame(game: Game, active = true, sync = true) {
     delete this.data.deletedGames[game.id];
+    if (sync) game.cloudDirty = true;
     this.data.games[game.id] = game;
     if (active && this.data.activeGameId !== game.id) {
       this.data.activeGameId = game.id;
       this.data.settingsUpdatedAt = Date.now();
+      this.data.settingsCloudDirty = true;
       this.onSettingsSaved?.();
     }
     await this.save();
-    this.onGameSaved?.(game);
+    if (sync) this.onGameSaved?.(game);
   }
 
   async saveSettings() {
     this.data.settingsUpdatedAt = Date.now();
+    this.data.settingsCloudDirty = true;
     await this.save();
     this.onSettingsSaved?.();
+  }
+
+  async markGameSynced(id: string, revision: number, syncedUpdatedAt: number) {
+    const game = this.data.games[id];
+    if (!game) return;
+    game.cloudRevision = Math.max(game.cloudRevision || 0, revision);
+    if (game.updatedAt <= syncedUpdatedAt) game.cloudDirty = false;
+    await this.save();
+  }
+
+  async markSettingsSynced(revision: number, syncedUpdatedAt: number) {
+    this.data.settingsCloudRevision = Math.max(this.data.settingsCloudRevision || 0, revision);
+    if (this.data.settingsUpdatedAt <= syncedUpdatedAt) this.data.settingsCloudDirty = false;
+    await this.save();
   }
 
   async mergeCloudGame(game: Game) {
     normalizeGame(game);
     if (this.data.deletedGames[game.id]) return false;
     const local = this.data.games[game.id];
-    if (local && local.updatedAt >= game.updatedAt) return false;
+    if (local?.cloudDirty) return false;
+    if (local) {
+      const localRevision = local.cloudRevision || 0;
+      const remoteRevision = game.cloudRevision || 0;
+      const remoteIsNewer = localRevision > 0 && remoteRevision > 0
+        ? remoteRevision > localRevision
+        : game.updatedAt > local.updatedAt;
+      if (!remoteIsNewer) return false;
+    }
     this.data.games[game.id] = game;
     await this.save();
     return true;
   }
 
-  async mergeCloudSettings(settings: { preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number }) {
+  async mergeCloudSettings(settings: { cloudRevision?: number; preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number }) {
     let changed = false;
     for (const [id, deletedAt] of Object.entries(settings.deletedGames || {})) {
       if (!Number.isFinite(deletedAt) || deletedAt <= (this.data.deletedGames[id] || 0)) continue;
@@ -231,11 +262,18 @@ export class Store {
       if (this.data.activeGameId === id) this.data.activeGameId = null;
       changed = true;
     }
-    if (this.data.settingsUpdatedAt < settings.updatedAt) {
+    const localRevision = this.data.settingsCloudRevision || 0;
+    const remoteRevision = Math.max(0, Math.floor(Number(settings.cloudRevision) || 0));
+    const remoteIsNewer = localRevision > 0 && remoteRevision > 0
+      ? remoteRevision > localRevision
+      : settings.updatedAt > this.data.settingsUpdatedAt;
+    if (!this.data.settingsCloudDirty && remoteIsNewer) {
       this.data.preferences = normalizePreferences(settings.preferences);
       if (settings.trainingProgress !== undefined) this.data.trainingProgress = normalizeTrainingProgress(settings.trainingProgress);
       this.data.activeGameId = settings.activeGameId && !this.data.deletedGames[settings.activeGameId] ? settings.activeGameId : null;
       this.data.settingsUpdatedAt = settings.updatedAt;
+      this.data.settingsCloudRevision = remoteRevision;
+      this.data.settingsCloudDirty = false;
       changed = true;
     }
     if (!changed) return false;
@@ -252,6 +290,7 @@ export class Store {
     this.data.deletedGames = Object.fromEntries(deletions);
     if (this.data.activeGameId === id) this.data.activeGameId = null;
     this.data.settingsUpdatedAt = Math.max(Date.now(), deletedAt);
+    this.data.settingsCloudDirty = true;
     await this.save();
     this.onSettingsSaved?.();
     return true;
@@ -277,6 +316,7 @@ export class Store {
       else if (game?.puzzle?.givens?.length === 81 && game.values?.length === 81) {
         delete this.data.deletedGames[id];
         this.data.games[id] = normalizeGame(game);
+        this.data.games[id].cloudDirty = true;
         added++;
       } else throw new Error(`Game ${id} is incomplete; nothing was imported.`);
     }

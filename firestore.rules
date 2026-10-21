@@ -12,6 +12,7 @@ service cloud.firestore {
     function validSudokuGame(id) {
       let d = request.resource.data;
       return d.version == 1
+        && (!('cloudRevision' in d) || (d.cloudRevision is int && d.cloudRevision >= 0))
         && d.id == id && validId(id)
         && d.values is list && d.values.size() == 81
         && d.corner is list && d.corner.size() == 81
@@ -22,6 +23,7 @@ service cloud.firestore {
     function validSudokuSettings() {
       let d = request.resource.data;
       return d.version == 1
+        && (!('cloudRevision' in d) || (d.cloudRevision is int && d.cloudRevision >= 0))
         && d.preferences is map
         && d.updatedAt is number
         && (!('deletedGames' in d) || (d.deletedGames is map && d.deletedGames.size() <= 500));

@@ -73,8 +73,9 @@ type CloudSnapshot = Omit<BoardSnapshot, "corner" | "centre" | "colours" | "elim
   eliminated: string[];
 };
 
-type CloudGame = Omit<Game, "corner" | "centre" | "colours" | "eliminated" | "history" | "future" | "hintHistory" | "hintPath"> & CloudSnapshot & {
+type CloudGame = Omit<Game, "corner" | "centre" | "colours" | "eliminated" | "history" | "future" | "hintHistory" | "hintPath" | "selected" | "anchor" | "mode" | "cloudDirty"> & CloudSnapshot & {
   version: 1;
+  cloudRevision: number;
   history: string[];
   future: string[];
   hintHistory: string[];
@@ -106,12 +107,13 @@ function decodeSnapshot(value: string): BoardSnapshot | null {
   }
 }
 
-export function encodeCloudGame(game: Game): CloudGame {
+export function encodeCloudGame(game: Game, cloudRevision = game.cloudRevision || 0): CloudGame {
   const hintPath = game.hintPath ? JSON.stringify(game.hintPath) : "";
-  const { hintPath: _hintPath, ...cloudGame } = game;
+  const { hintPath: _hintPath, selected: _selected, anchor: _anchor, mode: _mode, cloudDirty: _cloudDirty, ...cloudGame } = game;
   const encoded: CloudGame = {
     ...cloudGame,
     version: 1,
+    cloudRevision,
     corner: encodeMarks(game.corner),
     centre: encodeMarks(game.centre),
     colours: encodeColours(game.colours),
@@ -152,13 +154,13 @@ export function decodeCloudGame(value: unknown): Game | null {
   catch { return null; }
   if (history.some((item) => !item) || future.some((item) => !item) || hintHistory.length > 40) return null;
   const { version: _version, ...rest } = game;
-  return { ...rest, corner: decodeMarks(game.corner), centre: decodeMarks(game.centre), colours: decodeColours(game.colours), eliminated: decodeMarks(game.eliminated), lines: Array.isArray(game.lines) ? game.lines : [], history: history as BoardSnapshot[], future: future as BoardSnapshot[], hintHistory, hintPath };
+  return { ...rest, cloudRevision: Math.max(0, Math.floor(Number(game.cloudRevision) || 0)), cloudDirty: false, selected: [], anchor: -1, mode: "normal", corner: decodeMarks(game.corner), centre: decodeMarks(game.centre), colours: decodeColours(game.colours), eliminated: decodeMarks(game.eliminated), lines: Array.isArray(game.lines) ? game.lines : [], history: history as BoardSnapshot[], future: future as BoardSnapshot[], hintHistory, hintPath };
 }
 
-export type CloudSettings = { version: 1; preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number };
+export type CloudSettings = { version: 1; cloudRevision: number; preferences: Preferences; activeGameId: string | null; deletedGames?: Record<string, number>; trainingProgress?: TrainingProgress; updatedAt: number };
 
-export function encodeCloudSettings(data: Pick<AppData, "preferences" | "activeGameId" | "deletedGames" | "trainingProgress" | "settingsUpdatedAt">): CloudSettings {
-  return { version: 1, preferences: data.preferences, activeGameId: data.activeGameId, deletedGames: data.deletedGames, trainingProgress: data.trainingProgress, updatedAt: data.settingsUpdatedAt };
+export function encodeCloudSettings(data: Pick<AppData, "preferences" | "activeGameId" | "deletedGames" | "trainingProgress" | "settingsUpdatedAt" | "settingsCloudRevision">, cloudRevision = data.settingsCloudRevision || 0): CloudSettings {
+  return { version: 1, cloudRevision, preferences: data.preferences, activeGameId: data.activeGameId, deletedGames: data.deletedGames, trainingProgress: data.trainingProgress, updatedAt: data.settingsUpdatedAt };
 }
 
 function validSettings(value: unknown): value is CloudSettings {
@@ -174,20 +176,32 @@ export class CloudSync {
   private store: Store;
   private changed: () => void;
   private stops: Unsubscribe[] = [];
+  private pendingGames = new Map<string, number>();
+  private pendingDeletes = new Set<string>();
+  private pendingSettings = false;
+  private flushTimer: number | null = null;
+  private flushPromise: Promise<void> | null = null;
+  private inFlightCount = 0;
+  private reconciledGames = false;
+  private reconciledSettings = false;
 
   constructor(store: Store, changed: () => void) {
     this.store = store;
     this.changed = changed;
     addEventListener("online", () => {
-      if (this.user) void this.uploadLocal();
+      if (this.user) void this.flushNow();
     });
   }
 
   status() {
     if (!cloudConfigured) return "Device only";
     if (!this.user) return "Sign in to sync";
+    if (!navigator.onLine) return "Saved locally · offline";
+    if (this.working) {
+      const count = this.pendingGames.size + this.pendingDeletes.size + Number(this.pendingSettings) + this.inFlightCount;
+      return count ? `Syncing ${count} ${count === 1 ? "change" : "changes"}…` : "Syncing…";
+    }
     if (this.error) return "Sync needs attention";
-    if (this.working) return "Syncing…";
     return this.ready ? "Synced" : "Connecting…";
   }
 
@@ -196,56 +210,88 @@ export class CloudSync {
     this.user = user;
     this.error = "";
     this.ready = false;
+    this.reconciledGames = false;
+    this.reconciledSettings = false;
     this.changed();
     if (!user || !database) return;
     const games = collection(database, "users", user.uid, "sudokuGames");
     const settings = doc(database, "users", user.uid, "sudokuMeta", "settings");
     this.stops.push(onSnapshot(games, { includeMetadataChanges: true }, async (snapshot) => {
       let updated = false;
+      const remoteGames = new Map<string, Game>();
       for (const change of snapshot.docChanges()) {
         if (change.type === "removed") updated = (await this.store.removeGame(change.doc.id)) || updated;
       }
       for (const item of snapshot.docs) {
         const game = decodeCloudGame(item.data());
-        if (game) updated = (await this.store.mergeCloudGame(game)) || updated;
+        if (!game) continue;
+        remoteGames.set(game.id, game);
+        updated = (await this.store.mergeCloudGame(game)) || updated;
       }
-      if (!snapshot.metadata.fromCache) this.ready = true;
+      if (!snapshot.metadata.fromCache && !this.reconciledGames) {
+        this.reconciledGames = true;
+        for (const game of Object.values(this.store.data.games)) {
+          const remote = remoteGames.get(game.id);
+          if (game.cloudDirty || !remote || ((!game.cloudRevision || !remote.cloudRevision) && game.updatedAt > remote.updatedAt)) this.queueGame(game);
+        }
+        for (const id of Object.keys(this.store.data.deletedGames)) if (remoteGames.has(id)) this.queueDelete(id);
+        this.updateReady();
+      }
       if (updated || !snapshot.metadata.fromCache) this.changed();
     }, (error) => this.fail(error)));
     this.stops.push(onSnapshot(settings, { includeMetadataChanges: true }, async (snapshot) => {
       const data = snapshot.data();
       if (snapshot.exists() && validSettings(data) && await this.store.mergeCloudSettings(data)) this.changed();
+      if (!snapshot.metadata.fromCache && !this.reconciledSettings) {
+        this.reconciledSettings = true;
+        if (this.store.data.settingsCloudDirty || !snapshot.exists() || (validSettings(data) && (!this.store.data.settingsCloudRevision || !data.cloudRevision) && this.store.data.settingsUpdatedAt > data.updatedAt)) this.queueSettings();
+        this.updateReady();
+      }
     }, (error) => this.fail(error)));
-    await this.uploadLocal();
   }
 
   async uploadLocal() {
     if (!this.user || !database) return;
-    this.working = true;
-    this.changed();
-    try {
-      let succeeded = await this.syncSettings();
-      for (const id of Object.keys(this.store.data.deletedGames)) succeeded = await this.deleteGame(id) && succeeded;
-      for (const game of Object.values(this.store.data.games)) succeeded = await this.syncGame(game) && succeeded;
-      if (succeeded) this.error = "";
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.working = false;
-      this.changed();
-    }
+    if (this.store.data.settingsCloudDirty) this.pendingSettings = true;
+    for (const game of Object.values(this.store.data.games)) if (game.cloudDirty) this.pendingGames.set(game.id, game.updatedAt);
+    await this.flushNow();
   }
 
-  async syncGame(game: Game): Promise<boolean> {
+  queueGame(game: Game) {
+    if (!this.user || !database) return;
+    this.pendingGames.set(game.id, Math.max(game.updatedAt, this.pendingGames.get(game.id) || 0));
+    this.schedule();
+  }
+
+  queueSettings() {
+    if (!this.user || !database) return;
+    this.pendingSettings = true;
+    this.schedule();
+  }
+
+  private queueDelete(id: string) {
+    if (!this.user || !database) return;
+    this.pendingGames.delete(id);
+    this.pendingDeletes.add(id);
+    this.schedule();
+  }
+
+  private async writeGame(id: string, queuedUpdatedAt: number): Promise<boolean> {
     if (!this.user || !database) return true;
+    const game = this.store.data.games[id];
+    if (!game) return true;
+    const syncedUpdatedAt = Math.max(game.updatedAt, queuedUpdatedAt);
+    const encoded = encodeCloudGame(game);
     const reference = doc(database, "users", this.user.uid, "sudokuGames", game.id);
     try {
-      await runTransaction(database, async (transaction) => {
+      const revision = await runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
-        const remoteData = remote.data();
-        const remoteGame = decodeCloudGame(remoteData);
-        if (!remote.exists() || !remoteGame || remoteGame.updatedAt < game.updatedAt) transaction.set(reference, encodeCloudGame(game));
+        const remoteGame = decodeCloudGame(remote.data());
+        const nextRevision = Math.max(remoteGame?.cloudRevision || 0, game.cloudRevision || 0) + 1;
+        transaction.set(reference, { ...encoded, cloudRevision: nextRevision });
+        return nextRevision;
       });
+      await this.store.markGameSynced(id, revision, syncedUpdatedAt);
       return true;
     } catch (error) {
       this.fail(error);
@@ -255,8 +301,27 @@ export class CloudSync {
 
   async deleteGame(id: string) {
     if (!this.user || !database) return true;
+    this.queueDelete(id);
+    await this.flushNow();
+    return !this.pendingDeletes.has(id) && !this.error;
+  }
+
+  private async writeSettings(): Promise<boolean> {
+    if (!this.user || !database || !this.store.data.settingsUpdatedAt) return true;
+    const reference = doc(database, "users", this.user.uid, "sudokuMeta", "settings");
+    const settings = encodeCloudSettings(this.store.data);
     try {
-      await deleteDoc(doc(database, "users", this.user.uid, "sudokuGames", id));
+      const revision = await runTransaction(database, async (transaction) => {
+        const remote = await transaction.get(reference);
+        const remoteData = remote.data();
+        const remoteDeletions = validSettings(remoteData) ? remoteData.deletedGames || {} : {};
+        const deletedGames = { ...remoteDeletions };
+        for (const [id, deletedAt] of Object.entries(settings.deletedGames || {})) deletedGames[id] = Math.max(deletedAt, deletedGames[id] || 0);
+        const nextRevision = Math.max(validSettings(remoteData) ? remoteData.cloudRevision || 0 : 0, settings.cloudRevision || 0) + 1;
+        transaction.set(reference, { ...settings, cloudRevision: nextRevision, deletedGames });
+        return nextRevision;
+      });
+      await this.store.markSettingsSynced(revision, settings.updatedAt);
       return true;
     } catch (error) {
       this.fail(error);
@@ -264,28 +329,61 @@ export class CloudSync {
     }
   }
 
-  async syncSettings(): Promise<boolean> {
-    if (!this.user || !database || !this.store.data.settingsUpdatedAt) return true;
-    const reference = doc(database, "users", this.user.uid, "sudokuMeta", "settings");
-    const settings = encodeCloudSettings(this.store.data);
-    try {
-      await runTransaction(database, async (transaction) => {
-        const remote = await transaction.get(reference);
-        const remoteData = remote.data();
-        const remoteDeletions = validSettings(remoteData) ? remoteData.deletedGames || {} : {};
-        const deletedGames = { ...remoteDeletions };
-        for (const [id, deletedAt] of Object.entries(settings.deletedGames || {})) deletedGames[id] = Math.max(deletedAt, deletedGames[id] || 0);
-        const tombstonesChanged = Object.keys(deletedGames).some((id) => deletedGames[id] !== remoteDeletions[id]);
-        const newest = validSettings(remoteData) && remoteData.updatedAt >= settings.updatedAt
-          ? { version: 1, preferences: remoteData.preferences, activeGameId: remoteData.activeGameId, trainingProgress: remoteData.trainingProgress ?? settings.trainingProgress, updatedAt: remoteData.updatedAt }
-          : settings;
-        if (!remote.exists() || !validSettings(remoteData) || remoteData.updatedAt < settings.updatedAt || tombstonesChanged) transaction.set(reference, { ...newest, deletedGames });
-      });
-      return true;
-    } catch (error) {
-      this.fail(error);
-      return false;
+  private schedule(delay = 650) {
+    if (this.flushTimer !== null) window.clearTimeout(this.flushTimer);
+    this.flushTimer = window.setTimeout(() => { this.flushTimer = null; void this.flushNow(); }, delay);
+    const wasWorking = this.working;
+    this.refreshWorking();
+    if (wasWorking === this.working) this.changed();
+  }
+
+  private async flushNow() {
+    if (!this.user || !database) return;
+    if (this.flushTimer !== null) { window.clearTimeout(this.flushTimer); this.flushTimer = null; }
+    if (this.flushPromise) return this.flushPromise;
+    this.flushPromise = this.drain();
+    try { await this.flushPromise; }
+    finally { this.flushPromise = null; this.refreshWorking(); }
+  }
+
+  private async drain() {
+    this.error = "";
+    this.refreshWorking();
+    while (this.pendingSettings || this.pendingDeletes.size || this.pendingGames.size) {
+      const settings = this.pendingSettings;
+      const deletes = [...this.pendingDeletes];
+      const games = [...this.pendingGames.entries()];
+      this.pendingSettings = false;
+      this.pendingDeletes.clear();
+      this.pendingGames.clear();
+      this.inFlightCount = Number(settings) + deletes.length + games.length;
+      this.refreshWorking();
+
+      let failed = false;
+      if (settings && !await this.writeSettings()) { this.pendingSettings = true; failed = true; }
+      const deleteResults = await Promise.all(deletes.map(async (id) => {
+        try { await deleteDoc(doc(database!, "users", this.user!.uid, "sudokuGames", id)); return true; }
+        catch (error) { this.fail(error); return false; }
+      }));
+      deleteResults.forEach((succeeded, index) => { if (!succeeded) { this.pendingDeletes.add(deletes[index]); failed = true; } });
+      const gameResults = await Promise.all(games.map(([id, updatedAt]) => this.writeGame(id, updatedAt)));
+      gameResults.forEach((succeeded, index) => { if (!succeeded) { this.pendingGames.set(games[index][0], games[index][1]); failed = true; } });
+      this.inFlightCount = 0;
+      if (failed) break;
     }
+    if (!this.pendingSettings && !this.pendingDeletes.size && !this.pendingGames.size) this.error = "";
+  }
+
+  private refreshWorking() {
+    const working = Boolean(this.flushTimer !== null || this.flushPromise || this.inFlightCount);
+    if (this.working === working) return;
+    this.working = working;
+    this.changed();
+  }
+
+  private updateReady() {
+    this.ready = this.reconciledGames && this.reconciledSettings;
+    this.changed();
   }
 
   private fail(cause?: unknown) {
@@ -304,6 +402,12 @@ export class CloudSync {
   stop() {
     this.stops.forEach((stop) => stop());
     this.stops = [];
+    if (this.flushTimer !== null) window.clearTimeout(this.flushTimer);
+    this.flushTimer = null;
+    this.pendingGames.clear();
+    this.pendingDeletes.clear();
+    this.pendingSettings = false;
+    this.inFlightCount = 0;
     this.working = false;
   }
 }
