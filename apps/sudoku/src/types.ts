@@ -46,6 +46,8 @@ export interface Game extends BoardSnapshot {
   elapsed: number;
   startedAt: number;
   updatedAt: number;
+  cloudRevision?: number;
+  cloudDirty?: boolean;
   completedAt: number | null;
   failedAt: number | null;
   mistakes: number;
@@ -104,6 +106,8 @@ export interface AppData {
   version: 1;
   catalogueVersion: string;
   settingsUpdatedAt: number;
+  settingsCloudRevision?: number;
+  settingsCloudDirty?: boolean;
   preferences: Preferences;
   trainingProgress: TrainingProgress;
   games: Record<string, Game>;
