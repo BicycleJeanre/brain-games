@@ -51,6 +51,7 @@ let trainingAssisted = false;
 let trainingPatternRevealed = false;
 let trainingAnswerRevealed = false;
 let trainingPracticeIndex = 0;
+let trainingHighlightCell: number | null = null;
 type TrainingTrackId = typeof TRAINING_ROADMAP[number]["id"];
 let trainingTrack: TrainingTrackId | null = null;
 let challengeCadence: ChallengeCadence = "daily";
@@ -277,6 +278,8 @@ function openTraining(id: TrainingTechniqueId) {
   trainingAssisted = false;
   trainingPatternRevealed = false;
   trainingAnswerRevealed = false;
+  trainingHighlightCell = null;
+  highlightedDigits.clear();
   renderTrainingLesson();
 }
 
@@ -291,17 +294,29 @@ function trainingBoard(position: TrainingPosition, stage: typeof trainingStage, 
   return `<div class="training-board sudoku-board" role="grid" aria-label="Training Sudoku grid">${position.values.map((value, cell) => {
     const given = position.givens[cell];
     const selected = trainingSelection.has(cell);
-    const classes = ["training-cell", "sudoku-cell", !value && !position.candidates[cell].length ? "training-irrelevant" : "", value ? "has-value" : "", given ? "given" : "", selected ? "selected" : "", showPattern && evidence.has(cell) ? "training-evidence" : "", showPattern && focus.has(cell) ? "training-focus" : ""].filter(Boolean).join(" ");
     const candidates = position.candidates[cell];
+    const noteMatches = store.data.preferences.highlightMatches && highlightedDigits.size > 0 && (highlightOperator === "or"
+      ? candidates.some((digit) => highlightedDigits.has(digit))
+      : [...highlightedDigits].every((digit) => candidates.includes(digit)));
+    const valueMatches = store.data.preferences.highlightMatches && Boolean(value) && highlightedDigits.has(Number(value)) && (highlightOperator === "or" || highlightedDigits.size === 1);
+    const highlightAnchor = trainingHighlightCell === cell;
+    const peer = !selected && !highlightAnchor && store.data.preferences.highlightPeers && trainingHighlightCell !== null && Boolean(position.values[trainingHighlightCell]) && peers[trainingHighlightCell].includes(cell);
+    const classes = ["training-cell", "sudoku-cell", !value && !candidates.length ? "training-irrelevant" : "", value ? "has-value" : "", given ? "given" : "", selected ? "selected" : "", highlightAnchor ? "training-highlight-anchor" : "", peer ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", showPattern && evidence.has(cell) ? "training-evidence" : "", showPattern && focus.has(cell) ? "training-focus" : ""].filter(Boolean).join(" ");
     const content = value ? `<span class="cell-value">${value}</span>` : `<span class="training-candidates">${Array.from({ length: 9 }, (_, index) => index + 1).map((digit) => {
       if (!candidates.includes(digit)) return `<i aria-hidden="true"></i>`;
       const target = targets.has(`${cell}-${digit}`);
-      const candidateClass = (stage === "learn" || stage === "deduce" && reveal) && target ? position.hint.kind === "place" ? "training-answer" : "training-elimination" : "";
+      const answerClass = (stage === "learn" || stage === "deduce" && reveal) && target ? position.hint.kind === "place" ? "training-answer" : "training-elimination" : "";
+      const candidateClass = [answerClass, noteMatches && highlightedDigits.has(digit) ? "note-match" : ""].filter(Boolean).join(" ");
       return stage === "deduce" ? `<button class="training-candidate ${candidateClass}" data-training-cell="${cell}" data-training-digit="${digit}" aria-label="Candidate ${digit}, ${cellLabel(cell)}">${digit}</button>` : `<i class="${candidateClass}">${digit}</i>`;
     }).join("")}</span>`;
     if (stage === "find" && !value) return `<button class="${classes}" data-training-select="${cell}" aria-label="${cellLabel(cell)}, empty" aria-pressed="${selected}">${content}</button>`;
+    if (value) return `<button class="${classes}" data-training-value-cell="${cell}" aria-label="${cellLabel(cell)}, ${given ? "given " : ""}${value}" aria-pressed="${highlightAnchor}">${content}</button>`;
     return `<div class="${classes}" aria-label="${cellLabel(cell)}${value ? `, ${value}` : ", empty"}">${content}</div>`;
   }).join("")}${links ? `<svg class="training-links" viewBox="0 0 900 900" aria-hidden="true">${links}</svg>` : ""}</div>`;
+}
+
+function trainingHighlightControls() {
+  return `<section class="training-highlight-controls card" aria-label="Training number highlighting"><div><strong>Highlight digits</strong><small>Use the same matching tools as the puzzle player.</small></div><div class="number-pad training-number-pad">${[1,2,3,4,5,6,7,8,9].map((digit) => `<button data-training-highlight-digit="${digit}" class="${highlightedDigits.has(digit) ? "active-digit" : ""}" aria-pressed="${highlightedDigits.has(digit)}" aria-label="Highlight ${digit}">${digit}</button>`).join("")}<button id="clear-training-highlights" class="clear-key">Clear highlights</button></div>${store.data.preferences.showValueSelection ? `<div class="highlight-options"><p>Highlight cells containing:</p><div role="group" aria-label="Training multiple digit matching"><button data-training-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-training-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>` : ""}</section>`;
 }
 
 function renderTrainingLesson() {
@@ -318,9 +333,13 @@ function renderTrainingLesson() {
   else if (trainingStage === "find") panel = `<span class="eyebrow">Step 2 · Find the pattern · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.findPrompt)}</h2><p>Tap cells to select or deselect them, then check your pattern.</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<div class="stack-actions"><button class="primary" id="training-check-pattern">Check pattern</button><button class="secondary" id="training-clue">${reveal ? "Clue shown" : "Show a clue"}</button></div>`;
   else if (trainingStage === "deduce") panel = `<span class="eyebrow">Step 3 · Make the deduction · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.deductionPrompt)}</h2><p>Tap a candidate in the grid. ${position.hint.kind === "place" ? "A correct choice places it." : "A correct choice removes it."}</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<button class="secondary" id="training-answer">${reveal ? "Answer shown" : "Show the answer"}</button>`;
   else panel = `<span class="eyebrow">Lesson complete · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>You used ${escapeHtml(technique.title)}.</h2><p>${trainingAssisted ? "You completed the reasoning with guidance. Repeat it without a clue to build independent mastery." : "You found the pattern and made the deduction independently."}</p><div class="training-complete-mark" aria-hidden="true">✓</div><div class="stack-actions"><button class="primary" id="training-repeat">Practice another position</button><button class="secondary" id="training-next">Next technique</button><button class="text-button" id="training-all">All lessons</button></div>`;
-  shell(`<div class="lesson-toolbar"><button class="text-button" id="training-back">← All training</button><div class="lesson-steps" aria-label="Lesson progress">${[1,2,3,4].map((step) => `<i class="${step <= stageNumber ? "active" : ""}">${step}</i>`).join("")}</div></div><section class="lesson-player"><div>${trainingBoard(position, trainingStage, reveal)}</div><aside class="lesson-panel card">${panel}</aside></section><p class="training-source"><a href="${escapeHtml(position.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(position.origin)}</a> · verified locally by the pinned HoDoKu engine</p>`, `${technique.title} training`);
-  app.querySelector("#training-back")?.addEventListener("click", () => { activeTraining = null; renderTrainingHub(); });
-  app.querySelector("#training-practice")?.addEventListener("click", () => { trainingStage = "find"; trainingSelection.clear(); trainingFeedback = ""; renderTrainingLesson(); });
+  shell(`<div class="lesson-toolbar"><button class="text-button" id="training-back">← All training</button><div class="lesson-steps" aria-label="Lesson progress">${[1,2,3,4].map((step) => `<i class="${step <= stageNumber ? "active" : ""}">${step}</i>`).join("")}</div></div><section class="lesson-player"><div class="training-board-column">${trainingBoard(position, trainingStage, reveal)}${trainingHighlightControls()}</div><aside class="lesson-panel card">${panel}</aside></section><p class="training-source"><a href="${escapeHtml(position.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(position.origin)}</a> · verified locally by the pinned HoDoKu engine</p>`, `${technique.title} training`);
+  app.querySelector("#training-back")?.addEventListener("click", () => { activeTraining = null; trainingHighlightCell = null; highlightedDigits.clear(); renderTrainingHub(); });
+  app.querySelector("#training-practice")?.addEventListener("click", () => { trainingStage = "find"; trainingSelection.clear(); trainingHighlightCell = null; highlightedDigits.clear(); trainingFeedback = ""; renderTrainingLesson(); });
+  app.querySelectorAll<HTMLElement>("[data-training-value-cell]").forEach((cell) => cell.addEventListener("click", () => { const index = Number(cell.dataset.trainingValueCell); trainingHighlightCell = index; highlightOnly(Number(position.values[index])); renderTrainingLesson(); }));
+  app.querySelectorAll<HTMLElement>("[data-training-highlight-digit]").forEach((button) => button.addEventListener("click", () => { trainingHighlightCell = null; const digit = Number(button.dataset.trainingHighlightDigit); if (store.data.preferences.showValueSelection) toggleHighlight(digit); else highlightOnly(digit); renderTrainingLesson(); }));
+  app.querySelectorAll<HTMLElement>("[data-training-highlight-operator]").forEach((button) => button.addEventListener("click", () => { highlightOperator = button.dataset.trainingHighlightOperator as "or" | "and"; renderTrainingLesson(); }));
+  app.querySelector("#clear-training-highlights")?.addEventListener("click", () => { trainingHighlightCell = null; highlightedDigits.clear(); renderTrainingLesson(); });
   app.querySelectorAll<HTMLElement>("[data-training-select]").forEach((cell) => cell.addEventListener("click", () => { const index = Number(cell.dataset.trainingSelect); if (trainingSelection.has(index)) trainingSelection.delete(index); else trainingSelection.add(index); trainingFeedback = ""; renderTrainingLesson(); }));
   app.querySelector("#training-clue")?.addEventListener("click", () => { trainingAssisted = true; trainingPatternRevealed = true; trainingFeedback = `Look for ${patternCells(position).length} highlighted ${patternCells(position).length === 1 ? "cell" : "cells"}.`; renderTrainingLesson(); });
   app.querySelector("#training-check-pattern")?.addEventListener("click", () => {
@@ -340,10 +359,19 @@ function renderTrainingLesson() {
     trainingAssisted = false;
     trainingPatternRevealed = false;
     trainingAnswerRevealed = false;
+    trainingHighlightCell = null;
+    highlightedDigits.clear();
     renderTrainingLesson();
   });
-  app.querySelector("#training-all")?.addEventListener("click", () => { activeTraining = null; renderTrainingHub(); });
+  app.querySelector("#training-all")?.addEventListener("click", () => { activeTraining = null; trainingHighlightCell = null; highlightedDigits.clear(); renderTrainingHub(); });
   app.querySelector("#training-next")?.addEventListener("click", () => { const index = TRAINING_TECHNIQUES.findIndex((item) => item.id === activeTraining); openTraining(TRAINING_TECHNIQUES[(index + 1) % TRAINING_TECHNIQUES.length].id); });
+  app.querySelectorAll<HTMLElement>("#main, .app-header").forEach((surface) => surface.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement;
+    if ((!highlightedDigits.size && trainingHighlightCell === null) || target.closest(".training-board, .training-highlight-controls, button, a, input, select, textarea, dialog")) return;
+    trainingHighlightCell = null;
+    highlightedDigits.clear();
+    renderTrainingLesson();
+  }));
 }
 
 async function completeTraining(id: TrainingTechniqueId) {
@@ -1039,6 +1067,7 @@ function showDialog(content: string, closeLabel = "Done") {
 function showHelp() {
   showDialog(`<span class="eyebrow">User guide</span><h2>Solving Sudoku</h2><h3>Training</h3><p>Train contains 21 lessons from singles through fish, Empty Rectangles, wings, coloring, chains, uniqueness, ALS-XZ, and forcing chains. Every exercise is sourced from HoDoKu’s official regression and exemplar libraries and revalidated by the pinned local HoDoKu engine. Each moves through Learn, Find, Deduce, and Complete. A clue highlights the pattern without naming the candidate; Show answer is a separate, explicit fallback. Exact strong and weak chain links come from HoDoKu’s step data, and progress works offline and syncs across signed-in devices.</p><h3>Entering digits and notes</h3><p>Select one cell, drag across cells, or turn on Multi-select. Digit writes an answer for one cell; with several cells selected it defaults to corner notes. Warm corner notes stay in the top-left. High-contrast centre notes stay centred: near-white in dark mode and near-black in light mode. Both wrap only when needed. Entering a final value clears both note types from that cell, and notes can be added only to empty cells. Double-click or double-tap an empty cell with exactly one centre note to promote that note to the full digit. Across several selected cells, filled cells are left unchanged while a note is added to every empty cell first and removed only when every eligible cell already has it. Calculate all candidates removes corner notes and writes canonical centre candidates in every empty editable cell as one undoable action. The number buttons form a 3×3 keypad. On portrait phones, the compact player keeps the board and full keypad in the initial screen; secondary tools remain available below. Phone note digits are enlarged for legibility. Turn on Highlight values, then tap several digits to compare all of their matching placed values and notes without editing the puzzle. Use Any digit · OR for cells containing at least one selected note, or All digits · AND for cells containing every selected note. Highlighted notes keep their original warm or neutral color and become slightly larger and bold, without a circle or background. Clicking blank space outside the grid and controls clears the cell selection and every value highlight. A digit button becomes grey once all nine instances are placed in the grid, and returns to normal if one is cleared or undone. Peer shading appears only when the selected cell contains a placed value; selecting an empty or notes-only cell keeps the row, column, and box unshaded. Colour offers nine independently toggled shades; cells divide into equal segments when several are applied, with dots as a second cue. Lines uses the same palette: drag between cells, or select exactly two and connect them. Repeating a colored connection removes it; choosing another color recolors it. Colour and line controls can clear the selected cells, one chosen colour everywhere, or all annotations of that type. All annotation changes support undo, offline saves, backup, and signed-in sync. Solving the final cell adds a short completion celebration that respects reduced-motion settings.</p><h3>History</h3><p>The home screen keeps in-progress puzzles under Recent puzzles and finished games under Completed puzzles. Delete removes a puzzle from this device and, while signed in, from your synced session.</p><h3>Keyboard</h3><p>Arrow keys move. Shift + arrows extends the selection. Press 1–9 to enter, Backspace/Delete to clear, C for corner, M for centre, V for colour, L for lines, and Ctrl/⌘ Z or Y for undo/redo.</p><h3>Hints</h3><p>Hint begins with only the HoDoKu technique name and leaves the grid untouched. Show pattern then highlights and explains the relevant cells without exposing the exact deduction. Open the grid-specific explanation and choose Practice strategy when a matching lesson is available. Show answer is a separate third reveal; only then does Apply deduction become available. Dismiss any hint and reopen it from Previous hints. Brain Games rebuilds the current hint after every board or centre-note change and validates its pattern and target against the exact candidates displayed. Applying an elimination removes it from the visible notes too. All Easy, Medium, and Hard puzzles and half of the Diabolical catalogue have verified complete paths; the other Diabolical puzzles receive every available logical hint before the enabled engine limit is reported.</p><h3>Difficulty</h3><p>SE values come from SukakuExplainer and describe the hardest logical technique on its selected path. Easy, Medium, Hard, and Diabolical are friendly bands, not an official universal scale.</p><h3>Offline, sync, and privacy</h3><p>The production PWA caches its shell, bundled 80-puzzle catalogue, help, training, and solver. Progress always saves to IndexedDB first. Optional email/password accounts sync private puzzle sessions, cached hint paths, training progress, and preferences through Firestore so you can continue on another device. Durable edits are briefly coalesced into one background queue; unsent changes survive a reload and Firestore revisions resolve cross-device order without depending on device clocks. Selection and input-mode changes stay on the current device. The current board and completion always sync; only regenerable hint data and the oldest cloud undo/redo entries are omitted when an extensively annotated session would otherwise exceed Firestore’s document limit. Core play never requires a connection, and there are no analytics or ads. Keep JSON exports as an independent backup.</p>`, "Got it");
   dialog.querySelector("h2")?.insertAdjacentHTML("afterend", `<h3>Daily and weekly challenges</h3><p>Home offers one daily and one weekly puzzle in every difficulty. The selections are based on the UTC date or ISO week, so everyone receives the same bundled puzzle and it remains available offline. A weekly puzzle stays fixed for its full week and is not reused by a daily slot during that week. The eight current challenge puzzles are also reserved from regular automatic selection. Opening a challenge creates or resumes its dedicated challenge session; signed-in progress follows you between devices through the same private Firestore account. After a solve, continue to the next difficulty in that same day or week; finishing Diabolical returns to the challenge summary. The summary records current completion, total solves, average solve time, and separate daily and weekly streaks. Completing at least one challenge maintains that period's streak.</p>`);
+  dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Training highlights</h3><p>Training uses the same highlighting language as normal puzzles. Click a placed digit to highlight it and its peers, or use the 3×3 digit panel and number keys to highlight matching values and candidates. Select several digits and switch between OR and AND matching. Clear with Escape, the clear button, or a click outside the grid and controls. Your configured highlight colour and matching preferences apply in both places.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Reviewing previous hints</h3><p>Previous hints start again at the minimal technique-only tier. Choose Show pattern to reveal the explanation and original grid location. Open Why is this a …? for a cell-by-cell trace based on that grid, then Show answer for the exact historical deduction. A historical review cannot apply an old deduction to the current board.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Player preferences</h3><p>Settings can simplify notation to centre notes only or retain separate corner and centre notes. Simple mode also sends multi-cell note entry to the centre and maps the C shortcut to centre notes. You can hide colour, lines, multi-value highlighting, candidate calculation, and the player reminder without deleting puzzle annotations. The three-mistake limit is on by default: three incorrect full digits are allowed, while a fourth fails the attempt; notes do not count, and the limit can be turned off. Highlight mistakes immediately is a separate setting and is off by default; turn it on to mark an incorrect placed digit with an outline and ! symbol as soon as it is entered. Three size presets and a small set of high-contrast palettes control notes, Sudoku digits, menu text, and highlighted cells across light and dark themes.</p>`);
   dialog.querySelector(".dialog-close")?.insertAdjacentHTML("beforebegin", `<h3>Matching notes</h3><p>Selecting or highlighting a digit uses the same highlight shade for every matching cell, whether it contains a placed value, corner note, centre note, or automatic candidate. With several digits selected, choose OR for any match or AND for cells containing them all. The matching note itself also stays larger and bold.</p>`);
@@ -1071,7 +1100,23 @@ document.addEventListener("pointerdown", (event) => {
 });
 
 document.addEventListener("keydown", async (event) => {
-  if (view !== "player" || dialog.open || ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName)) return;
+  if (dialog.open || ["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName)) return;
+  if (view === "training" && activeTraining) {
+    if (/^[1-9]$/.test(event.key)) {
+      event.preventDefault();
+      trainingHighlightCell = null;
+      if (store.data.preferences.showValueSelection) toggleHighlight(Number(event.key));
+      else highlightOnly(Number(event.key));
+      renderTrainingLesson();
+    } else if (["Backspace", "Delete", "0", "Escape"].includes(event.key)) {
+      event.preventDefault();
+      trainingHighlightCell = null;
+      highlightedDigits.clear();
+      renderTrainingLesson();
+    }
+    return;
+  }
+  if (view !== "player") return;
   const game = store.activeGame(); if (!game || game.paused) return;
   const mod = event.metaKey || event.ctrlKey;
   if (mod && event.key.toLowerCase() === "z") { event.preventDefault(); await changeGame(game, () => event.shiftKey ? redo(game) : undo(game)); }
