@@ -27,7 +27,7 @@ Every available lesson uses a genuine position derived from the bundled, documen
 3. **Deduce** asks you to choose the candidate to place or eliminate. **Show the answer** is an explicit fallback and never changes a puzzle.
 4. **Complete** records the session and offers repetition or the next technique.
 
-Three independent completions with at least two-thirds independent accuracy mark a technique as mastered. Assisted completions still count as explored practice. Training progress saves to IndexedDB, is included in JSON backups, and synchronizes between signed-in devices with preferences.
+Three independent completions with at least two-thirds independent accuracy mark a technique as mastered. Assisted completions still count as explored practice. The training grid uses the same highlighting language as a normal puzzle: click a placed digit to select it and shade its peers, use the 3×3 digit panel or number keys to highlight matching values and candidates, combine several digits with OR or AND, and clear with Escape, the clear button, or a click outside the grid and controls. Highlight colours, contrast, candidate emphasis, and visibility preferences carry over from the player. Training progress saves to IndexedDB, is included in JSON backups, and synchronizes between signed-in devices with preferences.
 
 Every technique has one worked example and four different HoDoKu-verified practice positions. The exercise counter shows which position is active. After completing one, choose **Practice another position** to move directly to the next grid; reopening the lesson also resumes with the next exercise based on your completion count.
 

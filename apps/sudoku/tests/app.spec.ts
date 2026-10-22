@@ -108,6 +108,46 @@ test("training teaches a pattern before revealing its deduction and retains comp
   await expect(page.getByRole("link", { name: /HoDoKu reglib-1.3 · X_CHAIN/ })).toBeVisible();
 });
 
+test("training has the same value and candidate highlighting tools as the puzzle player", async ({ page }) => {
+  await page.getByRole("button", { name: "Train", exact: true }).click();
+  await page.getByRole("button", { name: /Naked single/ }).last().click();
+  await expect(page.locator("[data-training-highlight-digit]")).toHaveCount(9);
+
+  const placed = page.locator("[data-training-value-cell]").first();
+  const placedDigit = await placed.locator(".cell-value").textContent();
+  expect(placedDigit).toMatch(/^[1-9]$/);
+  await placed.click();
+  await expect(placed).toHaveClass(/training-highlight-anchor/);
+  await expect(page.locator(`[data-training-highlight-digit="${placedDigit}"]`)).toHaveClass(/active-digit/);
+  expect(await page.locator(".training-cell.match").count()).toBeGreaterThan(0);
+  expect(await page.locator(".training-cell.peer").count()).toBeGreaterThan(0);
+
+  await page.getByRole("button", { name: "Clear highlights" }).click();
+  await expect(page.locator(".training-cell.match")).toHaveCount(0);
+  await expect(page.locator(".training-cell.peer")).toHaveCount(0);
+
+  const candidatePair = await page.locator(".training-cell").evaluateAll((cells) => {
+    for (let cell = 0; cell < cells.length; cell++) {
+      const digits = [...cells[cell].querySelectorAll<HTMLElement>(".training-candidates i, .training-candidate")].map((item) => item.textContent?.trim() || "").filter(Boolean);
+      if (digits.length >= 2) return { cell, digits: digits.slice(0, 2) };
+    }
+    return null;
+  });
+  expect(candidatePair).not.toBeNull();
+  for (const digit of candidatePair!.digits) await page.locator(`[data-training-highlight-digit="${digit}"]`).click();
+  for (const digit of candidatePair!.digits) await expect(page.locator(`[data-training-highlight-digit="${digit}"]`)).toHaveClass(/active-digit/);
+  await page.getByRole("button", { name: "All digits · AND" }).click();
+  await expect(page.locator(".training-cell").nth(candidatePair!.cell)).toHaveClass(/note-match-cell/);
+  await expect(page.locator(".training-cell").nth(candidatePair!.cell).locator(".note-match")).toHaveCount(2);
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".training-cell.note-match-cell")).toHaveCount(0);
+  await page.keyboard.press(candidatePair!.digits[0]);
+  await expect(page.locator(`[data-training-highlight-digit="${candidatePair!.digits[0]}"]`)).toHaveClass(/active-digit/);
+  await page.getByRole("heading", { name: "Naked single training" }).click();
+  await expect(page.locator(".training-cell.note-match-cell")).toHaveCount(0);
+});
+
 test("Skyscraper training explains the shown strong links and eliminations in plain language", async ({ page }) => {
   await page.getByRole("button", { name: "Train", exact: true }).click();
   await page.locator('[data-training="skyscraper"]').last().click();
