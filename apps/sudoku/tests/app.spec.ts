@@ -235,6 +235,7 @@ test("the default three-mistake limit fails a puzzle on the fourth wrong digit",
   await expect(page.locator('[data-preference="showMistakes"]')).not.toBeChecked();
   await page.getByRole("button", { name: "Close settings and help" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await expect(page.locator(".board-status")).not.toContainText("Mistakes");
 
   const wrongDigits = await page.evaluate(async () => {
     const request = indexedDB.open("strack-v1");
@@ -248,7 +249,7 @@ test("the default three-mistake limit fails a puzzle on the fourth wrong digit",
   });
 
   for (const digit of wrongDigits.slice(0, 3)) await page.getByRole("button", { name: String(digit), exact: true }).click();
-  await expect(page.locator(".board-status")).toContainText("Mistakes 3/3");
+  await expect(page.locator(".board-status")).not.toContainText("Mistakes");
   await expect(page.locator(".failure-banner")).toHaveCount(0);
   await page.getByRole("button", { name: String(wrongDigits[3]), exact: true }).click();
   await expect(page.locator(".failure-banner")).toContainText("Puzzle failed");
@@ -264,6 +265,7 @@ test("immediate mistake highlighting is optional and accessible", async ({ page 
   await setting.check();
   await page.getByRole("button", { name: "Close settings and help" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await expect(page.locator(".board-status")).toContainText("Mistakes 0/3");
 
   const wrong = await page.evaluate(async () => {
     const request = indexedDB.open("strack-v1");
@@ -277,6 +279,7 @@ test("immediate mistake highlighting is optional and accessible", async ({ page 
   });
 
   await page.getByRole("button", { name: String(wrong), exact: true }).click();
+  await expect(page.locator(".board-status")).toContainText("Mistakes 1/3");
   await expect(page.locator(".sudoku-cell.mistake")).toHaveCount(1);
   await expect(page.locator(".sudoku-cell.mistake")).toHaveAttribute("aria-label", /incorrect/);
 });
