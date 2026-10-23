@@ -175,6 +175,47 @@ function avoidableRectangleType1Explanation(hint: Hint, context: ContextualHintC
   };
 }
 
+function hiddenRectangleExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const target = hint.targets[0];
+  const cells = [...new Set([...hint.evidence, ...hint.targets.map(({ cell }) => cell)])].sort((a, b) => a - b);
+  const rows = [...new Set(cells.map(rowOf))];
+  const columns = [...new Set(cells.map(columnOf))];
+  const boxes = [...new Set(cells.map(boxOf))];
+  if (!target || hint.kind !== "eliminate" || cells.length !== 4 || rows.length !== 2 || columns.length !== 2 || boxes.length !== 2 || !context.candidates) return null;
+
+  const opposite = cells.find((cell) => rowOf(cell) !== rowOf(target.cell) && columnOf(cell) !== columnOf(target.cell));
+  const rowMate = cells.find((cell) => rowOf(cell) === rowOf(target.cell) && cell !== target.cell);
+  const columnMate = cells.find((cell) => columnOf(cell) === columnOf(target.cell) && cell !== target.cell);
+  if (opposite === undefined || rowMate === undefined || columnMate === undefined) return null;
+
+  const pair = [...(context.candidates[opposite] || [])];
+  const strongDigit = pair.find((digit) => digit !== target.digit);
+  if (pair.length !== 2 || !pair.includes(target.digit) || !strongDigit) return null;
+
+  const rowStrongCells = context.candidates
+    .map((digits, cell) => ({ digits, cell }))
+    .filter(({ digits, cell }) => rowOf(cell) === rowOf(target.cell) && digits.includes(strongDigit))
+    .map(({ cell }) => cell);
+  const columnStrongCells = context.candidates
+    .map((digits, cell) => ({ digits, cell }))
+    .filter(({ digits, cell }) => columnOf(cell) === columnOf(target.cell) && digits.includes(strongDigit))
+    .map(({ cell }) => cell);
+  const expectedRow = new Set([rowMate, target.cell]);
+  const expectedColumn = new Set([columnMate, target.cell]);
+  if (rowStrongCells.length !== 2 || columnStrongCells.length !== 2 || rowStrongCells.some((cell) => !expectedRow.has(cell)) || columnStrongCells.some((cell) => !expectedColumn.has(cell))) return null;
+
+  return {
+    title: "Why is this a Hidden Rectangle?",
+    steps: [
+      `${cellList(cells)} are the four corners of a rectangle in Rows ${rows.map((row) => row + 1).join(" and ")} and Columns ${columns.map((column) => column + 1).join(" and ")}. The opposite corner ${compactCell(opposite)} is restricted to the pair ${pair.join("/")}.`,
+      `In Row ${rowOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(rowMate)} or ${compactCell(target.cell)}. In Column ${columnOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(columnMate)} or ${compactCell(target.cell)}. Those are the two strong links that make the rectangle “hidden.”`,
+      `Assume ${compactCell(target.cell)} were ${target.digit}. It could not be ${strongDigit}, so the row strong link would force ${compactCell(rowMate)}=${strongDigit}, and the column strong link would force ${compactCell(columnMate)}=${strongDigit}. That leaves ${compactCell(opposite)}=${target.digit}.`,
+      `The four corners would then use only ${target.digit} and ${strongDigit}, and all four values could be swapped ${target.digit}↔${strongDigit} while every row, column, box, and clue still worked. That would give the puzzle two solutions.`,
+      `Because this puzzle has one solution, the assumption is impossible: remove ${target.digit} from ${compactCell(target.cell)}.`,
+    ],
+  };
+}
+
 export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
   if (hint.technique === "Skyscraper") {
     const explanation = skyscraperExplanation(hint);
@@ -186,6 +227,10 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
   }
   if (hint.technique === "Avoidable Rectangle Type 1") {
     const explanation = avoidableRectangleType1Explanation(hint, context);
+    if (explanation) return explanation;
+  }
+  if (hint.technique === "Hidden Rectangle") {
+    const explanation = hiddenRectangleExplanation(hint, context);
     if (explanation) return explanation;
   }
 
