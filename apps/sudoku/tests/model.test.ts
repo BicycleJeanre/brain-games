@@ -134,6 +134,31 @@ test("contextual Avoidable Rectangle Type 1 explanation traces the shown corners
   assert.match(explanation.steps[3], /R6C6 becomes 8/);
 });
 
+test("contextual Hidden Rectangle explanation traces both strong links and the uniqueness contradiction", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[6] = [6, 9];
+  candidates[8] = [1, 6, 9];
+  candidates[51] = [1, 2, 3, 5, 6, 9];
+  candidates[53] = [1, 2, 5, 6, 9];
+  const explanation = contextualHintExplanation({
+    id: "hidden-rectangle",
+    technique: "Hidden Rectangle",
+    summary: "Hidden Rectangle elimination",
+    explanation: "",
+    kind: "eliminate",
+    evidence: [6, 8, 51],
+    targets: [{ cell: 53, digit: 6 }],
+  }, { candidates });
+
+  assert.equal(explanation.title, "Why is this a Hidden Rectangle?");
+  assert.match(explanation.steps.join(" "), /R1C7, R1C9, R6C7 and R6C9/);
+  assert.match(explanation.steps.join(" "), /Row 6.*R6C7.*R6C9/);
+  assert.match(explanation.steps.join(" "), /Column 9.*R1C9.*R6C9/);
+  assert.match(explanation.steps.join(" "), /Assume R6C9 were 6/);
+  assert.match(explanation.steps.join(" "), /swapped 6↔9/);
+  assert.match(explanation.steps.at(-1) || "", /remove 6 from R6C9/);
+});
+
 test("original clues cannot be used as editable corners of an Avoidable Rectangle", () => {
   const position = "857642931090073000300809000023700610978361452000020003189437526245006387736285100";
   const givens = "850000031000070000000809000003000600970301052000020000100407006205000307000080000";
