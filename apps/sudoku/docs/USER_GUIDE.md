@@ -29,7 +29,7 @@ Every available lesson uses a genuine position derived from the bundled, documen
 
 Three independent completions with at least two-thirds independent accuracy mark a technique as mastered. Assisted completions still count as explored practice. The training grid uses the same highlighting language as a normal puzzle: click a placed digit to select it and shade its peers, use the 3×3 digit panel or number keys to highlight matching values and candidates, combine several digits with OR or AND, and clear with Escape, the clear button, or a click outside the grid and controls. Highlight colours, contrast, candidate emphasis, and visibility preferences carry over from the player. Training progress saves to IndexedDB, is included in JSON backups, and synchronizes between signed-in devices with preferences.
 
-Every technique has one worked example and four different HoDoKu-verified practice positions. The exercise counter shows which position is active. After completing one, choose **Practice another position** to move directly to the next grid; reopening the lesson also resumes with the next exercise based on your completion count.
+Every technique has one worked example and four different HoDoKu-verified practice positions. The exercise counter shows which position is active. After completing one, choose **Practice another position** to move directly to the next grid; reopening the lesson also resumes with the next exercise based on your completion count. Hint names that are variants of a broader lesson route to that lesson—for example, Continuous Nice Loop and Discontinuous Nice Loop both open the Alternating inference chain training.
 
 ## Enter digits, notes, and colours
 

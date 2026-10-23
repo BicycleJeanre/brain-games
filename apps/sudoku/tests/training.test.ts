@@ -33,5 +33,8 @@ test("every lesson is a valid HoDoKu library position", () => {
 test("hint names link to the matching training lesson", () => {
   assert.equal(trainingTechniqueForHint("Empty Rectangle")?.id, "empty-rectangle");
   assert.equal(trainingTechniqueForHint("Alternating Inference Chain")?.id, "aic");
+  assert.equal(trainingTechniqueForHint("Nice Loop")?.id, "aic");
+  assert.equal(trainingTechniqueForHint("Continuous Nice Loop")?.id, "aic");
+  assert.equal(trainingTechniqueForHint("Discontinuous Nice Loop")?.id, "aic");
   assert.equal(trainingTechniqueForHint("Full house"), null);
 });
