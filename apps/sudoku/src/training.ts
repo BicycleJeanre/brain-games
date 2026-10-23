@@ -98,6 +98,9 @@ const normalizeTechniqueName = (value: string) => value.toLowerCase().replace(/[
 const trainingByHintName = new Map<string, TrainingTechniqueId>(TRAINING_TECHNIQUES.map((technique) => [normalizeTechniqueName(technique.title), technique.id]));
 trainingByHintName.set("simple colors", "simple-coloring");
 trainingByHintName.set("alternating inference chain", "aic");
+trainingByHintName.set("nice loop", "aic");
+trainingByHintName.set("continuous nice loop", "aic");
+trainingByHintName.set("discontinuous nice loop", "aic");
 trainingByHintName.set("forcing chain contradiction", "forcing-chain");
 trainingByHintName.set("forcing chain verity", "forcing-chain");
 
