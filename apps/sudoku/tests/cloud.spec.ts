@@ -23,6 +23,27 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await first.getByRole("button", { name: "Lines" }).click();
   await first.getByRole("button", { name: "Use rose line colour" }).click();
   await firstEmpty.dragTo(secondEmpty);
+  await expect.poll(() => first.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("strack-v1", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction("state", "readonly");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return { colours: Math.max(...game.colours.map((items: string[]) => items.length)), lines: game.lines.length, cloudDirty: game.cloudDirty };
+  }), { timeout: 10_000 }).toEqual({ colours: 2, lines: 1, cloudDirty: false });
   await first.getByRole("button", { name: "Settings and help" }).click();
   await expect(first.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible();
 
