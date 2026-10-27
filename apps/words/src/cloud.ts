@@ -72,7 +72,14 @@ export async function watchAuth(changed: (user: User | null) => void) {
   const available = services();
   if (!available) { changed(null); return () => {}; }
   const { auth, authApi } = await available;
-  return authApi.onAuthStateChanged(auth, changed);
+  return new Promise<Unsubscribe>((resolve, reject) => {
+    let unsubscribe: Unsubscribe = () => {};
+    let initial = true;
+    unsubscribe = authApi.onAuthStateChanged(auth, (user) => {
+      changed(user);
+      if (initial) { initial = false; resolve(unsubscribe); }
+    }, reject);
+  });
 }
 
 export async function signInAccount(email: string, password: string, create = false) {

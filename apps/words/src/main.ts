@@ -835,6 +835,7 @@ async function boot() {
   for (const puzzle of await store.cachedPuzzles()) if (!puzzleById(puzzle.id)) registerLocalPuzzle(puzzle);
   applyPreferences();
   authReady = watchAuth((user) => void cloud.setUser(user));
+  await authReady;
   render();
   if ("serviceWorker" in navigator) void navigator.serviceWorker.register(combinedBuild ? `${brainGamesHome}sw.js` : new URL("./sw.js", document.baseURI));
   const token = ++renderToken;
