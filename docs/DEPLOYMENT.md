@@ -1,12 +1,12 @@
 # Brain Games deployment and route inventory
 
-## Active routes
+## Route inventory
 
 | Route | Owner | Source | Status | Retirement decision |
 | --- | --- | --- | --- | --- |
 | `https://bicyclejeanre.github.io/brain-games/` | Jeanre Van Wyk | `BicycleJeanre/brain-games`, `main` | Live production | None |
-| `https://bicyclejeanre.github.io/strack/` | Jeanre Van Wyk | `BicycleJeanre/strack` | Retained production rollback | Must remain active until explicit authorization |
-| `https://bicyclejeanre.github.io/wtrack/` | Jeanre Van Wyk | `BicycleJeanre/wtrack` | Retained production rollback | Must remain active until explicit authorization |
+| `https://bicyclejeanre.github.io/strack/` | Jeanre Van Wyk | Retired legacy repository | Retired 2026-10-27 | Final commit preserved by `legacy-strack-final-2026-10-27` |
+| `https://bicyclejeanre.github.io/wtrack/` | Jeanre Van Wyk | Retired legacy repository | Retired 2026-10-27 | Final commit preserved by `legacy-wtrack-final-2026-10-27` |
 
 First recorded: 2026-10-15.
 
@@ -23,7 +23,7 @@ First recorded: 2026-10-15.
 
 - A Brain Games client rollback redeploys the previously accepted `main` commit through the Pages workflow.
 - The new client never deletes `strack-v1` or `wtrack`; those databases remain local recovery sources.
-- STrack and WTrack keep their independent Pages routes and Firebase projects. A Brain Games rollback does not require changing either legacy deployment.
+- The independent STrack and WTrack repositories and Pages routes are retired. Their final commits and branch tips are preserved as Brain Games tags; rollback redeploys an accepted Brain Games commit.
 - Firestore rules may be rolled back only to a previously compiled Brain Games ruleset that retains owner isolation for all active client paths.
 
 ## Production record
@@ -53,3 +53,4 @@ First recorded: 2026-10-15.
 - Unified-profile release: [pull request #12](https://github.com/BicycleJeanre/brain-games/pull/12), merged as `f48c9f6`. The root Settings page is the single account-management surface for profile creation, sign-in, password reset, and sign-out; both game modules consume that Firebase Authentication session and route account management back to the root.
 - Current Pages deployment: [workflow run 38734360809](https://github.com/BicycleJeanre/brain-games/actions/runs/38734360809), successful on 2026-10-15 after the required check passed.
 - Unified-profile verification: the Authentication-emulator journey created one profile in the shell and observed the same signed-in email in Sudoku and word games. Live production showed the single root account form and no duplicate game-level forms. Existing-browser service-worker activation required two refreshes; the independent `/strack/` and `/wtrack/` deployments were not changed.
+- Legacy retirement authorization: on 2026-10-27 the owner explicitly authorized local and GitHub cleanup so Brain Games would be the only repository. STrack final `main` was `3c4a96053abe6f1e74bd4b82564a9db41890a59d`; WTrack final `main` was `a7af2c9855bb7d07b5827c3aa6507309442d1fe0`. Both commits are ancestors of Brain Games `main`. Exact final releases are tagged `legacy-strack-final-2026-10-27` and `legacy-wtrack-final-2026-10-27`; all retained branch tips are tagged under `archive/strack/*` and `archive/wtrack/*` before the standalone repositories are removed.
