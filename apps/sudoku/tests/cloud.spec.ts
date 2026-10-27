@@ -55,6 +55,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await second.getByLabel("Password").fill(password);
   await second.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(second.getByRole("heading", { name: "Progress sync is on" })).toBeVisible();
+  await expect(second.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible({ timeout: 10_000 });
   await second.getByRole("button", { name: "Sudoku home" }).click();
   await expect(second.getByRole("button", { name: /Resume puzzle/ })).toBeVisible();
   await second.getByRole("button", { name: /Resume puzzle/ }).click();
