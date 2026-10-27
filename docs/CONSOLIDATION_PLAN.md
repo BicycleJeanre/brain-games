@@ -9,7 +9,7 @@ Started: 2026-10-15
 - STrack: `BicycleJeanre/strack` at `3c4a960` imported under `apps/sudoku/` with history preserved.
 - WTrack: `BicycleJeanre/wtrack` at `a7af2c9` imported under `apps/words/` with history preserved.
 - Destination: `BicycleJeanre/brain-games`.
-- Existing production routes remain active and are not authorized for retirement yet.
+- The owner explicitly authorized retirement of both standalone repositories and deployments on 2026-10-27. Their exact final releases and branch tips are preserved in Brain Games archive tags.
 
 ## Approved core decisions
 
@@ -77,9 +77,9 @@ Started: 2026-10-15
 - [x] Deploy compatible cloud rules before the client.
 - [x] Deploy Brain Games without redirecting legacy routes.
 - [ ] Run fresh-profile, installed-PWA, offline, migration, and cross-device smoke tests.
-- [ ] Add migration notices to STrack and WTrack only after Brain Games is accepted.
-- [ ] Record explicit retirement authorization before replacing either legacy application with a redirect.
+- [x] Retire the standalone repositories instead of adding interim migration notices or redirects.
+- [x] Record explicit retirement authorization before removing either legacy application (authorized 2026-10-27).
 
 ## Rollback rule
 
-Until Stage 6 is explicitly accepted, STrack and WTrack remain the production rollback sources. Brain Games must not delete legacy local databases, overwrite legacy cloud projects, or repurpose their Pages routes.
+Brain Games is now the sole source and deployment. Client rollback uses an earlier accepted Brain Games release. The final legacy release commits remain reachable as `legacy-strack-final-2026-10-27` and `legacy-wtrack-final-2026-10-27`, and every retained local or remote branch tip is preserved below `archive/strack/*` or `archive/wtrack/*`. Retirement does not delete the browser's legacy `strack-v1` or `wtrack` IndexedDB databases, so migration and recovery remain available.
