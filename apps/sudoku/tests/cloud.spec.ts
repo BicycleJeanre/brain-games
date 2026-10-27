@@ -11,7 +11,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await first.getByLabel("Password").fill(password);
   await first.getByRole("button", { name: "Create account" }).click();
   await expect(first.getByRole("heading", { name: "Progress sync is on" })).toBeVisible();
-  await first.getByRole("button", { name: "STrack home" }).click();
+  await first.getByRole("button", { name: "Sudoku home" }).click();
   await first.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const firstEmpty = first.locator(".sudoku-cell:not(.given)").first();
   const secondEmpty = first.locator(".sudoku-cell:not(.given)").nth(1);
@@ -34,7 +34,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await second.getByLabel("Password").fill(password);
   await second.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(second.getByRole("heading", { name: "Progress sync is on" })).toBeVisible();
-  await second.getByRole("button", { name: "STrack home" }).click();
+  await second.getByRole("button", { name: "Sudoku home" }).click();
   await expect(second.getByRole("button", { name: /Resume puzzle/ })).toBeVisible();
   await second.getByRole("button", { name: /Resume puzzle/ }).click();
   await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".cell-value")).toHaveText("1");
