@@ -3,13 +3,19 @@ import { expect, test } from "@playwright/test";
 test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   const email = `solver-${Date.now()}@example.test`;
   const password = "test-password-42";
+  const account = await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
+  });
+  expect(account.ok, await account.text()).toBe(true);
   const firstContext = await browser.newContext();
   const first = await firstContext.newPage();
   await first.goto("/");
   await first.getByRole("button", { name: "Settings" }).click();
   await first.getByLabel("Email").fill(email);
   await first.getByLabel("Password").fill(password);
-  await first.getByRole("button", { name: "Create account" }).click();
+  await first.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(first.getByRole("button", { name: "Sync now" })).toBeVisible({ timeout: 30_000 });
   await first.getByRole("button", { name: "Puzzles", exact: true }).click();
   await first.locator('[data-open="ws-word-craft-001"]').click();
