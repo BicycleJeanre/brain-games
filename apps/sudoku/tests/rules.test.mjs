@@ -30,30 +30,30 @@ after(async () => environment?.cleanup());
 test("owners can store and read valid games while other users cannot", async () => {
   const owner = environment.authenticatedContext("owner").firestore();
   const other = environment.authenticatedContext("other").firestore();
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/game-1"), game));
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/deselected"), { ...game, id: "deselected", selected: [] }));
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/lines"), { ...game, id: "lines", mode: "line", lines: [{ from: 0, to: 10, colour: "indigo" }] }));
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/daily"), { ...game, id: "daily", challenge: { cadence: "daily", periodKey: "2026-10-10" } }));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/game-1"), game));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/deselected"), { ...game, id: "deselected", selected: [] }));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/lines"), { ...game, id: "lines", mode: "line", lines: [{ from: 0, to: 10, colour: "indigo" }] }));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/daily"), { ...game, id: "daily", challenge: { cadence: "daily", periodKey: "2026-10-10" } }));
   const gameWithHints = structuredClone(localGame);
   gameWithHints.id = "with-hints";
   gameWithHints.hintStage = "minimal";
   gameWithHints.hintPath = { engine: "HoDoKu test", generatedAt: 2, complete: true, hints: [] };
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/with-hints"), encodeCloudGame(gameWithHints)));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/with-hints"), encodeCloudGame(gameWithHints)));
   const { hintHistory: _hintHistory, ...legacyGame } = game;
-  await assertSucceeds(setDoc(doc(owner, "users/owner/games/legacy"), { ...legacyGame, id: "legacy" }));
-  await assertSucceeds(getDoc(doc(owner, "users/owner/games/game-1")));
-  await assertFails(getDoc(doc(other, "users/owner/games/game-1")));
-  await assertFails(deleteDoc(doc(other, "users/owner/games/game-1")));
-  await assertSucceeds(deleteDoc(doc(owner, "users/owner/games/game-1")));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/legacy"), { ...legacyGame, id: "legacy" }));
+  await assertSucceeds(getDoc(doc(owner, "users/owner/sudokuGames/game-1")));
+  await assertFails(getDoc(doc(other, "users/owner/sudokuGames/game-1")));
+  await assertFails(deleteDoc(doc(other, "users/owner/sudokuGames/game-1")));
+  await assertSucceeds(deleteDoc(doc(owner, "users/owner/sudokuGames/game-1")));
 });
 
 test("rules reject malformed games and unauthenticated writes", async () => {
   const owner = environment.authenticatedContext("owner").firestore();
   const guest = environment.unauthenticatedContext().firestore();
-  await assertFails(setDoc(doc(owner, "users/owner/games/bad"), { ...game, id: "bad", values: [] }));
-  await assertFails(setDoc(doc(owner, "users/owner/games/too-many-lines"), { ...game, id: "too-many-lines", lines: Array(161).fill({ from: 0, to: 1, colour: "cyan" }) }));
-  await assertFails(setDoc(doc(owner, "users/owner/games/bad-challenge"), { ...game, id: "bad-challenge", challenge: { cadence: "monthly", periodKey: "2026-10" } }));
-  await assertFails(setDoc(doc(guest, "users/owner/games/game-1"), game));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/bad"), { ...game, id: "bad", values: [] }));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/too-many-lines"), { ...game, id: "too-many-lines", lines: Array(161).fill({ from: 0, to: 1, colour: "cyan" }) }));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/bad-challenge"), { ...game, id: "bad-challenge", challenge: { cadence: "monthly", periodKey: "2026-10" } }));
+  await assertFails(setDoc(doc(guest, "users/owner/sudokuGames/game-1"), game));
 });
 
 test("owners can store validated private settings", async () => {
@@ -64,11 +64,11 @@ test("owners can store validated private settings", async () => {
   data.trainingProgress = { "naked-single": { attempts: 3, correct: 3, completed: 3, mastered: true, lastPracticedAt: 2 } };
   data.settingsUpdatedAt = 2;
   const settings = encodeCloudSettings(data);
-  await assertSucceeds(setDoc(doc(owner, "users/owner/meta/settings"), settings));
-  const snapshot = await getDoc(doc(owner, "users/owner/meta/settings"));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuMeta/settings"), settings));
+  const snapshot = await getDoc(doc(owner, "users/owner/sudokuMeta/settings"));
   assert.equal(snapshot.data().activeGameId, "game-1");
   assert.equal(snapshot.data().deletedGames["old-game"], 1);
   assert.equal(snapshot.data().trainingProgress["naked-single"].mastered, true);
-  await assertFails(setDoc(doc(owner, "users/owner/meta/settings"), { ...settings, preferences: { ...settings.preferences, noteSize: "huge" } }));
-  await assertFails(setDoc(doc(owner, "users/owner/meta/settings"), { ...settings, trainingProgress: { unknown: {} } }));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuMeta/settings"), { ...settings, preferences: { ...settings.preferences, noteSize: "huge" } }));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuMeta/settings"), { ...settings, trainingProgress: { unknown: {} } }));
 });

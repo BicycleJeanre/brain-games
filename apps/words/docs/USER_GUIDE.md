@@ -66,4 +66,4 @@ The header reports **Online** or **Offline** independently from the account-sync
 
 ## Accounts and privacy
 
-An account is optional. When Firebase is configured, email/password sign-in privately syncs progress and preferences under your user ID. Signing in on another browser restores that saved state after synchronization. Core play contains no analytics or advertising and remains available when signed out.
+An account is optional. When Firebase is configured, email/password sign-in privately syncs progress and preferences under your user ID. Each puzzle session uses an independent local and cloud record, and rapid entries are coalesced into a bounded background queue so typing does not wait for network synchronization or rewrite the full history. Signing in on another browser restores that saved state after synchronization. Core play contains no analytics or advertising and remains available when signed out.

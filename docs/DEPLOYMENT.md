@@ -31,7 +31,7 @@ First recorded: 2026-10-15.
 - Firebase project: `brain-games-jvw` (Spark, no-cost, no billing account intended).
 - Firestore: `(default)`, `nam5`, Standard edition, free tier, deletion protection enabled.
 - Authentication: Email/Password enabled; `bicyclejeanre.github.io` authorized.
-- Cloud paths: `users/{uid}/sudokuGames/{id}`, `users/{uid}/sudokuMeta/settings`, and `users/{uid}/wordState/app`.
+- Cloud paths: `users/{uid}/sudokuGames/{id}`, `users/{uid}/sudokuMeta/settings`, `users/{uid}/wordProgress/{id}`, and `users/{uid}/wordMeta/settings`. The former `users/{uid}/wordState/app` remains read-only migration input for existing accounts.
 - 2026-10-15 security smoke: disposable owner write/read succeeded; cross-user and unauthenticated reads were denied; disposable documents and accounts were removed.
 - Release pull request: [#3](https://github.com/BicycleJeanre/brain-games/pull/3), merged as `22229d7`.
 - Pages deployment: [workflow run 38723638644](https://github.com/BicycleJeanre/brain-games/actions/runs/38723638644), successful on 2026-10-15.

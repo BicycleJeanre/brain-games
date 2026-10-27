@@ -170,30 +170,69 @@ const database = openDB(combinedBuild ? "brain-games-v1" : "strack-v1", 1, {
   },
 });
 
+const LEGACY_STATE_KEY = "app";
+const META_KEY = "meta";
+const GAME_KEY_PREFIX = "game:";
+type StoredMeta = Omit<AppData, "games">;
+
+function gameKey(id: string) {
+  return `${GAME_KEY_PREFIX}${id}`;
+}
+
+function normalizedData(value: Partial<AppData> | null | undefined, games: Record<string, Game>): AppData {
+  const saved = value ?? {};
+  return {
+    ...emptyData(),
+    ...saved,
+    settingsUpdatedAt: saved.settingsUpdatedAt || 0,
+    settingsCloudRevision: Math.max(0, Math.floor(Number(saved.settingsCloudRevision) || 0)),
+    settingsCloudDirty: Boolean(saved.settingsCloudDirty),
+    preferences: normalizePreferences(saved.preferences),
+    trainingProgress: normalizeTrainingProgress(saved.trainingProgress),
+    games,
+    deletedGames: saved.deletedGames || {},
+  };
+}
+
 export class Store {
   data: AppData = emptyData();
   onGameSaved: ((game: Game) => void) | null = null;
   onSettingsSaved: (() => void) | null = null;
 
+  private meta(): StoredMeta {
+    const { games: _games, ...meta } = this.data;
+    return meta;
+  }
+
+  private async saveMeta() {
+    await (await database).put(stateStore, this.meta(), META_KEY);
+  }
+
   async load() {
-    const saved = await (await database).get(stateStore, "app");
-    if (saved && saved.version === 1) {
-      this.data = {
-        ...emptyData(),
-        ...saved,
-        settingsUpdatedAt: saved.settingsUpdatedAt || 0,
-        settingsCloudRevision: Math.max(0, Math.floor(Number(saved.settingsCloudRevision) || 0)),
-        settingsCloudDirty: Boolean(saved.settingsCloudDirty),
-        preferences: normalizePreferences(saved.preferences),
-        trainingProgress: normalizeTrainingProgress(saved.trainingProgress),
-        games: Object.fromEntries(Object.entries(saved.games || {}).map(([id, game]) => [id, normalizeGame(game as Game)])),
-        deletedGames: saved.deletedGames || {},
-      };
+    const db = await database;
+    const [meta, keys] = await Promise.all([db.get(stateStore, META_KEY), db.getAllKeys(stateStore)]);
+    const gameKeys = keys.filter((key): key is string => typeof key === "string" && key.startsWith(GAME_KEY_PREFIX));
+    if (meta?.version === 1) {
+      const entries = await Promise.all(gameKeys.map(async (key) => [key.slice(GAME_KEY_PREFIX.length), normalizeGame(await db.get(stateStore, key) as Game)] as const));
+      this.data = normalizedData(meta, Object.fromEntries(entries));
+      return;
     }
+    const legacy = await db.get(stateStore, LEGACY_STATE_KEY);
+    if (legacy?.version !== 1) return;
+    const games = Object.fromEntries(Object.entries(legacy.games || {}).map(([id, game]) => [id, normalizeGame(game as Game)]));
+    this.data = normalizedData(legacy, games);
+    await this.save();
   }
 
   async save() {
-    await (await database).put(stateStore, this.data, "app");
+    const db = await database;
+    const transaction = db.transaction(stateStore, "readwrite");
+    const store = transaction.objectStore(stateStore);
+    const keys = await store.getAllKeys();
+    for (const key of keys) if (key === LEGACY_STATE_KEY || typeof key === "string" && key.startsWith(GAME_KEY_PREFIX)) await store.delete(key);
+    await store.put(this.meta(), META_KEY);
+    await Promise.all(Object.values(this.data.games).map((game) => store.put(game, gameKey(game.id))));
+    await transaction.done;
   }
 
   activeGame(): Game | null {
@@ -201,23 +240,33 @@ export class Store {
   }
 
   async putGame(game: Game, active = true, sync = true) {
+    const hadTombstone = game.id in this.data.deletedGames;
     delete this.data.deletedGames[game.id];
-    if (sync) game.cloudDirty = true;
+    if (sync) {
+      game.cloudDirty = true;
+      game.updatedAt = Math.max(Date.now(), game.updatedAt + 1);
+    }
     this.data.games[game.id] = game;
+    let metaChanged = hadTombstone;
     if (active && this.data.activeGameId !== game.id) {
       this.data.activeGameId = game.id;
       this.data.settingsUpdatedAt = Date.now();
       this.data.settingsCloudDirty = true;
+      metaChanged = true;
       this.onSettingsSaved?.();
     }
-    await this.save();
+    const db = await database;
+    const transaction = db.transaction(stateStore, "readwrite");
+    await transaction.store.put(game, gameKey(game.id));
+    if (metaChanged) await transaction.store.put(this.meta(), META_KEY);
+    await transaction.done;
     if (sync) this.onGameSaved?.(game);
   }
 
   async saveSettings() {
     this.data.settingsUpdatedAt = Date.now();
     this.data.settingsCloudDirty = true;
-    await this.save();
+    await this.saveMeta();
     this.onSettingsSaved?.();
   }
 
@@ -226,13 +275,13 @@ export class Store {
     if (!game) return;
     game.cloudRevision = Math.max(game.cloudRevision || 0, revision);
     if (game.updatedAt <= syncedUpdatedAt) game.cloudDirty = false;
-    await this.save();
+    await (await database).put(stateStore, game, gameKey(id));
   }
 
   async markSettingsSynced(revision: number, syncedUpdatedAt: number) {
     this.data.settingsCloudRevision = Math.max(this.data.settingsCloudRevision || 0, revision);
     if (this.data.settingsUpdatedAt <= syncedUpdatedAt) this.data.settingsCloudDirty = false;
-    await this.save();
+    await this.saveMeta();
   }
 
   async mergeCloudGame(game: Game) {
@@ -249,7 +298,7 @@ export class Store {
       if (!remoteIsNewer) return false;
     }
     this.data.games[game.id] = game;
-    await this.save();
+    await (await database).put(stateStore, game, gameKey(game.id));
     return true;
   }
 
@@ -277,7 +326,11 @@ export class Store {
       changed = true;
     }
     if (!changed) return false;
-    await this.save();
+    const db = await database;
+    const transaction = db.transaction(stateStore, "readwrite");
+    await transaction.store.put(this.meta(), META_KEY);
+    for (const id of Object.keys(settings.deletedGames || {})) if (!this.data.games[id]) await transaction.store.delete(gameKey(id));
+    await transaction.done;
     return true;
   }
 
@@ -291,7 +344,11 @@ export class Store {
     if (this.data.activeGameId === id) this.data.activeGameId = null;
     this.data.settingsUpdatedAt = Math.max(Date.now(), deletedAt);
     this.data.settingsCloudDirty = true;
-    await this.save();
+    const db = await database;
+    const transaction = db.transaction(stateStore, "readwrite");
+    await transaction.store.delete(gameKey(id));
+    await transaction.store.put(this.meta(), META_KEY);
+    await transaction.done;
     this.onSettingsSaved?.();
     return true;
   }
@@ -322,7 +379,9 @@ export class Store {
     }
     this.data.preferences = normalizePreferences({ ...this.data.preferences, ...parsed.data.preferences });
     this.data.trainingProgress = { ...this.data.trainingProgress, ...normalizeTrainingProgress(parsed.data.trainingProgress) };
-    await this.saveSettings();
+    await this.save();
+    this.onSettingsSaved?.();
+    for (const game of Object.values(this.data.games)) if (game.cloudDirty) this.onGameSaved?.(game);
     return { added, skipped };
   }
 
@@ -333,6 +392,7 @@ export class Store {
     }
     if (scope === "all") this.data = emptyData();
     if (this.data.activeGameId && !this.data.games[this.data.activeGameId]) this.data.activeGameId = null;
-    await this.saveSettings();
+    await this.save();
+    this.onSettingsSaved?.();
   }
 }

@@ -89,6 +89,7 @@ export interface PuzzleProgress {
   elapsedSeconds: number;
   startedAt: number;
   updatedAt: number;
+  cloudRevision?: number;
   completedAt: number | null;
   challenge?: {
     cadence: ChallengeCadence;
@@ -113,6 +114,7 @@ export interface AppData {
   version: 1;
   catalogueVersion: string;
   settingsUpdatedAt: number;
+  settingsCloudRevision?: number;
   preferences: Preferences;
   progress: Record<string, PuzzleProgress>;
   deletedProgress: Record<string, number>;

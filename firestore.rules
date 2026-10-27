@@ -38,6 +38,29 @@ service cloud.firestore {
         && d.settingsUpdatedAt is number;
     }
 
+    function validWordProgress(id) {
+      let d = request.resource.data;
+      return d.version == 1
+        && d.id == id && validId(id)
+        && d.puzzleId is string && validId(d.puzzleId)
+        && d.kind in ['word-search', 'crossword', 'word-grid']
+        && d.foundWordIds is list
+        && d.entries is list
+        && d.hintedCells is list
+        && d.updatedAt is number
+        && d.cloudRevision is int && d.cloudRevision >= 0;
+    }
+
+    function validWordSettings() {
+      let d = request.resource.data;
+      return d.version == 1
+        && d.cloudRevision is int && d.cloudRevision >= 0
+        && d.preferences is map
+        && d.settingsUpdatedAt is number
+        && d.deletedProgress is map && d.deletedProgress.size() <= 500
+        && (d.activePuzzleId == null || validId(d.activePuzzleId));
+    }
+
     match /users/{uid}/sudokuGames/{id} {
       allow read, delete: if owner(uid);
       allow create, update: if owner(uid) && validSudokuGame(id);
@@ -52,6 +75,17 @@ service cloud.firestore {
     match /users/{uid}/wordState/app {
       allow read, delete: if owner(uid);
       allow create, update: if owner(uid) && validWordState();
+    }
+
+    match /users/{uid}/wordProgress/{id} {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && validWordProgress(id);
+    }
+
+    match /users/{uid}/wordMeta/settings {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && validWordSettings();
+      allow delete: if false;
     }
 
     match /{document=**} {

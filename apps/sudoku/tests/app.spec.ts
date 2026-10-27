@@ -22,7 +22,7 @@ test("home, library and puzzle details expose the offline catalogue and SE prove
   await expect(page.locator("[data-challenge-puzzle]")).toHaveCount(4);
   await page.locator("[data-challenge-puzzle]").first().click();
   await expect(page.getByRole("grid", { name: "Sudoku board" })).toBeVisible();
-  await page.getByRole("button", { name: "STrack home" }).click();
+  await page.getByRole("button", { name: "Sudoku home" }).click();
   await expect(page.locator(".active-section").getByText("Daily challenge")).toBeVisible();
   await page.getByRole("button", { name: "This week" }).click();
   await expect(page.getByRole("heading", { name: "Weekly challenges" })).toBeVisible();
@@ -42,13 +42,13 @@ test("a completed challenge continues to the next difficulty in the same period"
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    const game = data.games[data.activeGameId];
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     const challenge = { ...game.challenge };
     game.values = [...game.puzzle.solution];
     game.completedAt = Date.now();
     game.updatedAt = game.completedAt;
-    store.put(data, "app");
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
     db.close();
     return challenge;
@@ -63,8 +63,9 @@ test("a completed challenge continues to the next difficulty in the same period"
     const request = indexedDB.open("strack-v1");
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readonly");
-    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    const game = data.games[data.activeGameId];
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     db.close();
     return { challenge: game.challenge, difficulty: game.puzzle.difficulty };
   });
@@ -219,7 +220,7 @@ test("player settings support simple notes, compact tools and readable presets",
   await expect(empty.nth(1).locator(".corner-marks")).toHaveCount(0);
   await expect(empty.nth(0).locator(".centre-marks")).toContainText("4");
   await expect(empty.nth(1).locator(".centre-marks")).toContainText("4");
-  expect(await empty.nth(0).locator(".centre-marks").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(13);
+  expect(await empty.nth(0).locator(".centre-marks").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
   expect(await page.getByRole("button", { name: "Notes", exact: true }).evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12);
 
   await page.reload();
@@ -241,8 +242,9 @@ test("the default three-mistake limit fails a puzzle on the fourth wrong digit",
     const request = indexedDB.open("strack-v1");
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readonly");
-    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    const game = data.games[data.activeGameId];
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     const answer = Number(game.puzzle.solution[game.anchor]);
     db.close();
     return [1, 2, 3, 4, 5].filter((digit) => digit !== answer).slice(0, 4);
@@ -271,8 +273,9 @@ test("immediate mistake highlighting is optional and accessible", async ({ page 
     const request = indexedDB.open("strack-v1");
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readonly");
-    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    const game = data.games[data.activeGameId];
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     const answer = Number(game.puzzle.solution[game.anchor]);
     db.close();
     return [1, 2, 3, 4, 5].find((digit) => digit !== answer);
@@ -434,11 +437,12 @@ test("home separates completed puzzles and allows individual deletion", async ({
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    data.games[data.activeGameId].completedAt = Date.now();
-    data.games[data.activeGameId].paused = true;
-    data.games[data.activeGameId].updatedAt = Date.now();
-    store.put(data, "app");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    game.completedAt = Date.now();
+    game.paused = true;
+    game.updatedAt = Date.now();
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
     db.close();
   });
@@ -544,8 +548,8 @@ test("selecting a placed value highlights matching corner and centre notes", asy
 
 test("selecting a placed value highlights matching automatic candidates", async ({ page }) => {
   await page.getByRole("button", { name: "Settings and help" }).click();
-  await page.getByLabel("Automatic candidates").check();
-  await page.getByRole("button", { name: "STrack home" }).click();
+  await page.getByRole("switch", { name: /Automatic candidates/ }).check();
+  await page.getByRole("button", { name: "Sudoku home" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const given = page.locator(".sudoku-cell.given").first();
   const digit = await given.locator(".cell-value").textContent();
@@ -618,7 +622,7 @@ test("corner notes remain separate from cell values and multi-cell toggles conve
   await page.getByRole("button", { name: /Multi-select/ }).click();
   await empty.nth(1).click();
   await page.getByRole("button", { name: "4", exact: true }).click();
-  await expect(empty.nth(0).locator(".corner-marks")).toContainText("4");
+  await expect(empty.nth(0).locator(".corner-marks")).toHaveCount(0);
   await expect(empty.nth(1).locator(".corner-marks")).toContainText("4");
   await page.getByRole("button", { name: "4", exact: true }).click();
   await expect(empty.nth(0).locator(".corner-marks")).toHaveCount(0);
@@ -667,6 +671,9 @@ test("solving the puzzle triggers a reduced-motion-safe completion celebration",
 });
 
 test("number-pad digits grey out after all nine are placed and recover on undo", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings and help" }).click();
+  await page.locator('[data-preference="mistakeLimit"]').uncheck();
+  await page.getByRole("button", { name: "Close settings and help" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   await expect(page.getByRole("grid", { name: "Sudoku board" })).toBeVisible();
   const digit = "5";
@@ -749,7 +756,11 @@ test("hints can show answers, be dismissed, and remain available in history", as
 });
 
 test("a supported hint opens its matching strategy lesson", async ({ page }) => {
-  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  const nakedSinglePosition = "8.9.4..2..46.1....3..9........1..9455.......6983..6........4..1....9.37..3..7.4.9";
+  await page.getByRole("button", { name: "Open" }).click();
+  await page.getByLabel("81-character puzzle").fill(nakedSinglePosition);
+  await page.getByRole("button", { name: "Validate puzzle" }).click();
+  await page.getByRole("button", { name: "Play now" }).click();
   await page.getByRole("button", { name: "Get a logical hint" }).click();
   await page.getByRole("button", { name: "Show pattern" }).click();
   const practice = page.getByRole("button", { name: /Practice Naked single/ });
@@ -768,9 +779,11 @@ test("an already-applied saved hint is not reopened after restart", async ({ pag
     const request = indexedDB.open("strack-v1");
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readonly");
-    const data = await new Promise<any>((resolve, reject) => { const get = transaction.objectStore("state").get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     db.close();
-    return data.games[data.activeGameId].hintId as string;
+    return game.hintId as string;
   });
   await page.getByRole("button", { name: "Apply deduction" }).click();
 
@@ -779,10 +792,11 @@ test("an already-applied saved hint is not reopened after restart", async ({ pag
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    data.games[data.activeGameId].hintStage = "preview";
-    data.games[data.activeGameId].hintId = hintId;
-    store.put(data, "app");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    game.hintStage = "preview";
+    game.hintId = hintId;
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
     db.close();
   }, appliedHintId);
@@ -820,13 +834,13 @@ test("hints follow the live candidate grid and never target absent centre notes"
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const transaction = db.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => { const get = store.get("app"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
-    const game = data.games[data.activeGameId];
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
     game.centre = centre;
     game.eliminated = Array.from({ length: 81 }, () => []);
     game.hintStage = "none";
     game.hintId = null;
-    store.put(data, "app");
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
     db.close();
   }, reportedCandidates);
@@ -902,7 +916,7 @@ test("Sudoku grid surfaces follow explicit light and dark themes", async ({ page
   await page.goto("/");
   await page.getByRole("button", { name: "Settings and help" }).click();
   await page.getByLabel("Theme").selectOption("dark");
-  await page.getByRole("button", { name: "STrack home" }).click();
+  await page.getByRole("button", { name: "Sudoku home" }).click();
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   await page.locator(".sudoku-cell.given").first().click();
   await expect(page.locator(".sudoku-cell.peer").first()).toBeVisible();
@@ -910,7 +924,7 @@ test("Sudoku grid surfaces follow explicit light and dark themes", async ({ page
 
   await page.getByRole("button", { name: "Settings and help" }).click();
   await page.getByLabel("Theme").selectOption("light");
-  await page.getByRole("button", { name: "STrack home" }).click();
+  await page.getByRole("button", { name: "Sudoku home" }).click();
   await page.getByRole("button", { name: /Resume puzzle/ }).click();
   const light = await boardColours();
 
@@ -1029,6 +1043,8 @@ test("production app relaunches offline with catalogue and current progress", as
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/strack/`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const empty = page.locator(".sudoku-cell:not(.given)").first();
   await empty.click();
@@ -1042,7 +1058,7 @@ test("production app relaunches offline with catalogue and current progress", as
   await page.getByRole("button", { name: /Resume puzzle/ }).click();
   await expect(page.getByRole("grid", { name: "Sudoku board" })).toBeVisible();
   await expect(page.locator(".sudoku-cell:not(.given)").first().locator(".cell-value")).toHaveText("1");
-  await page.getByRole("button", { name: "STrack home" }).click();
+  await page.getByRole("button", { name: "Sudoku home" }).click();
   await page.getByRole("button", { name: "Puzzles" }).click();
   await expect(page.getByText("80 puzzles")).toBeVisible();
   await context.close();

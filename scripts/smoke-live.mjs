@@ -50,13 +50,15 @@ async function firestore(path, options = {}) {
 async function cleanup() {
   if (!user) return;
   try {
-    const games = await firestore(`users/${user.localId}/sudokuGames`);
-    if (games.ok) {
-      for (const document of (await games.json()).documents || []) {
-        await fetch(`https://firestore.googleapis.com/v1/${document.name}`, { method: "DELETE", headers: { Authorization: `Bearer ${user.idToken}` } });
+    for (const collection of ["sudokuGames", "wordProgress"]) {
+      const records = await firestore(`users/${user.localId}/${collection}`);
+      if (records.ok) {
+        for (const document of (await records.json()).documents || []) {
+          await fetch(`https://firestore.googleapis.com/v1/${document.name}`, { method: "DELETE", headers: { Authorization: `Bearer ${user.idToken}` } });
+        }
       }
     }
-    for (const path of [`users/${user.localId}/sudokuMeta/settings`, `users/${user.localId}/wordState/app`]) await firestore(path, { method: "DELETE" });
+    for (const path of [`users/${user.localId}/sudokuMeta/settings`, `users/${user.localId}/wordMeta/settings`, `users/${user.localId}/wordState/app`]) await firestore(path, { method: "DELETE" });
     await authRequest("accounts:delete", { idToken: user.idToken });
   } catch (error) {
     console.error(`Cleanup warning: ${error instanceof Error ? error.message : error}`);

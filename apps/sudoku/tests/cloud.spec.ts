@@ -11,7 +11,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await first.getByLabel("Password").fill(password);
   await first.getByRole("button", { name: "Create account" }).click();
   await expect(first.getByRole("heading", { name: "Progress sync is on" })).toBeVisible();
-  await first.getByRole("button", { name: "STrack home" }).click();
+  await first.getByRole("button", { name: "Sudoku home" }).click();
   await first.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const firstEmpty = first.locator(".sudoku-cell:not(.given)").first();
   const secondEmpty = first.locator(".sudoku-cell:not(.given)").nth(1);
@@ -23,6 +23,27 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await first.getByRole("button", { name: "Lines" }).click();
   await first.getByRole("button", { name: "Use rose line colour" }).click();
   await firstEmpty.dragTo(secondEmpty);
+  await expect.poll(() => first.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("strack-v1", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction("state", "readonly");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return { colours: Math.max(...game.colours.map((items: string[]) => items.length)), lines: game.lines.length, cloudDirty: game.cloudDirty };
+  }), { timeout: 10_000 }).toEqual({ colours: 2, lines: 1, cloudDirty: false });
   await first.getByRole("button", { name: "Settings and help" }).click();
   await expect(first.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible();
 
@@ -34,11 +55,12 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await second.getByLabel("Password").fill(password);
   await second.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(second.getByRole("heading", { name: "Progress sync is on" })).toBeVisible();
-  await second.getByRole("button", { name: "STrack home" }).click();
+  await expect(second.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible({ timeout: 10_000 });
+  await second.getByRole("button", { name: "Sudoku home" }).click();
   await expect(second.getByRole("button", { name: /Resume puzzle/ })).toBeVisible();
   await second.getByRole("button", { name: /Resume puzzle/ }).click();
   await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".cell-value")).toHaveText("1");
-  await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".cell-colours i")).toHaveCount(2);
+  await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".colour-cues i")).toHaveCount(2);
   await expect(second.locator(".annotation-line.colour-rose:not(.preview)")).toHaveCount(1);
 
   await first.evaluate(async () => {
@@ -49,18 +71,22 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
     });
     const transaction = database.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => {
-      const request = store.get("app");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const game = data.games[data.activeGameId];
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     const completedAt = Date.now();
     game.values = game.puzzle.solution.split("");
     game.completedAt = completedAt;
     game.updatedAt = completedAt;
     game.cloudDirty = true;
-    store.put(data, "app");
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

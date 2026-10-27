@@ -13,7 +13,7 @@ The production build targets `https://bicyclejeanre.github.io/wtrack/`. The cata
 - Stable daily and weekly challenges in every rated difficulty, with independent sessions, streaks, completion, and average-time summaries.
 - IndexedDB-first progress, completion state, preferences, and timer.
 - Separate active/completed history with individual deletion, synchronized tombstones, and scoped local-data controls.
-- Optional Firebase email/password accounts and owner-protected Firestore state.
+- Optional Firebase email/password accounts with owner-protected per-session Firestore progress, separate settings, and bounded coalesced background updates.
 - Word-search generation through `@blex41/word-search`.
 - Crossword layout generation through `crossword-layout-generator`.
 - Build-time Word Grid vocabulary from `an-array-of-english-words`, quality-filtered with `subtlex-word-frequencies`; neither dataset ships in the browser bundle.

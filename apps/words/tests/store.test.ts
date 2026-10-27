@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "fake-indexeddb/auto";
+import { openDB } from "idb";
 import { puzzles, wordGrids, wordSearches } from "./fixtures.ts";
 import { DEFAULT_PREFERENCES, MAX_OFFLINE_PUZZLES, newProgress, normalizeData, Store } from "../src/store.ts";
 
@@ -47,6 +48,45 @@ test("store persists found words in IndexedDB", async () => {
   const reloaded = new Store();
   await reloaded.load();
   assert.deepEqual(reloaded.data.progress[puzzle.id]?.foundWordIds, [puzzle.words[0]!.id]);
+});
+
+test("word sessions use independent IndexedDB records", async () => {
+  const store = new Store();
+  await store.load();
+  await store.clearProgress("all");
+  await store.start(puzzles[0]!, "partition-first");
+  await store.start(puzzles[1]!, "partition-second");
+  const database = await openDB("wtrack", 2);
+  const keys = await database.getAllKeys("state");
+  assert.equal(keys.includes("app"), false, "the legacy monolithic record is removed");
+  assert.equal(keys.includes("meta"), true);
+  assert.equal(keys.includes("progress:partition-first"), true);
+  assert.equal(keys.includes("progress:partition-second"), true);
+  const untouched = structuredClone(await database.get("state", "progress:partition-second"));
+  await store.update(puzzles[0]!, (progress) => { progress.foundWordIds.push("only-first"); }, "partition-first");
+  assert.deepEqual(await database.get("state", "progress:partition-second"), untouched, "saving one session does not rewrite another session");
+  database.close();
+  await store.clearProgress("all");
+});
+
+test("legacy word state migrates without losing sessions", async () => {
+  const progress = newProgress(puzzles[0]!, 140);
+  progress.foundWordIds.push("legacy-word");
+  const legacy = normalizeData({ version: 1, preferences: DEFAULT_PREFERENCES, progress: { legacy: progress }, deletedProgress: {}, activePuzzleId: "legacy", settingsUpdatedAt: 140 });
+  const database = await openDB("wtrack", 2);
+  await database.clear("state");
+  await database.put("state", legacy, "app");
+  database.close();
+
+  const migrated = new Store();
+  await migrated.load();
+  assert.deepEqual(migrated.data.progress.legacy?.foundWordIds, ["legacy-word"]);
+  const reopened = await openDB("wtrack", 2);
+  const keys = await reopened.getAllKeys("state");
+  assert.equal(keys.includes("app"), false);
+  assert.equal(keys.includes("progress:legacy"), true);
+  reopened.close();
+  await migrated.clearProgress("all");
 });
 
 test("opening a revised Word Grid clears stale completion but preserves found words", async () => {
