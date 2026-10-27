@@ -116,12 +116,12 @@ service cloud.firestore {
         && (d.activeGameId == null || validId(d.activeGameId))
         && d.updatedAt is number && d.updatedAt > 0;
     }
-    match /users/{uid}/games/{id} {
+    match /users/{uid}/sudokuGames/{id} {
       allow read: if owner(uid);
       allow create, update: if owner(uid) && validGame(id);
       allow delete: if owner(uid);
     }
-    match /users/{uid}/meta/settings {
+    match /users/{uid}/sudokuMeta/settings {
       allow read: if owner(uid);
       allow create, update: if owner(uid) && validSettings();
       allow delete: if false;

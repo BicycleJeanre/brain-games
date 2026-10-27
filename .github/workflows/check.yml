@@ -25,6 +25,8 @@ jobs:
       - run: npm run test:shared
       - run: npm run test:unit
       - run: npm run test:rules
+      - run: npm run test:rules --workspace=strack
+      - run: npm run test:rules --workspace=wtrack
       - run: npm run build
       - run: npm run test:base-path
       - run: npx playwright install --with-deps chromium
