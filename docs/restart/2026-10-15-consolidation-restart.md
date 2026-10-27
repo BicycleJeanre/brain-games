@@ -1,6 +1,6 @@
 # Restart: Brain Games consolidation
 
-Status: Unified Brain Games experience deployed; legacy routes retained
+Status: Unified Brain Games deployed; sync-performance release live; legacy routes retired
 Owner: Jeanre Van Wyk  
 Date: 2026-10-15  
 Repo: `BicycleJeanre/brain-games`  
@@ -43,7 +43,9 @@ Combine STrack and WTrack into Brain Games without risking either live applicati
 - Pull request #12 merged the unified profile release as `f48c9f6`; Pages run `38734360809` deployed it successfully. The shared Settings screen now owns profile creation, sign-in, password reset, sign-out, and header status. In the combined app, Sudoku and word-game settings consume the same Firebase session and link back to the shared profile manager instead of presenting duplicate account forms.
 - The required check passed all 54 inherited unit tests, nine shell journeys, the combined build and base-path checks, and a targeted Authentication-emulator journey proving that a profile created once is recognized by the shell and both modules.
 - Live verification confirmed one account form at `/?view=settings`, no duplicate account form in either game module, and a shared “Manage Brain Games profile” route from both Sudoku and word-game settings. The live root service worker upgraded after two refreshes. Existing `/strack/` and `/wtrack/` deployments remain unchanged.
+- On 2026-10-27, pull request #29 merged the sync-performance release as `13bb7a0`. IndexedDB and Firestore now store games/sessions independently, rapid edits are coalesced with bounded concurrency, Sudoku cloud payloads omit local-only undo/hint history, and input paints before local persistence finishes.
+- Firestore rules and indexes were deployed to `brain-games-jvw` before Pages workflow run `40468890132`. The required check passed all local, security-rule, profile, and two-device emulator suites. A disposable live desktop/phone account verified shared sign-in and resume in both game families with no horizontal overflow, then its documents and account were removed.
 
 ## Next checkpoint
 
-Have the owner sign in once from shared Settings and confirm both game families restore on a physical PC and phone using the owner account. Continue shared cloud-data extraction afterward. Keep the previous `/strack/` and `/wtrack/` deployments active until explicit retirement authorization.
+Have the owner confirm the faster number-entry feel and current-game propagation on a physical phone and second device using the owner account. If either still lags, capture the game count, connection type, and approximate delay; the release now exposes independent records and bounded queues, making the remaining path diagnosable without rewriting full history.
