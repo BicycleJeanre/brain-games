@@ -60,7 +60,7 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await expect(second.getByRole("button", { name: /Resume puzzle/ })).toBeVisible();
   await second.getByRole("button", { name: /Resume puzzle/ }).click();
   await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".cell-value")).toHaveText("1");
-  await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".cell-colours i")).toHaveCount(2);
+  await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".colour-cues i")).toHaveCount(2);
   await expect(second.locator(".annotation-line.colour-rose:not(.preview)")).toHaveCount(1);
 
   await first.evaluate(async () => {
