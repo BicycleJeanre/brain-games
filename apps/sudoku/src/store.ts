@@ -242,7 +242,10 @@ export class Store {
   async putGame(game: Game, active = true, sync = true) {
     const hadTombstone = game.id in this.data.deletedGames;
     delete this.data.deletedGames[game.id];
-    if (sync) game.cloudDirty = true;
+    if (sync) {
+      game.cloudDirty = true;
+      game.updatedAt = Math.max(Date.now(), game.updatedAt + 1);
+    }
     this.data.games[game.id] = game;
     let metaChanged = hadTombstone;
     if (active && this.data.activeGameId !== game.id) {

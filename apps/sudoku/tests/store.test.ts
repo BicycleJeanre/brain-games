@@ -105,12 +105,26 @@ test("local UI saves stay off the cloud queue while durable changes retain retry
   game.values[0] = "1";
   game.updatedAt = 160;
   await store.putGame(game, false, true);
+  const savedAt = game.updatedAt;
   assert.equal(queuedGames, 1);
   assert.equal(game.cloudDirty, true, "an interrupted upload remains discoverable after restart");
 
-  await store.markGameSynced(game.id, 4, 160);
+  await store.markGameSynced(game.id, 4, savedAt);
   assert.equal(game.cloudRevision, 4);
   assert.equal(game.cloudDirty, false);
+});
+
+test("rapid cloud-bound saves keep a strict order and stale acknowledgements stay dirty", async () => {
+  const { Store } = await import("../src/store.ts");
+  const store = new Store();
+  await store.load();
+  const game = createGame(puzzle, 1);
+  await store.putGame(game);
+  const firstSavedAt = game.updatedAt;
+  await store.putGame(game);
+  assert.ok(game.updatedAt > firstSavedAt);
+  await store.markGameSynced(game.id, 1, firstSavedAt);
+  assert.equal(game.cloudDirty, true);
 });
 
 test("cloud merge keeps the newest puzzle and settings versions", async () => {
