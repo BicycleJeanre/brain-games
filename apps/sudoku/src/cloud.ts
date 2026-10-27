@@ -82,10 +82,18 @@ type CloudGame = Omit<Game, "corner" | "centre" | "colours" | "eliminated" | "hi
   hintPath?: string;
 };
 
-const MAX_SYNCED_HINT_PATH_LENGTH = 200_000;
-export const MAX_SYNCED_GAME_BYTES = 700_000;
+export const MAX_SYNCED_GAME_BYTES = 96_000;
 
 const encodedByteLength = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
+const SYNC_CONCURRENCY = 4;
+
+async function inBatches<T, R>(items: T[], work: (item: T) => Promise<R>) {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += SYNC_CONCURRENCY) {
+    results.push(...await Promise.all(items.slice(index, index + SYNC_CONCURRENCY).map(work)));
+  }
+  return results;
+}
 
 const encodeMarks = (marks: number[][]) => marks.map((digits) => [...digits].sort().join(""));
 const decodeMarks = (marks: string[]) => marks.map((digits) => [...digits].map(Number).filter((digit) => digit >= 1 && digit <= 9));
@@ -108,7 +116,6 @@ function decodeSnapshot(value: string): BoardSnapshot | null {
 }
 
 export function encodeCloudGame(game: Game, cloudRevision = game.cloudRevision || 0): CloudGame {
-  const hintPath = game.hintPath ? JSON.stringify(game.hintPath) : "";
   const { hintPath: _hintPath, selected: _selected, anchor: _anchor, mode: _mode, cloudDirty: _cloudDirty, ...cloudGame } = game;
   const encoded: CloudGame = {
     ...cloudGame,
@@ -118,24 +125,11 @@ export function encodeCloudGame(game: Game, cloudRevision = game.cloudRevision |
     centre: encodeMarks(game.centre),
     colours: encodeColours(game.colours),
     eliminated: encodeMarks(game.eliminated),
-    history: game.history.slice(-80).map((snapshot) => JSON.stringify(encodeSnapshot(snapshot))),
-    future: game.future.slice(-80).map((snapshot) => JSON.stringify(encodeSnapshot(snapshot))),
-    hintHistory: game.hintHistory.slice(-40).map((hint) => JSON.stringify(hint)),
-    ...(hintPath && hintPath.length <= MAX_SYNCED_HINT_PATH_LENGTH ? { hintPath } : {}),
+    history: [],
+    future: [],
+    hintHistory: [],
   };
-
-  // Firestore rejects documents above its per-document limit. A heavily
-  // annotated board can make 80 serialized undo snapshots larger than the
-  // current board itself. Keep the authoritative state, and shed regenerable
-  // or oldest history only from the cloud representation until it is safe.
-  if (encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) delete encoded.hintPath;
-  while (encoded.hintHistory.length && encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) encoded.hintHistory.shift();
-  while ((encoded.history.length || encoded.future.length) && encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) {
-    const historyBytes = encoded.history[0]?.length || 0;
-    const futureBytes = encoded.future[0]?.length || 0;
-    if (historyBytes >= futureBytes) encoded.history.shift();
-    else encoded.future.shift();
-  }
+  if (encodedByteLength(encoded) > MAX_SYNCED_GAME_BYTES) throw new Error("This puzzle has too many annotations to synchronize safely.");
   return encoded;
 }
 
@@ -181,6 +175,7 @@ export class CloudSync {
   private pendingSettings = false;
   private flushTimer: number | null = null;
   private flushPromise: Promise<void> | null = null;
+  private firstQueuedAt = 0;
   private inFlightCount = 0;
   private reconciledGames = false;
   private reconciledSettings = false;
@@ -222,7 +217,8 @@ export class CloudSync {
       for (const change of snapshot.docChanges()) {
         if (change.type === "removed") updated = (await this.store.removeGame(change.doc.id)) || updated;
       }
-      for (const item of snapshot.docs) {
+      const documents = !this.reconciledGames ? snapshot.docs : snapshot.docChanges().filter((change) => change.type !== "removed").map((change) => change.doc);
+      for (const item of documents) {
         const game = decodeCloudGame(item.data());
         if (!game) continue;
         remoteGames.set(game.id, game);
@@ -281,9 +277,9 @@ export class CloudSync {
     const game = this.store.data.games[id];
     if (!game) return true;
     const syncedUpdatedAt = Math.max(game.updatedAt, queuedUpdatedAt);
-    const encoded = encodeCloudGame(game);
     const reference = doc(database, "users", this.user.uid, "sudokuGames", game.id);
     try {
+      const encoded = encodeCloudGame(game);
       const revision = await runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
         const remoteGame = decodeCloudGame(remote.data());
@@ -329,8 +325,10 @@ export class CloudSync {
     }
   }
 
-  private schedule(delay = 650) {
+  private schedule() {
+    if (!this.firstQueuedAt) this.firstQueuedAt = Date.now();
     if (this.flushTimer !== null) window.clearTimeout(this.flushTimer);
+    const delay = Math.min(350, Math.max(0, 2_000 - (Date.now() - this.firstQueuedAt)));
     this.flushTimer = window.setTimeout(() => { this.flushTimer = null; void this.flushNow(); }, delay);
     const wasWorking = this.working;
     this.refreshWorking();
@@ -356,17 +354,18 @@ export class CloudSync {
       this.pendingSettings = false;
       this.pendingDeletes.clear();
       this.pendingGames.clear();
+      this.firstQueuedAt = 0;
       this.inFlightCount = Number(settings) + deletes.length + games.length;
       this.refreshWorking();
 
       let failed = false;
       if (settings && !await this.writeSettings()) { this.pendingSettings = true; failed = true; }
-      const deleteResults = await Promise.all(deletes.map(async (id) => {
+      const deleteResults = await inBatches(deletes, async (id) => {
         try { await deleteDoc(doc(database!, "users", this.user!.uid, "sudokuGames", id)); return true; }
         catch (error) { this.fail(error); return false; }
-      }));
+      });
       deleteResults.forEach((succeeded, index) => { if (!succeeded) { this.pendingDeletes.add(deletes[index]); failed = true; } });
-      const gameResults = await Promise.all(games.map(([id, updatedAt]) => this.writeGame(id, updatedAt)));
+      const gameResults = await inBatches(games, ([id, updatedAt]) => this.writeGame(id, updatedAt));
       gameResults.forEach((succeeded, index) => { if (!succeeded) { this.pendingGames.set(games[index][0], games[index][1]); failed = true; } });
       this.inFlightCount = 0;
       if (failed) break;
@@ -407,6 +406,7 @@ export class CloudSync {
     this.pendingGames.clear();
     this.pendingDeletes.clear();
     this.pendingSettings = false;
+    this.firstQueuedAt = 0;
     this.inFlightCount = 0;
     this.working = false;
   }

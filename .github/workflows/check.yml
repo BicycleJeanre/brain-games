@@ -17,11 +17,18 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
       - run: npm ci
       - run: npm run test:shared
       - run: npm run test:unit
+      - run: npm run test:rules
       - run: npm run build
       - run: npm run test:base-path
       - run: npx playwright install --with-deps chromium
       - run: npm run test:shell -- --project=chromium
       - run: npm run test:profile
+      - run: npm run test:cloud --workspace=strack
+      - run: npm run test:cloud --workspace=wtrack

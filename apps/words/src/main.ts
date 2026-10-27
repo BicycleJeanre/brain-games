@@ -39,6 +39,7 @@ let cachedPuzzleIds = new Set<string>();
 let settingsMessage = "";
 let settingsError = false;
 let renderToken = 0;
+let timerSaveCounter = 0;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -54,7 +55,10 @@ const matchesLibraryType = (puzzle: PuzzleSummary) => libraryType === "all"
     : libraryType === "word-grid" ? puzzle.kind === "word-grid" && puzzle.wordGridMode !== "shuffle"
       : puzzle.kind === libraryType);
 
-const cloud = new CloudSync(store, () => render());
+const cloud = new CloudSync(store, (dataChanged = false) => {
+  document.querySelectorAll<HTMLElement>("[data-cloud-status]").forEach((element) => { element.textContent = cloud.status(); });
+  if (dataChanged || view !== "player") render();
+});
 let authReady: ReturnType<typeof watchAuth> | undefined;
 
 function applyPreferences() {
@@ -76,7 +80,7 @@ function chrome(content: string) {
         ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid">B</span><span>Brain Games</span></a><div class="game-switcher" aria-label="Games"><a href="${brainGamesSudoku}">Sudoku</a><a href="${brainGamesWords}" aria-current="page">Word games</a></div>`
         : `<button class="brand" data-nav="home" aria-label="Word games home"><span class="brand-grid">A</span><span>Word games</span></button>`}
       <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
-      <span class="cloud-state">${escapeHtml(cloud.status())}</span>
+      <span class="cloud-state" data-cloud-status>${escapeHtml(cloud.status())}</span>
       <nav aria-label="Primary">
         ${[["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
       </nav>
@@ -413,7 +417,6 @@ async function completeWordSelection(end: GridPoint) {
   selectionStart = null;
   if (word) {
     await store.update(activePuzzle, (progress) => { if (!progress.foundWordIds.includes(word.id)) progress.foundWordIds.push(word.id); }, activeSessionId ?? activePuzzle.id);
-    void cloud.upload();
   }
   render();
   return Boolean(word);
@@ -446,7 +449,6 @@ async function submitWordGrid() {
     playerMessage = isTarget
       ? `${word.label} scores ${word.score} point${word.score === 1 ? "" : "s"}.`
       : `${word.label} is a bonus word worth ${word.score} point${word.score === 1 ? "" : "s"}.`;
-    void cloud.upload();
   } else if (wordGridPath.length < puzzle.minimumLength) playerMessage = `Words need at least ${puzzle.minimumLength} letters.`;
   else playerMessage = `${label || (puzzle.wordGridMode === "shuffle" ? "That word" : "That path")} is not in this ${puzzle.wordGridMode === "shuffle" ? "tray" : "grid"}'s accepted word list.`;
   wordGridPath = [];
@@ -491,7 +493,6 @@ function bind() {
     wordGridPath = [];
     playerMessage = "";
     render();
-    void cloud.upload();
   }));
   app.querySelector<HTMLElement>("[data-retry-catalogue]")?.addEventListener("click", () => void reloadCatalogue());
   app.querySelector<HTMLButtonElement>("[data-hint]")?.addEventListener("click", async () => {
@@ -528,7 +529,6 @@ function bind() {
       }
     }
     render();
-    void cloud.upload();
   });
 
   app.querySelectorAll<HTMLButtonElement>("[data-word-cell]").forEach((cell) => {
@@ -646,14 +646,15 @@ function bind() {
       const value = input.value.toUpperCase().replace(/[^A-Z]/g, "").slice(-1);
       input.value = value;
       const index = Number(input.dataset.crosswordCell);
-      const progress = await store.update(puzzle, (current) => { current.entries[index] = value; }, activeSessionId ?? puzzle.id);
+      const save = store.update(puzzle, (current) => { current.entries[index] = value; }, activeSessionId ?? puzzle.id);
+      const progress = sessionProgress()!;
       const activeClue = puzzle.clues.find((clue) => clueKey(clue.number, clue.direction) === selectedClue);
       const next = value && activeClue
         ? nextEmptyCrosswordIndex(puzzle, activeClue, index, progress.entries)
         : nextCrosswordIndex(puzzle, index, "next");
       render();
       if (value && next !== index) app.querySelector<HTMLInputElement>(`[data-crossword-cell="${next}"]`)?.focus();
-      void cloud.upload();
+      await save;
     });
     input.addEventListener("keydown", (event) => {
       if (!activePuzzle || activePuzzle.kind !== "crossword" || !event.key.startsWith("Arrow")) return;
@@ -670,7 +671,6 @@ function bind() {
     applyPreferences();
     const status = app.querySelector<HTMLElement>("[data-preferences-status]");
     if (status) status.textContent = "Saved on this device. Syncing when available.";
-    void cloud.upload();
   };
   app.querySelectorAll<HTMLSelectElement>("[data-preference-select]").forEach((select) => select.addEventListener("change", () => void savePreference(select.dataset.preferenceSelect as keyof Preferences, select.value)));
   app.querySelectorAll<HTMLInputElement>("[data-preference-toggle]").forEach((toggle) => toggle.addEventListener("change", () => void savePreference(toggle.dataset.preferenceToggle as keyof Preferences, toggle.checked)));
@@ -697,7 +697,6 @@ function bind() {
     settingsMessage = "Current puzzle reset.";
     settingsError = false;
     render();
-    void cloud.upload();
   });
   app.querySelectorAll<HTMLElement>("[data-delete-progress]").forEach((element) => element.addEventListener("click", async () => {
     const sessionId = element.dataset.deleteProgress!;
@@ -705,7 +704,6 @@ function bind() {
     await store.removeProgress(sessionId);
     if (activeSessionId === sessionId) { activeSessionId = null; activePuzzle = null; view = "home"; }
     render();
-    void cloud.upload();
   }));
   app.querySelectorAll<HTMLElement>("[data-clear-progress]").forEach((element) => element.addEventListener("click", async () => {
     const scope = element.dataset.clearProgress as "completed" | "all";
@@ -715,7 +713,6 @@ function bind() {
     settingsMessage = `${removed} saved session${removed === 1 ? "" : "s"} removed.`;
     settingsError = false;
     render();
-    void cloud.upload();
   }));
   app.querySelector<HTMLElement>("[data-clear-cache]")?.addEventListener("click", async () => {
     if (!confirm("Remove every downloaded offline puzzle payload? Saved progress will remain.")) return;
@@ -820,6 +817,9 @@ async function reloadCatalogue() {
 
 async function boot() {
   await store.load();
+  store.onProgressSaved = (progress, sessionId) => cloud.queueProgress(progress, sessionId);
+  store.onProgressDeleted = (sessionId) => cloud.queueDelete(sessionId);
+  store.onSettingsSaved = () => cloud.queueSettings();
   cachedPuzzleIds = new Set(await store.cachedPuzzleIds());
   try {
     await loadCatalogue();
@@ -837,10 +837,11 @@ async function boot() {
   window.setInterval(async () => {
     if (token !== renderToken || view !== "player" || !activePuzzle) return;
     const progress = sessionProgress();
-    if (!progress || progress.completedAt) return;
+    const sessionId = activeSessionId;
+    if (!progress || !sessionId || progress.completedAt) return;
     progress.elapsedSeconds += 1;
     progress.updatedAt = Date.now();
-    await store.save();
+    await store.persistProgress(sessionId, ++timerSaveCounter % 30 === 0);
     const timer = app.querySelector<HTMLElement>(".timer");
     if (timer && store.data.preferences.showTimer) timer.textContent = formatTime(progress.elapsedSeconds);
   }, 1000);

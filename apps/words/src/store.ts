@@ -25,11 +25,20 @@ interface CachedPuzzle {
   lastOpenedAt: number;
 }
 
+const LEGACY_STATE_KEY = "app";
+const META_KEY = "meta";
+const PROGRESS_KEY_PREFIX = "progress:";
+type StoredMeta = Omit<AppData, "progress">;
+
+function progressKey(id: string) {
+  return `${PROGRESS_KEY_PREFIX}${id}`;
+}
+
 function defaults(): AppData {
   return {
     version: 1,
     catalogueVersion: CATALOGUE_VERSION,
-    settingsUpdatedAt: Date.now(),
+    settingsUpdatedAt: 0,
     preferences: { ...DEFAULT_PREFERENCES },
     progress: {},
     deletedProgress: {},
@@ -79,6 +88,7 @@ export function normalizeData(value: unknown): AppData {
         elapsedSeconds: typeof candidate.elapsedSeconds === "number" ? candidate.elapsedSeconds : 0,
         startedAt: typeof candidate.startedAt === "number" ? candidate.startedAt : Date.now(),
         updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : 0,
+        cloudRevision: Math.max(0, Math.floor(Number(candidate.cloudRevision) || 0)),
         completedAt: typeof candidate.completedAt === "number" ? candidate.completedAt : null,
         ...(candidate.challenge
           && (candidate.challenge.cadence === "daily" || candidate.challenge.cadence === "weekly")
@@ -95,6 +105,7 @@ export function normalizeData(value: unknown): AppData {
     version: 1,
     catalogueVersion: CATALOGUE_VERSION,
     settingsUpdatedAt: typeof raw.settingsUpdatedAt === "number" ? raw.settingsUpdatedAt : base.settingsUpdatedAt,
+    settingsCloudRevision: Math.max(0, Math.floor(Number(raw.settingsCloudRevision) || 0)),
     preferences: {
       theme: ["system", "light", "dark"].includes(preferences.theme ?? "") ? preferences.theme! : "system",
       showTimer: typeof preferences.showTimer === "boolean" ? preferences.showTimer : true,
@@ -115,6 +126,26 @@ export function normalizeData(value: unknown): AppData {
 export class Store {
   data: AppData = defaults();
   private database?: Awaited<ReturnType<typeof openDB>>;
+  onProgressSaved: ((progress: PuzzleProgress, sessionId: string) => void) | null = null;
+  onProgressDeleted: ((sessionId: string) => void) | null = null;
+  onSettingsSaved: (() => void) | null = null;
+
+  private meta(): StoredMeta {
+    const { progress: _progress, ...meta } = this.data;
+    return meta;
+  }
+
+  private async saveMeta() {
+    if (this.database) await this.database.put(stateStore, this.meta(), META_KEY);
+  }
+
+  private async saveProgress(sessionId: string, sync = true) {
+    if (!this.database) return;
+    const progress = this.data.progress[sessionId];
+    if (!progress) return;
+    await this.database.put(stateStore, progress, progressKey(sessionId));
+    if (sync) this.onProgressSaved?.(progress, sessionId);
+  }
 
   async load() {
     this.database = await openDB(combinedBuild ? "brain-games-v1" : "wtrack", combinedBuild ? 1 : 2, { upgrade(db) {
@@ -122,12 +153,27 @@ export class Store {
         if (!db.objectStoreNames.contains(store)) db.createObjectStore(store);
       }
     } });
-    this.data = normalizeData(await this.database.get(stateStore, "app"));
+    const [meta, keys] = await Promise.all([this.database.get(stateStore, META_KEY), this.database.getAllKeys(stateStore)]);
+    const progressKeys = keys.filter((key): key is string => typeof key === "string" && key.startsWith(PROGRESS_KEY_PREFIX));
+    if (meta?.version === 1) {
+      const entries = await Promise.all(progressKeys.map(async (key) => [key.slice(PROGRESS_KEY_PREFIX.length), await this.database!.get(stateStore, key)] as const));
+      this.data = normalizeData({ ...meta, progress: Object.fromEntries(entries) });
+      return this.data;
+    }
+    const legacy = await this.database.get(stateStore, LEGACY_STATE_KEY);
+    this.data = normalizeData(legacy);
+    if (legacy?.version === 1) await this.save();
     return this.data;
   }
 
   async save() {
-    if (this.database) await this.database.put(stateStore, this.data, "app");
+    if (!this.database) return;
+    const transaction = this.database.transaction(stateStore, "readwrite");
+    const keys = await transaction.store.getAllKeys();
+    for (const key of keys) if (key === LEGACY_STATE_KEY || typeof key === "string" && key.startsWith(PROGRESS_KEY_PREFIX)) await transaction.store.delete(key);
+    await transaction.store.put(this.meta(), META_KEY);
+    await Promise.all(Object.entries(this.data.progress).map(([id, progress]) => transaction.store.put(progress, progressKey(id))));
+    await transaction.done;
   }
 
   async cachedPuzzleIds() {
@@ -171,8 +217,16 @@ export class Store {
       existing.updatedAt = Date.now();
     }
     delete this.data.deletedProgress[sessionId];
+    if (this.data.activePuzzleId !== sessionId) this.data.settingsUpdatedAt = Date.now();
     this.data.activePuzzleId = sessionId;
-    await this.save();
+    const transaction = this.database?.transaction(stateStore, "readwrite");
+    if (transaction) {
+      await transaction.store.put(this.data.progress[sessionId]!, progressKey(sessionId));
+      await transaction.store.put(this.meta(), META_KEY);
+      await transaction.done;
+    }
+    this.onProgressSaved?.(this.data.progress[sessionId]!, sessionId);
+    this.onSettingsSaved?.();
     return this.data.progress[sessionId]!;
   }
 
@@ -183,8 +237,12 @@ export class Store {
     if (isPuzzleComplete(puzzle, progress.foundWordIds, progress.entries) && !progress.completedAt) progress.completedAt = progress.updatedAt;
     this.data.progress[sessionId] = progress;
     this.data.activePuzzleId = sessionId;
-    await this.save();
+    await this.saveProgress(sessionId);
     return progress;
+  }
+
+  async persistProgress(sessionId: string, sync = false) {
+    await this.saveProgress(sessionId, sync);
   }
 
   async reset(puzzle: Puzzle, sessionId = puzzle.id) {
@@ -192,7 +250,10 @@ export class Store {
     this.data.progress[sessionId] = newProgress(puzzle, Date.now(), challenge);
     this.data.activePuzzleId = sessionId;
     delete this.data.deletedProgress[sessionId];
-    await this.save();
+    this.data.settingsUpdatedAt = Date.now();
+    await this.saveProgress(sessionId);
+    await this.saveMeta();
+    this.onSettingsSaved?.();
   }
 
   async removeProgress(sessionId: string, deletedAt = Date.now()) {
@@ -201,7 +262,15 @@ export class Store {
     this.data.deletedProgress[sessionId] = Math.max(deletedAt, this.data.deletedProgress[sessionId] ?? 0);
     this.data.deletedProgress = boundedDeletedProgress(this.data.deletedProgress);
     if (this.data.activePuzzleId === sessionId) this.data.activePuzzleId = null;
-    await this.save();
+    this.data.settingsUpdatedAt = Math.max(Date.now(), deletedAt);
+    if (this.database) {
+      const transaction = this.database.transaction(stateStore, "readwrite");
+      await transaction.store.delete(progressKey(sessionId));
+      await transaction.store.put(this.meta(), META_KEY);
+      await transaction.done;
+    }
+    this.onProgressDeleted?.(sessionId);
+    this.onSettingsSaved?.();
     return true;
   }
 
@@ -215,19 +284,30 @@ export class Store {
     this.data.deletedProgress = boundedDeletedProgress(this.data.deletedProgress);
     if (scope === "all") this.data.activePuzzleId = null;
     else if (this.data.activePuzzleId && !this.data.progress[this.data.activePuzzleId]) this.data.activePuzzleId = null;
-    await this.save();
+    this.data.settingsUpdatedAt = now;
+    if (this.database) {
+      const transaction = this.database.transaction(stateStore, "readwrite");
+      for (const [id] of entries) await transaction.store.delete(progressKey(id));
+      await transaction.store.put(this.meta(), META_KEY);
+      await transaction.done;
+    }
+    for (const [id] of entries) this.onProgressDeleted?.(id);
+    this.onSettingsSaved?.();
     return entries.length;
   }
 
   async setPreferences(preferences: Preferences) {
     this.data.preferences = preferences;
     this.data.settingsUpdatedAt = Date.now();
-    await this.save();
+    await this.saveMeta();
+    this.onSettingsSaved?.();
   }
 
   async replaceData(value: unknown) {
     this.data = normalizeData(value);
     await this.save();
+    this.onSettingsSaved?.();
+    for (const [id, progress] of Object.entries(this.data.progress)) this.onProgressSaved?.(progress, id);
     return this.data;
   }
 
@@ -242,25 +322,69 @@ export class Store {
     this.data.preferences = incoming.preferences;
     this.data.settingsUpdatedAt = Date.now();
     await this.save();
+    this.onSettingsSaved?.();
+    for (const [id, progress] of Object.entries(this.data.progress)) this.onProgressSaved?.(progress, id);
     return { added, skipped };
   }
 
   async mergeRemote(remote: AppData) {
     const incoming = normalizeData(remote);
+    const changedProgress = new Set<string>();
+    const deletedProgress = new Set<string>();
     for (const [id, progress] of Object.entries(incoming.progress)) {
       if ((this.data.deletedProgress[id] ?? 0) >= progress.updatedAt) continue;
-      if (!this.data.progress[id] || this.data.progress[id]!.updatedAt < progress.updatedAt) this.data.progress[id] = progress;
+      const local = this.data.progress[id];
+      const remoteIsNewer = !local || (local.cloudRevision && progress.cloudRevision
+        ? progress.cloudRevision > local.cloudRevision || progress.cloudRevision === local.cloudRevision && progress.updatedAt > local.updatedAt
+        : local.updatedAt < progress.updatedAt);
+      if (remoteIsNewer) { this.data.progress[id] = progress; changedProgress.add(id); }
     }
     for (const [id, deletedAt] of Object.entries(incoming.deletedProgress)) {
       this.data.deletedProgress[id] = Math.max(this.data.deletedProgress[id] ?? 0, deletedAt);
-      if ((this.data.progress[id]?.updatedAt ?? 0) <= deletedAt) delete this.data.progress[id];
+      if ((this.data.progress[id]?.updatedAt ?? 0) <= deletedAt) { delete this.data.progress[id]; deletedProgress.add(id); }
     }
     this.data.deletedProgress = boundedDeletedProgress(this.data.deletedProgress);
-    if (incoming.settingsUpdatedAt > this.data.settingsUpdatedAt) {
+    const remoteSettingsAreNewer = this.data.settingsCloudRevision && incoming.settingsCloudRevision
+      ? incoming.settingsCloudRevision > this.data.settingsCloudRevision
+      : incoming.settingsUpdatedAt > this.data.settingsUpdatedAt;
+    if (remoteSettingsAreNewer) {
       this.data.preferences = incoming.preferences;
       this.data.settingsUpdatedAt = incoming.settingsUpdatedAt;
+      this.data.settingsCloudRevision = incoming.settingsCloudRevision;
       this.data.activePuzzleId = incoming.activePuzzleId;
     }
-    await this.save();
+    if (this.database) {
+      const transaction = this.database.transaction(stateStore, "readwrite");
+      for (const id of changedProgress) await transaction.store.put(this.data.progress[id]!, progressKey(id));
+      for (const id of deletedProgress) await transaction.store.delete(progressKey(id));
+      await transaction.store.put(this.meta(), META_KEY);
+      await transaction.done;
+    }
+  }
+
+  async mergeRemoteProgress(sessionId: string, progress: PuzzleProgress) {
+    const normalized = normalizeData({ version: 1, progress: { [sessionId]: progress } }).progress[sessionId];
+    if (!normalized || (this.data.deletedProgress[sessionId] ?? 0) >= normalized.updatedAt) return false;
+    const local = this.data.progress[sessionId];
+    const remoteIsNewer = !local || (local.cloudRevision && normalized.cloudRevision
+      ? normalized.cloudRevision > local.cloudRevision || normalized.cloudRevision === local.cloudRevision && normalized.updatedAt > local.updatedAt
+      : normalized.updatedAt > local.updatedAt);
+    if (!remoteIsNewer) return false;
+    const contentChanged = !local || JSON.stringify({ ...local, cloudRevision: 0 }) !== JSON.stringify({ ...normalized, cloudRevision: 0 });
+    this.data.progress[sessionId] = normalized;
+    await this.saveProgress(sessionId, false);
+    return contentChanged;
+  }
+
+  async markProgressSynced(sessionId: string, revision: number) {
+    const progress = this.data.progress[sessionId];
+    if (!progress) return;
+    progress.cloudRevision = Math.max(progress.cloudRevision || 0, revision);
+    await this.saveProgress(sessionId, false);
+  }
+
+  async markSettingsSynced(revision: number) {
+    this.data.settingsCloudRevision = Math.max(this.data.settingsCloudRevision || 0, revision);
+    await this.saveMeta();
   }
 }

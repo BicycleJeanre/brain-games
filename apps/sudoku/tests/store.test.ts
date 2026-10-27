@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { openDB } from "idb";
 import { createGame } from "../src/game.ts";
 import type { AnnotationColour, BoardSnapshot, Puzzle } from "../src/types.ts";
 
@@ -39,6 +40,52 @@ test("IndexedDB persists active progress and backup import preserves existing ID
   assert.deepEqual(result, { added: 0, skipped: 1 });
   await second.clear("all");
   assert.equal(second.activeGame(), null);
+});
+
+test("Sudoku games use independent IndexedDB records", async () => {
+  const { Store } = await import("../src/store.ts");
+  const store = new Store();
+  await store.clear("all");
+  const first = createGame({ ...puzzle, id: "partition-first" }, 120);
+  const second = createGame({ ...puzzle, id: "partition-second" }, 121);
+  await store.putGame(first);
+  await store.putGame(second);
+
+  const database = await openDB("strack-v1", 1);
+  const keys = await database.getAllKeys("state");
+  assert.equal(keys.includes("app"), false, "the legacy monolithic record is removed");
+  assert.equal(keys.includes("meta"), true);
+  assert.equal(keys.includes(`game:${first.id}`), true);
+  assert.equal(keys.includes(`game:${second.id}`), true);
+  const untouched = structuredClone(await database.get("state", `game:${second.id}`));
+
+  first.values[0] = "1";
+  first.updatedAt = 122;
+  await store.putGame(first);
+  assert.deepEqual(await database.get("state", `game:${second.id}`), untouched, "saving one game does not rewrite another game");
+  database.close();
+  await store.clear("all");
+});
+
+test("legacy Sudoku state migrates without losing games", async () => {
+  const { Store, emptyData } = await import("../src/store.ts");
+  const game = createGame({ ...puzzle, id: "legacy-partition" }, 130);
+  game.values[0] = "1";
+  const legacy = { ...emptyData(), activeGameId: game.id, games: { [game.id]: game } };
+  const database = await openDB("strack-v1", 1);
+  await database.clear("state");
+  await database.put("state", legacy, "app");
+  database.close();
+
+  const migrated = new Store();
+  await migrated.load();
+  assert.equal(migrated.activeGame()?.values[0], "1");
+  const reopened = await openDB("strack-v1", 1);
+  const keys = await reopened.getAllKeys("state");
+  assert.equal(keys.includes("app"), false);
+  assert.equal(keys.includes(`game:${game.id}`), true);
+  reopened.close();
+  await migrated.clear("all");
 });
 
 test("local UI saves stay off the cloud queue while durable changes retain retry state", async () => {
@@ -116,7 +163,7 @@ test("deleted puzzles stay deleted when a stale cloud game arrives", async () =>
   assert.equal(otherDevice.data.games[game.id], undefined);
 });
 
-test("cloud encoding preserves multiple colours and line annotations without nested arrays", async () => {
+test("cloud encoding preserves authoritative play state without local history payloads", async () => {
   const { decodeCloudGame, encodeCloudGame, encodeCloudSettings, MAX_SYNCED_GAME_BYTES } = await import("../src/cloud.ts");
   const { emptyData } = await import("../src/store.ts");
   const gameWithoutHints = createGame(puzzle, 699);
@@ -148,21 +195,21 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   assert.equal("cloudDirty" in encoded, false, "local queue metadata is not uploaded");
   assert.equal(encoded.colours[0], "cyan|amber|indigo");
   assert.deepEqual(encoded.lines, [{ from: 0, to: 10, colour: "rose" }]);
-  assert.equal(typeof encoded.hintPath, "string", "nested hint data is serialized for Firestore");
+  assert.equal("hintPath" in encoded, false, "regenerable hint paths stay on the device");
+  assert.deepEqual(encoded.history, [], "undo history stays on the device");
+  assert.deepEqual(encoded.future, [], "redo history stays on the device");
+  assert.deepEqual(encoded.hintHistory, [], "hint review history stays on the device");
   const decoded = decodeCloudGame(encoded);
   assert.deepEqual(decoded?.colours[0], ["cyan", "amber", "indigo"]);
   assert.deepEqual(decoded?.lines, [{ from: 0, to: 10, colour: "rose" }]);
   assert.deepEqual(decoded?.challenge, { cadence: "daily", periodKey: "2026-10-10" });
   assert.equal(decoded?.mistakes, 4, "the mistake count syncs with the puzzle session");
   assert.equal(decoded?.failedAt, 703, "the failed-at timestamp syncs across devices");
-  assert.deepEqual(decoded?.hintPath, game.hintPath, "cached logical paths sync with the puzzle session");
+  assert.equal(decoded?.hintPath, undefined);
   assert.equal(decoded?.cloudRevision, 7);
   assert.deepEqual(decoded?.selected, []);
   assert.equal(decoded?.anchor, -1);
   assert.equal(decoded?.mode, "normal");
-  game.hintPath.engine = "x".repeat(200_001);
-  assert.equal("hintPath" in encodeCloudGame(game), false, "oversized regenerable hint paths cannot block puzzle progress sync");
-
   const settingsData = emptyData();
   settingsData.settingsUpdatedAt = 702;
   const settings = encodeCloudSettings(settingsData);
@@ -184,7 +231,7 @@ test("cloud encoding preserves multiple colours and line annotations without nes
   largeGame.updatedAt = 704;
   const budgeted = encodeCloudGame(largeGame);
   assert.ok(new TextEncoder().encode(JSON.stringify(budgeted)).byteLength <= MAX_SYNCED_GAME_BYTES, "cloud games stay below the conservative Firestore document budget");
-  assert.ok(budgeted.history.length < 80, "only the oldest cloud undo snapshots are trimmed when necessary");
+  assert.deepEqual(budgeted.history, [], "large local undo histories do not enter the cloud payload");
   const budgetedRoundTrip = decodeCloudGame(budgeted);
   assert.deepEqual(budgetedRoundTrip?.values, largeGame.values, "the current board survives cloud budgeting");
   assert.equal(budgetedRoundTrip?.completedAt, 704, "completion survives cloud budgeting");

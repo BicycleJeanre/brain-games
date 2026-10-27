@@ -49,18 +49,22 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
     });
     const transaction = database.transaction("state", "readwrite");
     const store = transaction.objectStore("state");
-    const data = await new Promise<any>((resolve, reject) => {
-      const request = store.get("app");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const game = data.games[data.activeGameId];
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
     const completedAt = Date.now();
     game.values = game.puzzle.solution.split("");
     game.completedAt = completedAt;
     game.updatedAt = completedAt;
     game.cloudDirty = true;
-    store.put(data, "app");
+    store.put(game, `game:${game.id}`);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);

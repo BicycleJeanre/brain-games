@@ -64,8 +64,15 @@ async function readLegacyState(name: "strack-v1" | "wtrack") {
 }
 
 async function readCombinedState(database: IDBPDatabase, store: string) {
-  const value: unknown = await database.get(store, "app");
-  return isRecord(value) && value.version === 1 ? value : null;
+  const legacy: unknown = await database.get(store, "app");
+  if (isRecord(legacy) && legacy.version === 1) return legacy;
+  const meta: unknown = await database.get(store, "meta");
+  if (!isRecord(meta) || meta.version !== 1) return null;
+  const collection = store === SUDOKU_STORE ? "games" : "progress";
+  const prefix = store === SUDOKU_STORE ? "game:" : "progress:";
+  const keys = (await database.getAllKeys(store)).filter((key): key is string => typeof key === "string" && key.startsWith(prefix));
+  const entries = await Promise.all(keys.map(async (key) => [key.slice(prefix.length), await database.get(store, key)] as const));
+  return { ...meta, [collection]: Object.fromEntries(entries) };
 }
 
 function stateCounts(value: RecordValue | null, collection: "games" | "progress") {
@@ -186,8 +193,22 @@ async function mergeIntoCombined(sudoku: unknown | null, words: unknown | null, 
     const sudokuResult = sudoku ? mergeSudokuState(currentSudoku, sudoku) : { data: currentSudoku, added: 0, updated: 0 };
     const wordsResult = words ? mergeWordsState(currentWords, words) : { data: currentWords, added: 0, updated: 0 };
     const transaction = database.transaction([META_STORE, SUDOKU_STORE, WORDS_STORE], "readwrite");
-    if (sudokuResult.data) await transaction.objectStore(SUDOKU_STORE).put(sudokuResult.data, "app");
-    if (wordsResult.data) await transaction.objectStore(WORDS_STORE).put(wordsResult.data, "app");
+    if (sudokuResult.data) {
+      const store = transaction.objectStore(SUDOKU_STORE);
+      const keys = await store.getAllKeys();
+      for (const key of keys) if (key === "app" || typeof key === "string" && key.startsWith("game:")) await store.delete(key);
+      const { games, ...meta } = sudokuResult.data;
+      await store.put(meta, "meta");
+      await Promise.all(Object.entries(recordOrEmpty(games)).map(([id, game]) => store.put(game, `game:${id}`)));
+    }
+    if (wordsResult.data) {
+      const store = transaction.objectStore(WORDS_STORE);
+      const keys = await store.getAllKeys();
+      for (const key of keys) if (key === "app" || typeof key === "string" && key.startsWith("progress:")) await store.delete(key);
+      const { progress, ...meta } = wordsResult.data;
+      await store.put(meta, "meta");
+      await Promise.all(Object.entries(recordOrEmpty(progress)).map(([id, session]) => store.put(session, `progress:${id}`)));
+    }
     await transaction.objectStore(META_STORE).put({ version: 1, source, lastImportedAt: new Date().toISOString() }, "migration");
     await transaction.done;
     return {
