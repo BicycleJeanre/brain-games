@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+async function waitForAuthenticatedSettings(page: import("@playwright/test").Page, device: string) {
+  try {
+    await expect(page.getByRole("button", { name: "Sync now" })).toBeVisible({ timeout: 30_000 });
+  } catch {
+    throw new Error(`${device} did not authenticate. Visible page: ${(await page.locator("body").innerText()).slice(0, 1_200)}`);
+  }
+}
+
 test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   const email = `solver-${Date.now()}@example.test`;
   const password = "test-password-42";
@@ -16,7 +24,7 @@ test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   await first.getByLabel("Email").fill(email);
   await first.getByLabel("Password").fill(password);
   await first.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(first.getByRole("button", { name: "Sync now" })).toBeVisible({ timeout: 30_000 });
+  await waitForAuthenticatedSettings(first, "First device");
   await first.getByRole("button", { name: "Puzzles", exact: true }).click();
   await first.locator('[data-open="ws-word-craft-001"]').click();
   await first.locator('[data-word-cell="2,0"]').click();
@@ -33,7 +41,7 @@ test("a signed-in puzzle resumes on a second device", async ({ browser }) => {
   await second.getByLabel("Email").fill(email);
   await second.getByLabel("Password").fill(password);
   await second.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(second.getByRole("button", { name: "Sync now" })).toBeVisible({ timeout: 30_000 });
+  await waitForAuthenticatedSettings(second, "Second device");
   await expect(second.getByText("Synced")).toBeVisible({ timeout: 10_000 });
   await second.getByRole("button", { name: "Puzzles", exact: true }).click();
   await second.locator('[data-open="ws-word-craft-001"]').click();
