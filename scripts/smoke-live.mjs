@@ -22,21 +22,24 @@ async function authRequest(path, body) {
   return result;
 }
 
-async function signInSudoku(page) {
-  await page.getByRole("button", { name: /Settings and help/ }).click();
-  await page.locator("#account-email").fill(email);
-  await page.locator("#account-password").fill(password);
+async function signInProfile(page) {
+  await page.goto(`${base}?view=settings`);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  try { await page.getByText(email, { exact: true }).waitFor({ timeout: 20_000 }); }
-  catch { throw new Error(`Sudoku sign-in failed at ${page.url()}: ${(await page.locator("body").innerText()).slice(0, 700)}`); }
+  await page.getByText(`Signed in as ${email}`).waitFor({ timeout: 20_000 });
 }
 
-async function signInWords(page) {
+async function verifySudokuProfile(page) {
+  await page.getByRole("button", { name: /Settings and help/ }).click();
+  try { await page.getByText(email, { exact: true }).waitFor({ timeout: 20_000 }); }
+  catch { throw new Error(`Sudoku profile failed at ${page.url()}: ${(await page.locator("body").innerText()).slice(0, 700)}`); }
+}
+
+async function verifyWordsProfile(page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  if (await page.getByText(email, { exact: true }).count()) return;
-  await page.locator('input[name="email"]').fill(email);
-  await page.locator('input[name="password"]').fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByText(email, { exact: true }).waitFor({ timeout: 20_000 });
 }
 
@@ -73,26 +76,22 @@ try {
   const first = await desktop.newPage();
   const second = await phone.newPage();
 
+  await signInProfile(first);
   await first.goto(`${base}sudoku/`);
-  await first.evaluate(() => navigator.serviceWorker.ready);
-  await first.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await signInSudoku(first);
+  await verifySudokuProfile(first);
   await first.getByRole("button", { name: /Close settings and help/ }).click();
   await first.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   await first.getByRole("grid", { name: "Sudoku board" }).waitFor();
   await first.getByText("Synced", { exact: true }).first().waitFor({ timeout: 20_000 });
 
+  await signInProfile(second);
   await second.goto(`${base}sudoku/`);
-  await second.evaluate(() => navigator.serviceWorker.ready);
-  await second.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await signInSudoku(second);
+  await verifySudokuProfile(second);
   await second.getByRole("button", { name: /Close settings and help/ }).click();
   await second.getByRole("button", { name: /Resume puzzle/ }).waitFor({ timeout: 20_000 });
 
   await first.goto(`${base}words/`);
-  await first.evaluate(() => navigator.serviceWorker.ready);
-  await first.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await signInWords(first);
+  await verifyWordsProfile(first);
   await first.getByRole("button", { name: "Puzzles", exact: true }).click();
   await first.locator("[data-open]:not([disabled])").first().click();
   await first.getByRole("button", { name: "← Puzzles" }).waitFor();
@@ -100,9 +99,7 @@ try {
   await first.getByRole("button", { name: "Sync now" }).click();
 
   await second.goto(`${base}words/`);
-  await second.evaluate(() => navigator.serviceWorker.ready);
-  await second.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await signInWords(second);
+  await verifyWordsProfile(second);
   await second.getByRole("button", { name: "Puzzles", exact: true }).click();
   await second.getByRole("button", { name: "Continue", exact: true }).first().waitFor({ timeout: 20_000 });
 
