@@ -25,3 +25,10 @@
 - Date: 2026-10-15
 - Decision: Begin with one repository and deployment artifact containing a shared launcher plus scoped Sudoku and Word Games modules, then extract shared services incrementally.
 - Exit condition: Replace scoped legacy shells and workers after shared local data, account, settings, backup, and offline services are validated.
+
+## BG-005 — One game library and settings surface
+
+- Status: Approved
+- Date: 2026-10-27
+- Decision: Present Sudoku, Crosswords, Word Search, Word Grid, and Letter Mix as peers in one Brain Games library. Keep focused game engines modular, but route application-level Games, Progress, profile, appearance, player preferences, and backup controls through the shared shell.
+- Rationale: The product should behave as one application rather than two linked legacy families. Domain-specific player controls remain available in the shared Settings page, and game-specific puzzle, training, creation, and help workflows remain inside their focused players.

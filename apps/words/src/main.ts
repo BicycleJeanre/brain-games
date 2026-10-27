@@ -13,15 +13,17 @@ type LibraryType = "all" | PuzzleKind | "letter-mix";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
 const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
-const brainGamesSudoku = `${brainGamesHome}sudoku/`;
-const brainGamesWords = `${brainGamesHome}words/`;
 const store = new Store();
-const requestedView = new URLSearchParams(location.search).get("view");
-let view: View = requestedView === "settings" ? "settings" : "home";
+const requested = new URLSearchParams(location.search);
+const requestedView = requested.get("view");
+const requestedGame = requested.get("game") as LibraryType | null;
+const requestedLibraryType = requestedGame && ["word-search", "crossword", "word-grid", "letter-mix"].includes(requestedGame) ? requestedGame : null;
+if (combinedBuild && requestedView === "settings") location.replace(`${brainGamesHome}?view=settings`);
+let view: View = requestedLibraryType ? "library" : requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let activePuzzle: Puzzle | null = null;
 let activeSessionId: string | null = null;
-let libraryType: LibraryType = "all";
+let libraryType: LibraryType = requestedLibraryType ?? "all";
 let libraryDifficulty: "all" | Difficulty = "all";
 let selectionStart: GridPoint | null = null;
 let wordGridPath: GridPoint[] = [];
@@ -77,12 +79,14 @@ function chrome(content: string) {
   return `
     <header class="app-header">
       ${combinedBuild
-        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid">B</span><span>Brain Games</span></a><div class="game-switcher" aria-label="Games"><a href="${brainGamesSudoku}">Sudoku</a><a href="${brainGamesWords}" aria-current="page">Word games</a></div>`
+        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid">B</span><span>Brain Games</span></a><span class="module-title">Word games</span>`
         : `<button class="brand" data-nav="home" aria-label="Word games home"><span class="brand-grid">A</span><span>Word games</span></button>`}
       <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
       <span class="cloud-state" data-cloud-status>${escapeHtml(cloud.status())}</span>
       <nav aria-label="Primary">
-        ${[["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
+        ${combinedBuild
+          ? `<a href="${brainGamesHome}">Games</a><button data-nav="library" class="${active === "library" ? "active" : ""}">Puzzles</button><button data-nav="create" class="${active === "create" ? "active" : ""}">Create</button><button data-nav="help" class="${active === "help" ? "active" : ""}">Help</button><a href="${brainGamesHome}?view=progress">Progress</a><a href="${brainGamesHome}?view=settings">Settings</a>`
+          : [["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
       </nav>
     </header>
     <main id="main" class="${view === "player" ? "player-main" : ""}">${content}</main>

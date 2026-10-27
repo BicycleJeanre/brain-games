@@ -26,7 +26,7 @@ Brain Games does not make medical, therapeutic, educational-outcome, intelligenc
 
 ## Initial migration boundary
 
-The first combined milestone provides one repository, one deployment artifact, and one Brain Games entry point. The proven STrack and WTrack applications are mounted as Sudoku and Word Games modules while their domain logic remains intact. Subsequent milestones replace duplicate shell, settings, authentication, synchronization, backup, and service-worker code with shared Brain Games services.
+The first combined milestone provided one repository, one deployment artifact, and one Brain Games entry point. The proven STrack and WTrack engines remain mounted as focused modules while their domain logic stays intact. The current shell presents every game as a peer in one library and owns the single profile, settings, backup, progress, and service-worker surfaces. Remaining consolidation work is limited to domain cloud-data and challenge internals that do not need to appear as separate applications.
 
 The existing `/strack/` and `/wtrack/` deployments remain active until local-data migration, account migration, offline behavior, phone/desktop behavior, and rollback have been production-verified.
 

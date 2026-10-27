@@ -46,6 +46,8 @@ Started: 2026-10-15
 - [x] Add shell-level accessibility and mobile tests.
 - [x] Add a cross-game Progress dashboard for active sessions, completions, and recorded average times.
 - [x] Replace the scrolling launcher anchors with distinct Home, Play, Progress, and Settings views, including browser history and direct settings deep links.
+- [x] Replace separate Sudoku and Word Games family cards with one first-class game list for Sudoku, Crosswords, Word Search, Word Grid, and Letter Mix.
+- [x] Consolidate player preferences into the shared Settings surface and redirect older module settings links to it.
 
 ### Stage 3 — Local persistence and backups
 

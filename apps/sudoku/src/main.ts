@@ -14,14 +14,13 @@ import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Train
 const catalogue = catalogueJson as Puzzle[];
 const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
 const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
-const brainGamesSudoku = `${brainGamesHome}sudoku/`;
-const brainGamesWords = `${brainGamesHome}words/`;
 const store = new Store();
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const dialog = document.querySelector<HTMLDialogElement>("#dialog")!;
 const toast = document.querySelector<HTMLDivElement>("#toast")!;
 type View = "home" | "training" | "library" | "player" | "import" | "settings";
 const requestedView = new URLSearchParams(location.search).get("view");
+if (combinedBuild && requestedView === "settings") location.replace(`${brainGamesHome}?view=settings`);
 let view: View = requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let libraryBand: Difficulty | "All" = "All";
@@ -100,14 +99,14 @@ function shell(content: string, title: string) {
   app.innerHTML = `
     <header class="app-header">
       ${combinedBuild
-        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid" aria-hidden="true">B</span><span>Brain Games</span></a><div class="game-switcher" aria-label="Games"><a href="${brainGamesSudoku}" aria-current="page">Sudoku</a><a href="${brainGamesWords}">Word games</a></div>`
+        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid" aria-hidden="true">B</span><span>Brain Games</span></a><span class="module-title">Sudoku</span>`
         : `<button class="brand" data-nav="home" aria-label="Sudoku home"><span class="brand-grid" aria-hidden="true">9</span><span>Sudoku</span></button>`}
       <span class="cloud-state" data-cloud-status>${cloud.status()}</span><nav aria-label="Main navigation">
-        ${combinedBuild ? `<button data-nav="home" class="${view === "home" ? "active" : ""}">Home</button>` : ""}
+        ${combinedBuild ? `<a href="${brainGamesHome}">Games</a>` : ""}
         <button data-nav="training" class="${view === "training" ? "active" : ""}">Train</button>
         <button data-nav="library" class="${view === "library" ? "active" : ""}">Puzzles</button>
         <button data-nav="import" class="${view === "import" ? "active" : ""}">Open</button>
-        <button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">Settings</button>
+        ${combinedBuild ? `<button data-help>Help</button><a href="${brainGamesHome}?view=progress">Progress</a><a href="${brainGamesHome}?view=settings">Settings</a>` : `<button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">Settings</button>`}
       </nav>
     </header>
     <main id="main" class="${view === "player" ? "player-main" : ""}" tabindex="-1">
@@ -120,6 +119,7 @@ function shell(content: string, title: string) {
 
 function bindNavigation() {
   app.querySelectorAll<HTMLElement>("[data-nav]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav as View)));
+  app.querySelector<HTMLElement>("[data-help]")?.addEventListener("click", showHelp);
 }
 
 function navigate(next: View) {
