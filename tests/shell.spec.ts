@@ -3,11 +3,14 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
-test("the shared home exposes both complete game families", async ({ page }) => {
+test("the shared home exposes every game in one library", async ({ page }) => {
   await page.goto("./");
   await expect(page.getByRole("heading", { name: /What would you like to play|Pick up where you left off/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Sudoku/ })).toHaveAttribute("href", "/brain-games/sudoku/");
-  await expect(page.getByRole("link", { name: /Open Word games/ })).toHaveAttribute("href", "/brain-games/words/");
+  await expect(page.getByRole("link", { name: /Play Sudoku/ })).toHaveAttribute("href", "/brain-games/sudoku/");
+  await expect(page.getByRole("link", { name: /Play Crosswords/ })).toHaveAttribute("href", "/brain-games/words/?game=crossword");
+  await expect(page.getByRole("link", { name: /Play Word Search/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play Word Grid/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play Letter Mix/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Progress", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
@@ -17,20 +20,21 @@ test("the shared home exposes both complete game families", async ({ page }) => 
   await page.getByRole("button", { name: "Play" }).click();
   await expect(page.getByText(/do not imply cognitive or health benefits/)).toBeVisible();
 
-  await page.getByRole("link", { name: /Open Sudoku/ }).click();
+  await page.getByRole("link", { name: /Play Sudoku/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toHaveAttribute("href", "/brain-games/");
-  await expect(page.getByRole("link", { name: "Sudoku", exact: true })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("link", { name: "Word games", exact: true })).toHaveAttribute("href", "/brain-games/words/");
+  await expect(page.getByRole("link", { name: "Games", exact: true })).toHaveAttribute("href", "/brain-games/");
+  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveAttribute("href", "/brain-games/?view=settings");
   await page.getByRole("link", { name: "Brain Games home" }).click();
-  await page.getByRole("link", { name: /Open Word games/ }).click();
+  await page.getByRole("link", { name: /Play Crosswords/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toHaveAttribute("href", "/brain-games/");
-  await expect(page.getByRole("link", { name: "Word games", exact: true })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("link", { name: "Sudoku", exact: true })).toHaveAttribute("href", "/brain-games/sudoku/");
+  await expect(page.getByRole("heading", { name: "Puzzles", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crosswords", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveAttribute("href", "/brain-games/?view=settings");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await expect(page.getByText(/STrack|WTrack/)).toHaveCount(0);
 });
 
-test("one Brain Games profile owns sign-in for every game", async ({ page }) => {
+test("one settings surface owns preferences for every game", async ({ page }) => {
   await page.goto("./");
   await page.getByRole("button", { name: "Sign in to Brain Games" }).click();
   await expect(page).toHaveURL(/\?view=settings$/);
@@ -48,25 +52,70 @@ test("one Brain Games profile owns sign-in for every game", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-  await page.getByRole("link", { name: "Sudoku preferences" }).click();
-  await expect(page.getByRole("heading", { name: "Settings & help" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close settings and help" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toHaveAttribute("href", "/brain-games/?view=settings");
-  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
+  await page.getByLabel("Note style").selectOption("simple");
+  await page.getByLabel("Show hint controls").uncheck();
+  await expect(page.getByText("Saved for all word games.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Note style")).toHaveValue("simple");
+  await expect(page.getByLabel("Show hint controls")).not.toBeChecked();
 
-  await page.getByRole("link", { name: "Manage Brain Games profile" }).click();
-  await page.getByRole("link", { name: "Word-game preferences" }).click();
+  await page.goto("./sudoku/?view=settings");
+  await expect(page).toHaveURL(/brain-games\/?\?view=settings$/);
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toHaveAttribute("href", "/brain-games/?view=settings");
-  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
+  await page.goto("./words/?view=settings");
+  await expect(page).toHaveURL(/brain-games\/?\?view=settings$/);
+});
+
+test("shared settings preserve an unpartitioned combined game record", async ({ page }) => {
+  await page.goto("./?view=settings");
+  await page.evaluate(async () => {
+    const request = indexedDB.open("brain-games-v1", 1);
+    await new Promise<void>((resolve, reject) => {
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const transaction = request.result.transaction("sudoku-state", "readwrite");
+        const store = transaction.objectStore("sudoku-state");
+        store.delete("meta");
+        store.put({
+          version: 1,
+          settingsUpdatedAt: 1,
+          preferences: { noteStyle: "advanced" },
+          trainingProgress: {},
+          games: { preserved: { id: "preserved", updatedAt: 10 } },
+          deletedGames: {},
+          activeGameId: "preserved",
+        }, "app");
+        transaction.oncomplete = () => { request.result.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  });
+  await page.reload();
+  await page.getByLabel("Note style").selectOption("simple");
+  await expect(page.getByText("Saved for Sudoku.")).toBeVisible();
+  const keys = await page.evaluate(async () => {
+    const request = indexedDB.open("brain-games-v1", 1);
+    return new Promise<IDBValidKey[]>((resolve, reject) => {
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const transaction = request.result.transaction("sudoku-state", "readonly");
+        const getKeys = transaction.objectStore("sudoku-state").getAllKeys();
+        getKeys.onsuccess = () => { request.result.close(); resolve(getKeys.result); };
+        getKeys.onerror = () => reject(getKeys.error);
+      };
+    });
+  });
+  expect(keys).toContain("game:preserved");
+  expect(keys).toContain("meta");
+  expect(keys).not.toContain("app");
 });
 
 test("the shared home fits a phone viewport without horizontal scrolling", async ({ page }) => {
   await page.goto("./");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
-  await expect(page.getByRole("link", { name: /Open Sudoku/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Word games/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play Sudoku/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play Crosswords/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Settings" })).toBeVisible();
 });
 
@@ -124,20 +173,20 @@ test("the installed shell and both visited game modules relaunch after the serve
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${port}/brain-games/`);
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await page.getByRole("link", { name: /Open Sudoku/ }).click();
+  await page.getByRole("link", { name: /Play Sudoku/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
   await page.getByRole("link", { name: "Brain Games home" }).click();
-  await page.getByRole("link", { name: /Open Word games/ }).click();
+  await page.getByRole("link", { name: /Play Crosswords/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
   await page.getByRole("link", { name: "Brain Games home" }).click();
   server.closeAllConnections();
   await new Promise<void>((closed) => server.close(() => closed()));
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /What would you like to play|Pick up where you left off/ })).toBeVisible();
-  await page.getByRole("link", { name: /Open Sudoku/ }).click();
+  await page.getByRole("link", { name: /Play Sudoku/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
   await page.getByRole("link", { name: "Brain Games home" }).click();
-  await page.getByRole("link", { name: /Open Word games/ }).click();
+  await page.getByRole("link", { name: /Play Crosswords/ }).click();
   await expect(page.getByRole("link", { name: "Brain Games home" })).toBeVisible();
   await context.close();
 });

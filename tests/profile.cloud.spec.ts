@@ -11,18 +11,18 @@ test("one sign-in is shared by the shell, Sudoku, and word games", async ({ page
   await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
   await expect(page.getByRole("button", { name: `Manage Brain Games profile for ${email}` })).toBeVisible();
 
-  await page.getByRole("link", { name: "Sudoku preferences" }).click();
-  await expect(page.getByText(email)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: /Play Sudoku/ }).click();
+  await expect(page.locator("[data-cloud-status]").first()).not.toHaveText("Sign in to sync");
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
 
-  await page.getByRole("link", { name: "Manage Brain Games profile" }).click();
-  await page.getByRole("link", { name: "Word-game preferences" }).click();
-  await expect(page.getByText(email)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Manage Brain Games profile" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: /Play Crosswords/ }).click();
+  await expect(page.locator("[data-cloud-status]").first()).not.toHaveText("Sign in to sync");
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
 
-  await page.getByRole("link", { name: "Manage Brain Games profile" }).click();
   await page.getByRole("button", { name: "Sign out on this device" }).click();
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 });

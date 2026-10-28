@@ -140,11 +140,12 @@ a { color: var(--accent); }
 .game-switcher { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
 .game-switcher a { padding: 6px 9px; border-radius: 6px; color: var(--muted); font-size: 11px; font-weight: 800; text-decoration: none; }
 .game-switcher a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.module-title { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
 .brand-grid { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 15px; }
 .app-header nav { display: flex; align-self: stretch; gap: 5px; }
 .cloud-state { margin-left: auto; padding: 4px 9px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); font-size: 9px; font-weight: 800; }
-.app-header nav button { min-width: 54px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--menu-user-colour); font-size: calc(var(--menu-text-size) + 2px); font-weight: 700; }
-.app-header nav button.active, .app-header nav button:hover { border-bottom-color: var(--accent); color: var(--text); }
+.app-header nav button, .app-header nav a { display: flex; min-width: 54px; align-items: center; justify-content: center; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--menu-user-colour); font-size: calc(var(--menu-text-size) + 2px); font-weight: 700; text-decoration: none; }
+.app-header nav button.active, .app-header nav button:hover, .app-header nav a:hover { border-bottom-color: var(--accent); color: var(--text); }
 main { width: min(1180px, 100%); min-height: calc(100dvh - 64px); margin: 0 auto; padding: 34px 22px calc(80px + env(safe-area-inset-bottom)); }
 main.player-main { width: min(1320px, 100%); }
 .app-footer { display: flex; width: min(1180px, 100%); align-items: center; justify-content: space-between; gap: 12px; margin: -54px auto 0; padding: 16px 22px calc(20px + env(safe-area-inset-bottom)); color: var(--faint); font-size: 10px; }
@@ -433,7 +434,7 @@ dialog::backdrop { background: #020607b8; backdrop-filter: blur(4px); }
   :root[data-note-size="small"] { --corner-note-font-size: 9px; --centre-note-font-size: 10px; --corner-match-font-size: 11px; --centre-match-font-size: 12px; }
   :root[data-note-size="medium"] { --corner-note-font-size: 10px; --centre-note-font-size: 11px; --corner-match-font-size: 12px; --centre-match-font-size: 13px; }
   :root[data-note-size="large"] { --corner-note-font-size: 12px; --centre-note-font-size: 12px; --corner-match-font-size: 14px; --centre-match-font-size: 14px; }
-  .app-header { flex-wrap: wrap; padding: 7px 5px 0 10px; }.brand { gap: 5px; }.brand-grid { width: 29px; height: 29px; }.brand > span:last-child { display: none; }.game-switcher a { padding-inline: 6px; }.app-header nav { width: 100%; height: 42px; justify-content: space-between; order: 3; }.app-header nav button { flex: 1; min-width: 0; padding: 0 4px; }.cloud-state { display: none; }
+  .app-header { flex-wrap: wrap; padding: 7px 5px 0 10px; }.brand { gap: 5px; }.brand-grid { width: 29px; height: 29px; }.brand > span:last-child, .module-title { display: none; }.game-switcher a { padding-inline: 6px; }.app-header nav { width: 100%; height: 42px; justify-content: space-between; order: 3; }.app-header nav button, .app-header nav a { flex: 1; min-width: 0; padding: 0 4px; }.cloud-state { display: none; }
   .page-heading { margin-bottom: 18px; }.page-heading h1 { font-size: 27px; }
   .hero { grid-template-columns: 1fr; min-height: auto; margin-bottom: 30px; padding: 25px 20px; }.hero .primary { min-height: 58px; }
   .band-grid { gap: 8px; }.band-card { min-height: 120px; padding: 15px; }.band-card strong { margin-top: 22px; }

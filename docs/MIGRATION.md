@@ -5,8 +5,8 @@ Brain Games uses `brain-games-v1`, a versioned IndexedDB database with separate 
 ## Same-device migration
 
 1. Open Brain Games on the same browser profile used for the previous Sudoku or word-game app.
-2. Review the previous Sudoku and word-game session counts on the Brain Games home page.
-3. Select **Import existing progress**.
+2. Open Brain Games **Settings** and review the previous Sudoku and word-game session counts under **Your saved games**.
+3. Select **Import existing progress** there.
 4. Download a combined Brain Games backup.
 5. Open each game module and confirm active and completed sessions.
 
@@ -19,7 +19,7 @@ The legacy Firebase projects and the Brain Games Firebase project are intentiona
 1. On a device that can sign into the previous apps, open each one and allow it to finish syncing.
 2. Open Brain Games in the same browser profile and import the now-local legacy state.
 3. Open Brain Games **Settings** and create or sign into the single Brain Games profile. The same email address may be used, but it is a separate Firebase account from the previous apps. One sign-in covers Sudoku and every word game.
-4. Open Sudoku and Word Games once while online so both namespaces upload.
+4. Open Sudoku and one word game once while online so both namespaces upload.
 5. Sign into Brain Games on the second device and confirm both game families restore.
 
 Keep an exported backup until both devices have been checked. The existing deployments remain available throughout this migration period.

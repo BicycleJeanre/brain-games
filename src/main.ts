@@ -1,9 +1,9 @@
 import "./style.css";
 import { leaveProfile, profileConfigured, profileError, resetProfilePassword, useProfile, watchProfile, type ProfileUser } from "./auth.ts";
+import { DEFAULT_SUDOKU_PREFERENCES, DEFAULT_WORD_PREFERENCES, loadGamePreferences, saveSharedTheme, saveSudokuPreferences, saveWordPreferences, type GamePreferences, type Theme } from "./preferences.ts";
 import { createCombinedBackup, importBackup, importLegacyData, migrationPreview, type ImportResult, type MigrationPreview } from "./storage.ts";
 
 type ShellView = "home" | "play" | "progress" | "settings";
-type Theme = "system" | "light" | "dark";
 
 const base = import.meta.env.BASE_URL;
 const themeKey = "brain-games-theme";
@@ -13,6 +13,11 @@ let dataMessage = "";
 let profileUser: ProfileUser | null = null;
 let profileMessage = "";
 let profileMessageError = false;
+let settingsMessage = "";
+let gamePreferences: GamePreferences = {
+  sudoku: { ...DEFAULT_SUDOKU_PREFERENCES },
+  words: { ...DEFAULT_WORD_PREFERENCES },
+};
 
 const requestedView = new URLSearchParams(location.search).get("view") as ShellView | null;
 let view: ShellView = requestedView && validViews.has(requestedView) ? requestedView : "home";
@@ -50,14 +55,26 @@ const formatTime = (seconds: number | null) => {
 };
 
 const gameCards = () => `
-  <div class="game-grid" aria-label="Game collections">
+  <div class="game-grid" aria-label="All games">
     <a class="game-card sudoku" href="${base}sudoku/">
       <span class="game-mark" aria-hidden="true">9</span>
-      <span><small>Sudoku</small><strong>Logic, candidates, hints and training</strong><em>Open Sudoku →</em></span>
+      <span><small>Logic</small><strong>Sudoku</strong><p>Classic number puzzles with candidates, explanatory hints, challenges and training.</p><em>Play Sudoku →</em></span>
     </a>
-    <a class="game-card words" href="${base}words/">
-      <span class="game-mark" aria-hidden="true">A</span>
-      <span><small>Word games</small><strong>Crosswords, searches, grids and letter mixes</strong><em>Open Word games →</em></span>
+    <a class="game-card words" href="${base}words/?game=crossword">
+      <span class="game-mark" aria-hidden="true">CW</span>
+      <span><small>Words</small><strong>Crosswords</strong><p>Fill keyboard-friendly grids using paired across and down clues.</p><em>Play Crosswords →</em></span>
+    </a>
+    <a class="game-card words" href="${base}words/?game=word-search">
+      <span class="game-mark" aria-hidden="true">WS</span>
+      <span><small>Words</small><strong>Word Search</strong><p>Trace hidden words in eight directions and keep every find.</p><em>Play Word Search →</em></span>
+    </a>
+    <a class="game-card words" href="${base}words/?game=word-grid">
+      <span class="game-mark" aria-hidden="true">WG</span>
+      <span><small>Words</small><strong>Word Grid</strong><p>Connect adjacent letters without reusing a tile.</p><em>Play Word Grid →</em></span>
+    </a>
+    <a class="game-card words" href="${base}words/?game=letter-mix">
+      <span class="game-mark" aria-hidden="true">LM</span>
+      <span><small>Words</small><strong>Letter Mix</strong><p>Build words from a free-order letter tray and shuffle it at any time.</p><em>Play Letter Mix →</em></span>
     </a>
   </div>`;
 
@@ -77,11 +94,11 @@ function homeView() {
   const active = preview ? preview.combinedSudoku.active + preview.combinedWords.active : 0;
   return `
     <section class="hero card">
-      <div><span class="eyebrow">Your game desk</span><h1>${active ? "Pick up where you left off." : "What would you like to play?"}</h1><p>Sudoku and word games share one home, while each game keeps the focused controls that make it enjoyable to play.</p></div>
+      <div><span class="eyebrow">Your game desk</span><h1>${active ? "Pick up where you left off." : "What would you like to play?"}</h1><p>Every game shares this home, profile, progress, and settings, while each player keeps the focused controls that make it enjoyable.</p></div>
       <span class="status"><i aria-hidden="true"></i>${navigator.onLine ? "Ready online" : "Ready offline"}</span>
     </section>
     <section class="home-section" aria-labelledby="games-heading">
-      <div class="section-heading"><div><span class="eyebrow">Choose a game</span><h2 id="games-heading">Play</h2></div><button class="text-button" data-view="play">See all games →</button></div>
+      <div class="section-heading"><div><span class="eyebrow">Your library</span><h2 id="games-heading">All games</h2></div></div>
       ${gameCards()}
     </section>
     <section class="home-section progress-preview card" aria-labelledby="progress-preview-heading">
@@ -92,10 +109,16 @@ function homeView() {
 
 function playView() {
   return `
-    <section class="page-heading"><div><span class="eyebrow">Game library</span><h1>Choose a game</h1><p>Each game opens in its own focused player. Use the Brain Games header to switch without returning to a long landing page.</p></div></section>
+    <section class="page-heading"><div><span class="eyebrow">Game library</span><h1>All games</h1><p>Choose any game directly. Every player uses this Brain Games home, profile, progress, appearance, and settings surface.</p></div></section>
     ${gameCards()}
     <section class="future-card card"><span class="eyebrow">More games later</span><h2>Built to grow</h2><p>Future entertainment modules can include speed-reading games, memory, attention and mental arithmetic. Scores describe play only and do not imply cognitive or health benefits.</p></section>`;
 }
+
+const selectSetting = (domain: "sudoku" | "words", key: string, title: string, detail: string, value: string, options: Array<[string, string]>) => `
+  <label class="settings-field"><span><strong>${title}</strong><small>${detail}</small></span><select data-preference-domain="${domain}" data-preference-key="${key}" aria-label="${title}">${options.map(([option, label]) => `<option value="${option}" ${value === option ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
+
+const toggleSetting = (domain: "sudoku" | "words" | "shared", key: string, title: string, detail: string, checked: boolean) => `
+  <label class="toggle settings-field"><input type="checkbox" data-preference-domain="${domain}" data-preference-key="${key}" ${checked ? "checked" : ""}/><span><strong>${title}</strong><small>${detail}</small></span></label>`;
 
 function settingsView() {
   const theme = savedTheme();
@@ -103,7 +126,7 @@ function settingsView() {
   const legacyWords = preview?.legacyWords.progress ?? 0;
   const combined = preview ? preview.combinedSudoku.games + preview.combinedWords.progress : 0;
   return `
-    <section class="page-heading"><div><span class="eyebrow">Preferences and data</span><h1>Settings</h1><p>Shared app choices live here. Detailed player controls remain available inside each game.</p></div></section>
+    <section class="page-heading"><div><span class="eyebrow">One place for the whole app</span><h1>Settings</h1><p>Profile, appearance, player preferences, and backups for every game live here.</p></div><span class="settings-saved" data-settings-status role="status">${settingsMessage || "Changes save automatically"}</span></section>
     <div class="settings-grid">
       <section class="settings-card profile-card card" aria-labelledby="profile-heading">
         <div><span class="eyebrow">One account for every game</span><h2 id="profile-heading">Brain Games profile</h2>
@@ -116,13 +139,41 @@ function settingsView() {
         ${profileMessage ? `<p class="profile-message ${profileMessageError ? "error" : ""}" role="status">${escapeHtml(profileMessage)}</p>` : ""}</div>
         <div class="profile-games" aria-label="Profile coverage"><span><b>9</b> Sudoku</span><span><b>A</b> Word games</span><span><b>+</b> Future games</span></div>
       </section>
-      <section class="settings-card card" aria-labelledby="appearance-heading">
-        <span class="eyebrow">Appearance</span><h2 id="appearance-heading">Theme</h2><p>Use your device setting, or keep Brain Games light or dark.</p>
-        <label class="settings-field"><span><strong>Colour theme</strong><small>Applies to this shared game desk.</small></span><select data-theme-select><option value="system" ${theme === "system" ? "selected" : ""}>System</option><option value="light" ${theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${theme === "dark" ? "selected" : ""}>Dark</option></select></label>
+      <section class="settings-card full-settings-card card" aria-labelledby="appearance-heading">
+        <span class="eyebrow">Across every game</span><h2 id="appearance-heading">Appearance &amp; play</h2><p>These choices apply consistently to Sudoku and every word game.</p>
+        <label class="settings-field"><span><strong>Colour theme</strong><small>Use the device setting or keep one theme everywhere.</small></span><select data-theme-select><option value="system" ${theme === "system" ? "selected" : ""}>System</option><option value="light" ${theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${theme === "dark" ? "selected" : ""}>Dark</option></select></label>
+        ${toggleSetting("shared", "showTimer", "Show timers", "Keep elapsed time visible in all game players.", gamePreferences.sudoku.showTimer && gamePreferences.words.showTimer)}
+        ${toggleSetting("shared", "showControlHelp", "Show player instructions", "Keep keyboard, touch, and selection reminders visible.", gamePreferences.sudoku.showControlHelp && gamePreferences.words.showControlHelp)}
       </section>
-      <section class="settings-card card" aria-labelledby="game-settings-heading">
-        <span class="eyebrow">Player preferences</span><h2 id="game-settings-heading">Game settings</h2><p>Open each game's detailed display, assistance, timer, storage, and help controls. Your profile is managed above.</p>
-        <div class="stack-actions"><a class="secondary" href="${base}sudoku/?view=settings">Sudoku preferences</a><a class="secondary" href="${base}words/?view=settings">Word-game preferences</a></div>
+      <section class="settings-card full-settings-card card" aria-labelledby="sudoku-settings-heading">
+        <span class="eyebrow">Sudoku</span><h2 id="sudoku-settings-heading">Grid &amp; assistance</h2>
+        ${selectSetting("sudoku", "noteStyle", "Note style", "Use centre notes only or separate corner and centre notes.", gamePreferences.sudoku.noteStyle, [["simple", "Simple"], ["advanced", "Advanced"]])}
+        ${toggleSetting("sudoku", "autoCandidates", "Automatic candidates", "Show possible digits when a cell has no manual notes.", gamePreferences.sudoku.autoCandidates)}
+        ${toggleSetting("sudoku", "cleanCandidates", "Clean candidates after entry", "Remove an entered digit from peer-cell notes.", gamePreferences.sudoku.cleanCandidates)}
+        ${toggleSetting("sudoku", "highlightPeers", "Highlight peers", "Highlight the row, column, and box of the selected cell.", gamePreferences.sudoku.highlightPeers)}
+        ${toggleSetting("sudoku", "highlightMatches", "Highlight matching digits", "Highlight matching values and candidate notes.", gamePreferences.sudoku.highlightMatches)}
+        ${toggleSetting("sudoku", "showMistakes", "Show mistakes immediately", "Mark an incorrect placed digit without revealing the answer.", gamePreferences.sudoku.showMistakes)}
+        ${toggleSetting("sudoku", "mistakeLimit", "Three-mistake limit", "Fail an attempt after a fourth incorrect full digit.", gamePreferences.sudoku.mistakeLimit)}
+        ${toggleSetting("sudoku", "showColours", "Show colour annotations", "Keep colour marking available in the player.", gamePreferences.sudoku.showColours)}
+        ${toggleSetting("sudoku", "showLines", "Show line annotations", "Keep candidate-link drawing available in the player.", gamePreferences.sudoku.showLines)}
+        ${toggleSetting("sudoku", "showValueSelection", "Show multi-value highlighting", "Allow several digits to be highlighted with OR/AND matching.", gamePreferences.sudoku.showValueSelection)}
+        ${toggleSetting("sudoku", "showCandidateCalculation", "Show candidate calculation", "Keep the calculate-all-candidates action available.", gamePreferences.sudoku.showCandidateCalculation)}
+        ${selectSetting("sudoku", "digitSize", "Digit size", "Placed values in the Sudoku grid.", gamePreferences.sudoku.digitSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("sudoku", "noteSize", "Note size", "Corner and centre candidate notes.", gamePreferences.sudoku.noteSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("sudoku", "menuSize", "Menu text size", "Navigation and primary player controls.", gamePreferences.sudoku.menuSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("sudoku", "digitColour", "Digit colour", "Placed values in light and dark themes.", gamePreferences.sudoku.digitColour, [["cyan", "Cyan"], ["mono", "Monochrome"], ["amber", "Amber"]])}
+        ${selectSetting("sudoku", "noteColour", "Note colour", "Candidate-note palette.", gamePreferences.sudoku.noteColour, [["classic", "Classic"], ["mono", "Monochrome"], ["cyan", "Cyan"], ["amber", "Amber"]])}
+        ${selectSetting("sudoku", "menuColour", "Menu colour", "Navigation and control text palette.", gamePreferences.sudoku.menuColour, [["standard", "Standard"], ["bright", "Bright"], ["cyan", "Cyan"], ["amber", "Amber"]])}
+        ${selectSetting("sudoku", "highlightColour", "Highlight colour", "Selected cells, matches, and training highlights.", gamePreferences.sudoku.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}
+      </section>
+      <section class="settings-card full-settings-card card" aria-labelledby="word-settings-heading">
+        <span class="eyebrow">Crosswords, Word Search, Word Grid &amp; Letter Mix</span><h2 id="word-settings-heading">Word-game player</h2>
+        ${toggleSetting("words", "showHints", "Show hint controls", "Keep local hint actions available in every word game.", gamePreferences.words.showHints)}
+        ${toggleSetting("words", "checkAsYouType", "Mark incorrect crossword letters", "Add an error state without revealing the correct answer.", gamePreferences.words.checkAsYouType)}
+        ${selectSetting("words", "gridTextSize", "Grid letter size", "Letters inside word-search, crossword, and word-grid cells.", gamePreferences.words.gridTextSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("words", "clueTextSize", "Clue and word-list size", "Crossword clues and found or target word lists.", gamePreferences.words.clueTextSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("words", "menuTextSize", "Menu text size", "Navigation and primary player controls.", gamePreferences.words.menuTextSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
+        ${selectSetting("words", "highlightColour", "Highlight colour", "Selected cells, active clues, and hint outlines.", gamePreferences.words.highlightColour, [["cyan", "Cyan"], ["amber", "Amber"], ["violet", "Violet"], ["green", "Green"]])}
       </section>
       <section class="settings-card data-card card" aria-labelledby="data-heading">
         <div><span class="eyebrow">Data &amp; backups</span><h2 id="data-heading">Your saved games</h2><p>Import compatible progress from earlier versions or keep an independent combined backup. Importing leaves the earlier data untouched.</p></div>
@@ -170,11 +221,37 @@ function navigate(next: ShellView, replace = false) {
 
 function bindView() {
   document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.view as ShellView)));
-  document.querySelector<HTMLSelectElement>("[data-theme-select]")?.addEventListener("change", (event) => {
+  const reportSettingsSaved = (message = "Saved for every game. Changes sync when each game connects.") => {
+    settingsMessage = message;
+    const status = document.querySelector<HTMLElement>("[data-settings-status]");
+    if (status) status.textContent = message;
+  };
+  document.querySelector<HTMLSelectElement>("[data-theme-select]")?.addEventListener("change", async (event) => {
     const next = (event.currentTarget as HTMLSelectElement).value as Theme;
     localStorage.setItem(themeKey, next);
     applyTheme(next);
+    await saveSharedTheme(next, gamePreferences);
+    reportSettingsSaved("Theme saved for the complete app.");
   });
+  const savePreference = async (element: HTMLInputElement | HTMLSelectElement) => {
+    const domain = element.dataset.preferenceDomain as "sudoku" | "words" | "shared";
+    const key = element.dataset.preferenceKey!;
+    const value = element instanceof HTMLInputElement ? element.checked : element.value;
+    if (domain === "shared") {
+      (gamePreferences.sudoku as unknown as Record<string, unknown>)[key] = value;
+      (gamePreferences.words as unknown as Record<string, unknown>)[key] = value;
+      await Promise.all([saveSudokuPreferences(gamePreferences.sudoku), saveWordPreferences(gamePreferences.words)]);
+    } else if (domain === "sudoku") {
+      (gamePreferences.sudoku as unknown as Record<string, unknown>)[key] = value;
+      await saveSudokuPreferences(gamePreferences.sudoku);
+    } else {
+      (gamePreferences.words as unknown as Record<string, unknown>)[key] = value;
+      await saveWordPreferences(gamePreferences.words);
+    }
+    reportSettingsSaved(domain === "shared" ? "Saved for every game." : `Saved for ${domain === "sudoku" ? "Sudoku" : "all word games"}.`);
+  };
+  document.querySelectorAll<HTMLInputElement>("input[data-preference-domain]").forEach((input) => input.addEventListener("change", () => void savePreference(input)));
+  document.querySelectorAll<HTMLSelectElement>("select[data-preference-domain]").forEach((select) => select.addEventListener("change", () => void savePreference(select)));
   document.querySelector<HTMLFormElement>("[data-profile-form]")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
@@ -252,6 +329,12 @@ async function refreshPreview() {
   render();
 }
 
+async function refreshGamePreferences() {
+  try { gamePreferences = await loadGamePreferences(); }
+  catch { settingsMessage = "Player preferences could not be loaded. Your saved games are unaffected."; }
+  render();
+}
+
 addEventListener("popstate", () => {
   const next = new URLSearchParams(location.search).get("view") as ShellView | null;
   view = next && validViews.has(next) ? next : "home";
@@ -261,6 +344,7 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { i
 
 render();
 void refreshPreview();
+void refreshGamePreferences();
 watchProfile((user) => { profileUser = user; render(); });
 
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register(`${base}sw.js`));

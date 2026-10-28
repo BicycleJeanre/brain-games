@@ -33,14 +33,18 @@ async function signInProfile(page) {
 }
 
 async function verifySudokuProfile(page) {
-  await page.getByRole("button", { name: /Settings and help/ }).click();
+  await page.getByText("Synced", { exact: true }).first().waitFor({ timeout: 20_000 });
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
   try { await page.getByText(email, { exact: true }).waitFor({ timeout: 20_000 }); }
   catch { throw new Error(`Sudoku profile failed at ${page.url()}: ${(await page.locator("body").innerText()).slice(0, 700)}`); }
+  await page.goBack();
 }
 
 async function verifyWordsProfile(page) {
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByText("Synced", { exact: true }).first().waitFor({ timeout: 20_000 });
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByText(email, { exact: true }).waitFor({ timeout: 20_000 });
+  await page.goBack();
 }
 
 async function firestore(path, options = {}) {
@@ -79,7 +83,6 @@ try {
   await signInProfile(first);
   await first.goto(`${base}sudoku/`);
   await verifySudokuProfile(first);
-  await first.getByRole("button", { name: /Close settings and help/ }).click();
   await first.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   await first.getByRole("grid", { name: "Sudoku board" }).waitFor();
   await first.getByText("Synced", { exact: true }).first().waitFor({ timeout: 20_000 });
@@ -87,7 +90,6 @@ try {
   await signInProfile(second);
   await second.goto(`${base}sudoku/`);
   await verifySudokuProfile(second);
-  await second.getByRole("button", { name: /Close settings and help/ }).click();
   await second.getByRole("button", { name: /Resume puzzle/ }).waitFor({ timeout: 20_000 });
 
   await first.goto(`${base}words/`);
@@ -95,8 +97,7 @@ try {
   await first.getByRole("button", { name: "Puzzles", exact: true }).click();
   await first.locator("[data-open]:not([disabled])").first().click();
   await first.getByRole("button", { name: "← Puzzles" }).waitFor();
-  await first.getByRole("button", { name: "Settings", exact: true }).click();
-  await first.getByRole("button", { name: "Sync now" }).click();
+  await first.getByText("Synced", { exact: true }).first().waitFor({ timeout: 20_000 });
 
   await second.goto(`${base}words/`);
   await verifyWordsProfile(second);
