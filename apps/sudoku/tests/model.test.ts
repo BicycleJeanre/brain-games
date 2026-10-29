@@ -159,6 +159,92 @@ test("contextual Hidden Rectangle explanation traces both strong links and the u
   assert.match(explanation.steps.at(-1) || "", /remove 6 from R6C9/);
 });
 
+test("XY-Wing explanation defines the rule and labels the pivot and both wings", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[27] = [1, 6];
+  candidates[30] = [1, 9];
+  candidates[37] = [6, 9];
+  const explanation = contextualHintExplanation({
+    id: "xy-wing",
+    technique: "XY-Wing",
+    summary: "",
+    explanation: "",
+    kind: "eliminate",
+    evidence: [27, 30, 37],
+    targets: [{ cell: 28, digit: 9 }],
+  }, { candidates });
+
+  assert.equal(explanation.title, "How this XY-Wing works");
+  assert.match(explanation.definition || "", /one two-candidate pivot and two two-candidate wings/i);
+  assert.deepEqual(explanation.roles?.map(({ cell, label, badge }) => ({ cell, label, badge })), [
+    { cell: 27, label: "Pivot", badge: "P" },
+    { cell: 30, label: "Wing A", badge: "W1" },
+    { cell: 37, label: "Wing B", badge: "W2" },
+  ]);
+  assert.match(explanation.steps.join(" "), /R4C1 is the pivot/);
+  assert.match(explanation.steps.join(" "), /at least one wing is 9/);
+  assert.match(explanation.steps.at(-1) || "", /remove 9 from R4C2/);
+});
+
+test("XYZ-Wing explanation labels its three-candidate pivot and proves the shared Z", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[21] = [4, 6, 7];
+  candidates[12] = [6, 7];
+  candidates[24] = [4, 6];
+  const explanation = contextualHintExplanation({
+    id: "xyz-wing",
+    technique: "XYZ-Wing",
+    summary: "",
+    explanation: "",
+    kind: "eliminate",
+    evidence: [21, 12, 24],
+    targets: [{ cell: 22, digit: 6 }],
+  }, { candidates });
+
+  assert.equal(explanation.title, "How this XYZ-Wing works");
+  assert.match(explanation.definition || "", /three-candidate pivot/i);
+  assert.deepEqual(explanation.roles?.map(({ cell, label }) => ({ cell, label })), [
+    { cell: 21, label: "Pivot" },
+    { cell: 12, label: "Wing A" },
+    { cell: 24, label: "Wing B" },
+  ]);
+  assert.match(explanation.steps.join(" "), /shared Z digit is 6/);
+  assert.match(explanation.steps.join(" "), /sees all three possible places for 6/);
+});
+
+test("W-Wing explanation states that there is no pivot and names both wings and link ends", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[0] = [5, 7];
+  candidates[23] = [5, 7];
+  candidates[10] = [1, 7];
+  candidates[14] = [5, 7];
+  candidates[18] = [1, 5, 7];
+  const explanation = contextualHintExplanation({
+    id: "w-wing",
+    technique: "W-Wing",
+    summary: "",
+    explanation: "",
+    kind: "eliminate",
+    evidence: [0, 23, 10, 14],
+    targets: [{ cell: 18, digit: 5 }],
+  }, { candidates });
+
+  assert.equal(explanation.title, "How this W-Wing works");
+  assert.match(explanation.definition || "", /has no pivot/i);
+  assert.match(explanation.definition || "", /strong link on 7/i);
+  assert.deepEqual(explanation.roles?.map(({ cell, label, badge }) => ({ cell, label, badge })), [
+    { cell: 0, label: "Wing A", badge: "W1" },
+    { cell: 23, label: "Wing B", badge: "W2" },
+    { cell: 10, label: "Link end A", badge: "L1" },
+    { cell: 14, label: "Link end B", badge: "L2" },
+  ]);
+  assert.match(explanation.steps[0], /R1C1 and R3C6 are the wings/);
+  assert.match(explanation.steps[1], /R2C2 and R2C6.*strong link for 7 in Row 2/);
+  assert.match(explanation.steps[2], /Wing A is 5.*Wing B is forced to 5/);
+  assert.match(explanation.steps[3], /R3C1 sees Wing A through Column 1 and Wing B through Row 3/);
+  assert.match(explanation.steps[4], /remove 5 from R3C1/);
+});
+
 test("original clues cannot be used as editable corners of an Avoidable Rectangle", () => {
   const position = "857642931090073000300809000023700610978361452000020003189437526245006387736285100";
   const givens = "850000031000070000000809000003000600970301052000020000100407006205000307000080000";

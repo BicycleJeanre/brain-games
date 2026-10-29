@@ -39,3 +39,10 @@
 - Date: 2026-10-29
 - Decision: Render one shared Brain Games header and palette on the home, Sudoku, and word-game routes. Home, Play, Progress, Settings, profile access, theme, timers, and player-instruction visibility are application settings; domain modules may expose only contextual puzzle, training, creation, import, and help tools beneath the canonical shell.
 - Rationale: Repeating similar but independently implemented headers and theme preferences still makes navigation feel like separate linked products. A shared component and one canonical settings record keep the application identity stable while preserving modular game engines.
+
+## BG-007 — Wing hints must teach their own vocabulary
+
+- Status: Approved from player feedback
+- Date: 2026-10-29
+- Decision: When an XY-Wing, XYZ-Wing, or W-Wing hint reveals its pattern, define the technique in plain language, label every reconstructed pattern cell by role on both the grid and the explanation panel, define relational terms such as “sees” and “strong link,” and trace the exact candidate branches to the elimination. Never assign a role such as pivot, wing, or link end unless that role can be derived from the displayed candidates and units.
+- Rationale: A technique name and list of coordinates do not teach the rule. In particular, W-Wing has no pivot; grouping all highlighted cells as “pivot and wing cells” is both unclear and wrong.
