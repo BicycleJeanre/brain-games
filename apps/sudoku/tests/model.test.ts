@@ -30,7 +30,7 @@ test("candidate calculation and logical hint identify a forced value", () => {
   assert.deepEqual(candidateList(values, 0), [5]);
   const hint = findHint(values);
   assert.equal(hint?.technique, "Full house");
-  assert.match(hint?.id || "", /^hodoku-/);
+  assert.match(hint?.id || "", /^sudokui-/);
   assert.deepEqual(hint?.targets, [{ cell: 0, digit: 5 }]);
 });
 
@@ -294,10 +294,6 @@ test("original clues cannot be used as editable corners of an Avoidable Rectangl
   const values = [...position].map((value) => value === "0" ? "" : value);
   const visibleCandidates = candidateRows.flat().map((digits) => [...digits].map(Number));
 
-  const wronglyMutable = findHint(values, [], { visibleCandidates, solution });
-  assert.equal(wronglyMutable?.technique, "Avoidable Rectangle Type 1", "the regression fixture reproduces the former false hint when clue metadata is omitted");
-  assert.equal(hintRespectsGivens(wronglyMutable!, givens), false);
-
   const corrected = findHint(values, [], { visibleCandidates, solution, givens });
   assert.ok(corrected, "the engine continues to a valid logical move");
   assert.notEqual(corrected.technique, "Avoidable Rectangle Type 1");
@@ -378,6 +374,38 @@ test("the reported live candidate grid cannot produce invisible hint targets", (
     assert.ok(hint.targets.every(({ cell, digit }) => visibleCandidates[cell].includes(digit)), "every elimination is visible on the live board");
   }
   assert.notDeepEqual(hint.targets, [{ cell: 27, digit: 8 }, { cell: 45, digit: 8 }, { cell: 47, digit: 8 }], "the already-applied elimination is skipped");
+});
+
+test("sudokUI explains the reported Finned Jellyfish with exact roles and a pre-answer walk", () => {
+  const position = "502070430030400052004325700401502073020010504975643281048050000010004005059030847";
+  const candidateRows = [
+    ["", "689", "", "189", "", "1689", "", "", "689"],
+    ["178", "", "67", "", "689", "689", "169", "", ""],
+    ["168", "689", "", "", "", "", "", "169", "689"],
+    ["", "68", "", "", "89", "", "69", "", ""],
+    ["368", "", "36", "789", "", "789", "", "69", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["2367", "", "", "279", "", "679", "1369", "1269", "69"],
+    ["2367", "", "367", "2789", "689", "", "369", "269", ""],
+    ["26", "", "", "12", "", "16", "", "", ""],
+  ];
+  const values = [...position].map((value) => value === "0" ? "" : value);
+  const visibleCandidates = candidateRows.flat().map((digits) => [...digits].map(Number));
+  const givens = "502070430000400050000020700400502073000010000970603001008050000010004000059030807";
+  const solution = "562871439837469152194325768481592673623718594975643281348257916716984325259136847";
+  const hint = findHint(values, [], { visibleCandidates, givens, solution });
+  assert.equal(hint?.technique, "Finned Jellyfish");
+  assert.deepEqual(hint?.targets, [{ cell: 15, digit: 6 }]);
+  assert.deepEqual(hint?.instruction?.primary.map(({ cell }) => cell), [1, 5, 18, 19, 28, 33, 72, 77]);
+  assert.deepEqual(hint?.instruction?.fins.map(({ cell }) => cell), [8, 25, 26]);
+  assert.match(hint?.instruction?.what || "", /Four rows/);
+  assert.match(hint?.instruction?.why || "", /If no fin is true/);
+  assert.deepEqual(hint?.instruction?.frames.slice(0, 3).map(({ text }) => text), [
+    "Base rows: the 6s of the fish.",
+    "Cover columns: where the base's 6s must land.",
+    "Fin: 6s outside the fish, in one box; a removal must see every fin.",
+  ]);
+  assert.equal(hint?.instruction?.frames.at(-1)?.show.includes("conclusion"), true);
 });
 
 test("applying a hint keeps solver eliminations and visible notes in sync", () => {
@@ -587,7 +615,7 @@ test("catalogue has 20 valid, rated, provenance-complete puzzles in every band",
     for (let step = 0; step < initialPath.hints.length; step++) {
       const hint = findHint(values, eliminated, { solution: puzzle.solution });
       assert.ok(hint, `${puzzle.id} must retain a current hint at step ${step + 1}`);
-      assert.match(hint.id, /^hodoku-/, `${puzzle.id} must use the HoDoKu engine`);
+      assert.match(hint.id, /^sudokui-/, `${puzzle.id} must use the sudokUI engine`);
       hintTechniques.add(hint.technique);
       applyLogicalHint(values, eliminated, hint);
     }
