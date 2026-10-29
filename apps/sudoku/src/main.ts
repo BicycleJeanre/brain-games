@@ -5,7 +5,7 @@ import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, nextChallengePuzzle, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
 import { applyColour, applyHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, clearSelected, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, moveSelection, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "./game.ts";
-import { contextualHintExplanation } from "./hint-explanation.ts";
+import { contextualHintExplanation, type ContextualHintExplanation, type HintCellRole } from "./hint-explanation.ts";
 import { buildHintPath, hintRespectsGivens, nextHintFromPath } from "./hint-engine.ts";
 import { regularPuzzlePool, selectRegularPuzzle } from "./puzzle-selection.ts";
 import { candidateList, cellLabel, isHintApplicable, normalizePuzzle, peers, validatePuzzle } from "./sudoku.ts";
@@ -314,6 +314,7 @@ function trainingBoard(position: TrainingPosition, stage: typeof trainingStage, 
   const evidence = new Set(position.hint.evidence);
   const targets = new Set(position.hint.targets.map((target) => `${target.cell}-${target.digit}`));
   const showPattern = stage === "learn" || reveal;
+  const roles = showPattern ? contextualHintExplanation(position.hint, { values: position.values, candidates: position.candidates }).roles || [] : [];
   const links = showPattern ? (position.hint.links || []).map(({ from, to, strong }) => {
     return `<line class="training-link ${strong ? "strong" : "weak"}" x1="${from.cell % 9 * 100 + 50}" y1="${Math.floor(from.cell / 9) * 100 + 50}" x2="${to.cell % 9 * 100 + 50}" y2="${Math.floor(to.cell / 9) * 100 + 50}"></line>`;
   }).join("") : "";
@@ -325,19 +326,22 @@ function trainingBoard(position: TrainingPosition, stage: typeof trainingStage, 
       ? candidates.some((digit) => highlightedDigits.has(digit))
       : [...highlightedDigits].every((digit) => candidates.includes(digit)));
     const valueMatches = store.data.preferences.highlightMatches && Boolean(value) && highlightedDigits.has(Number(value)) && (highlightOperator === "or" || highlightedDigits.size === 1);
+    const hintRole = roles.find((role) => role.cell === cell);
     const highlightAnchor = trainingHighlightCell === cell;
     const peer = !selected && !highlightAnchor && store.data.preferences.highlightPeers && trainingHighlightCell !== null && Boolean(position.values[trainingHighlightCell]) && peers[trainingHighlightCell].includes(cell);
-    const classes = ["training-cell", "sudoku-cell", !value && !candidates.length ? "training-irrelevant" : "", value ? "has-value" : "", given ? "given" : "", selected ? "selected" : "", highlightAnchor ? "training-highlight-anchor" : "", peer ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", showPattern && evidence.has(cell) ? "training-evidence" : "", showPattern && focus.has(cell) ? "training-focus" : ""].filter(Boolean).join(" ");
-    const content = value ? `<span class="cell-value">${value}</span>` : `<span class="training-candidates">${Array.from({ length: 9 }, (_, index) => index + 1).map((digit) => {
+    const classes = ["training-cell", "sudoku-cell", !value && !candidates.length ? "training-irrelevant" : "", value ? "has-value" : "", given ? "given" : "", selected ? "selected" : "", highlightAnchor ? "training-highlight-anchor" : "", peer ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", showPattern && evidence.has(cell) ? "training-evidence" : "", hintRole ? "hint-role-cell" : "", showPattern && focus.has(cell) ? "training-focus" : ""].filter(Boolean).join(" ");
+    let content = value ? `<span class="cell-value">${value}</span>` : `<span class="training-candidates">${Array.from({ length: 9 }, (_, index) => index + 1).map((digit) => {
       if (!candidates.includes(digit)) return `<i aria-hidden="true"></i>`;
       const target = targets.has(`${cell}-${digit}`);
       const answerClass = (stage === "learn" || stage === "deduce" && reveal) && target ? position.hint.kind === "place" ? "training-answer" : "training-elimination" : "";
       const candidateClass = [answerClass, noteMatches && highlightedDigits.has(digit) ? "note-match" : ""].filter(Boolean).join(" ");
       return stage === "deduce" ? `<button class="training-candidate ${candidateClass}" data-training-cell="${cell}" data-training-digit="${digit}" aria-label="Candidate ${digit}, ${cellLabel(cell)}">${digit}</button>` : `<i class="${candidateClass}">${digit}</i>`;
     }).join("")}</span>`;
-    if (stage === "find" && !value) return `<button class="${classes}" data-training-select="${cell}" aria-label="${cellLabel(cell)}, empty" aria-pressed="${selected}">${content}</button>`;
-    if (value) return `<button class="${classes}" data-training-value-cell="${cell}" aria-label="${cellLabel(cell)}, ${given ? "given " : ""}${value}" aria-pressed="${highlightAnchor}">${content}</button>`;
-    return `<div class="${classes}" aria-label="${cellLabel(cell)}${value ? `, ${value}` : ", empty"}">${content}</div>`;
+    if (hintRole) content += `<span class="hint-role-badge" aria-hidden="true">${escapeHtml(hintRole.badge)}</span>`;
+    const roleLabel = hintRole ? `, hint role ${escapeHtml(hintRole.label)}` : "";
+    if (stage === "find" && !value) return `<button class="${classes}" data-training-select="${cell}" aria-label="${cellLabel(cell)}, empty${roleLabel}" aria-pressed="${selected}">${content}</button>`;
+    if (value) return `<button class="${classes}" data-training-value-cell="${cell}" aria-label="${cellLabel(cell)}, ${given ? "given " : ""}${value}${roleLabel}" aria-pressed="${highlightAnchor}">${content}</button>`;
+    return `<div class="${classes}" aria-label="${cellLabel(cell)}${value ? `, ${value}` : ", empty"}${roleLabel}">${content}</div>`;
   }).join("")}${links ? `<svg class="training-links" viewBox="0 0 900 900" aria-hidden="true">${links}</svg>` : ""}</div>`;
 }
 
@@ -355,7 +359,7 @@ function renderTrainingLesson() {
   const reveal = trainingStage === "find" ? trainingPatternRevealed : trainingStage === "deduce" ? trainingAnswerRevealed : false;
   const lessonReasoning = contextualHintExplanation(position.hint, { values: position.values, candidates: position.candidates });
   let panel = "";
-  if (trainingStage === "learn") panel = `<span class="eyebrow">Step 1 · Worked example</span><h2>${escapeHtml(technique.title)}</h2><p class="lesson-concept">${escapeHtml(technique.concept)}</p><div class="lesson-explanation"><strong>${escapeHtml(lessonReasoning.title)}</strong><ol>${lessonReasoning.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></div><button class="primary" id="training-practice">Practice with a new position</button>`;
+  if (trainingStage === "learn") panel = `<span class="eyebrow">Step 1 · Worked example</span><h2>${escapeHtml(technique.title)}</h2><p class="lesson-concept">${escapeHtml(technique.concept)}</p><div class="lesson-explanation"><strong>${escapeHtml(lessonReasoning.title)}</strong>${contextualExplanationBodyMarkup(lessonReasoning)}</div><button class="primary" id="training-practice">Practice with a new position</button>`;
   else if (trainingStage === "find") panel = `<span class="eyebrow">Step 2 · Find the pattern · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.findPrompt)}</h2><p>Tap cells to select or deselect them, then check your pattern.</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<div class="stack-actions"><button class="primary" id="training-check-pattern">Check pattern</button><button class="secondary" id="training-clue">${reveal ? "Clue shown" : "Show a clue"}</button></div>`;
   else if (trainingStage === "deduce") panel = `<span class="eyebrow">Step 3 · Make the deduction · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.deductionPrompt)}</h2><p>Tap a candidate in the grid. ${position.hint.kind === "place" ? "A correct choice places it." : "A correct choice removes it."}</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<button class="secondary" id="training-answer">${reveal ? "Answer shown" : "Show the answer"}</button>`;
   else panel = `<span class="eyebrow">Lesson complete · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>You used ${escapeHtml(technique.title)}.</h2><p>${trainingAssisted ? "You completed the reasoning with guidance. Repeat it without a clue to build independent mastery." : "You found the pattern and made the deduction independently."}</p><div class="training-complete-mark" aria-hidden="true">✓</div><div class="stack-actions"><button class="primary" id="training-repeat">Practice another position</button><button class="secondary" id="training-next">Next technique</button><button class="text-button" id="training-all">All lessons</button></div>`;
@@ -489,7 +493,7 @@ function showPuzzleInfo(puzzle: Puzzle) {
     <p>${escapeHtml(puzzle.provenance)}</p><p><strong>What SE means:</strong> the number represents the hardest technique on SukakuExplainer’s selected logical solve path. It is useful and reproducible, but not a universal or official difficulty scale.</p>`, "Close details");
 }
 
-function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: boolean): string {
+function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: boolean, roles: readonly HintCellRole[] = []): string {
   const value = game.values[cell];
   const given = game.puzzle.givens[cell] !== "0";
   const selected = game.selected.includes(cell);
@@ -505,17 +509,19 @@ function cellMarkup(game: Game, cell: number, hint: Hint | null, answerShown: bo
   const valueMatches = store.data.preferences.highlightMatches && Boolean(value) && highlightedDigits.has(Number(value)) && (highlightOperator === "or" || highlightedDigits.size === 1);
   const cellColours = game.colours[cell];
   const hintFocus = hint?.targets.some((target) => target.cell === cell);
+  const hintRole = roles.find((role) => role.cell === cell);
   const mistake = Boolean(store.data.preferences.showMistakes && value && value !== game.puzzle.solution[cell]);
-  const classes = ["sudoku-cell", given ? "given" : "", value ? "has-value" : "", cornerDigits.length ? "has-corner" : "", centreDigits.length ? "has-centre" : "", cellColours.length ? "has-colours" : "", selected ? "selected" : "", !selected && store.data.preferences.highlightPeers && game.selected.some((chosen) => game.values[chosen] && peers[chosen].includes(cell)) ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", mistake ? "mistake" : "", hint?.evidence.includes(cell) ? "hint-evidence" : "", hintFocus ? answerShown ? "hint-target" : "hint-focus" : ""].filter(Boolean).join(" ");
+  const classes = ["sudoku-cell", given ? "given" : "", value ? "has-value" : "", cornerDigits.length ? "has-corner" : "", centreDigits.length ? "has-centre" : "", cellColours.length ? "has-colours" : "", selected ? "selected" : "", !selected && store.data.preferences.highlightPeers && game.selected.some((chosen) => game.values[chosen] && peers[chosen].includes(cell)) ? "peer" : "", noteMatches ? "note-match-cell" : "", valueMatches ? "match" : "", mistake ? "mistake" : "", hint?.evidence.includes(cell) ? "hint-evidence" : "", hintRole ? "hint-role-cell" : "", hintFocus ? answerShown ? "hint-target" : "hint-focus" : ""].filter(Boolean).join(" ");
   let content = cellColours.length ? `<span class="cell-colours" style="--colour-count:${cellColours.length}" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span>` : "";
   if (value) content = `<span class="cell-value">${value}</span>`;
   if (!value && cornerDigits.length) content += `<span class="corner-marks">${cornerDigits.map(noteDigit).join("")}</span>`;
   if (!value && centreDigits.length) content += `<span class="centre-marks">${centreDigits.map(noteDigit).join("")}</span>`;
   if (automaticCandidates.length) content = `<span class="centre-marks auto">${automaticCandidates.map(noteDigit).join("")}</span>`;
+  if (hintRole) content += `<span class="hint-role-badge" aria-hidden="true">${escapeHtml(hintRole.badge)}</span>`;
   const noteLabel = simpleNotes ? centreDigits.length ? `, notes ${centreDigits.join(" ")}` : "" : `${cornerDigits.length ? `, corner notes ${cornerDigits.join(" ")}` : ""}${centreDigits.length ? `, centre notes ${centreDigits.join(" ")}` : ""}`;
   const colourLabel = cellColours.length ? `, colours ${cellColours.join(", ")}` : "";
   const lineLabel = game.lines.filter((line) => line.from === cell || line.to === cell).map((line) => `${line.colour} line to ${cellLabel(line.from === cell ? line.to : line.from)}`).join(", ");
-  return `<button class="${classes}" data-cell="${cell}" aria-label="${cellLabel(cell)}${value ? `, ${given ? "given " : ""}${value}` : ", empty"}${mistake ? ", incorrect" : ""}${noteLabel}${colourLabel}${lineLabel ? `, ${lineLabel}` : ""}" aria-pressed="${selected}">${content}<span class="colour-cues" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span></button>`;
+  return `<button class="${classes}" data-cell="${cell}" aria-label="${cellLabel(cell)}${value ? `, ${given ? "given " : ""}${value}` : ", empty"}${mistake ? ", incorrect" : ""}${noteLabel}${colourLabel}${lineLabel ? `, ${lineLabel}` : ""}${hintRole ? `, hint role ${escapeHtml(hintRole.label)}` : ""}" aria-pressed="${selected}">${content}<span class="colour-cues" aria-hidden="true">${cellColours.map((colour) => `<i class="colour-${colour}"></i>`).join("")}</span></button>`;
 }
 
 function lineMarkup(game: Game) {
@@ -578,7 +584,10 @@ function hintPreview(hint: Hint) {
   if (hint.technique === "Swordfish" || hint.technique === "Jellyfish") return { summary: `A candidate forms a ${hint.technique} across matching rows or columns.`, explanation: "The highlighted base lines restrict the candidate to the same cover lines, creating eliminations elsewhere in those cover lines." };
   if (hint.technique === "Empty Rectangle") return { summary: "A candidate forms an Empty Rectangle inside one box and connects to an outside strong link.", explanation: "The box candidates lie along one row and one column. Whichever end of the linked outside pair is true, the same target candidate is eliminated." };
   if (hint.technique === "Avoidable Rectangle Type 1") return { summary: "Three editable values and one open cell form a two-digit rectangle.", explanation: "If the open corner took the highlighted candidate, the two digits could be swapped across all four corners without changing any original clue. The unique solution therefore rules out that candidate." };
-  if (hint.technique.includes("Wing")) return { summary: `The highlighted candidates form a ${hint.technique}.`, explanation: "Trace how the pivot and wing cells constrain one another, then inspect the cells that can see the relevant endpoints." };
+  if (hint.technique === "XY-Wing") return { summary: "One pivot connects two wings that share an elimination digit.", explanation: "The pivot sees both wings. Whichever pivot candidate is true forces the shared third digit into one of the wings." };
+  if (hint.technique === "XYZ-Wing") return { summary: "A three-candidate pivot and two wings share one elimination digit.", explanation: "The pivot and both wings contain the shared Z digit. Every possible pivot value forces Z into one of those three pattern cells." };
+  if (hint.technique === "W-Wing") return { summary: "Two matching wings are connected by a strong link.", explanation: "A W-Wing has no pivot. The strong link forces at least one of the two wings to take their other shared digit." };
+  if (hint.technique.includes("Wing")) return { summary: `The highlighted candidates form a ${hint.technique}.`, explanation: "Open the explanation below for the rule, the role of each highlighted cell, and the exact elimination proof." };
   if (hint.technique.includes("Chain") || hint.technique.includes("Loop") || hint.technique.includes("AIC")) return { summary: `The highlighted candidates form a ${hint.technique}.`, explanation: "Follow the alternating strong and weak links. Either endpoint state leads to the same verified deduction." };
   if (hint.technique.includes("Color")) return { summary: `The highlighted candidates form a ${hint.technique} pattern.`, explanation: "Follow the conjugate links as two alternating colors, then look for a contradiction or a cell that sees both colors." };
   if (hint.technique.includes("Rectangle") || hint.technique.includes("Uniqueness") || hint.technique.includes("BUG")) return { summary: `The highlighted cells form a ${hint.technique} pattern.`, explanation: "Use the puzzle's unique-solution constraint to determine which candidate cannot remain." };
@@ -587,9 +596,14 @@ function hintPreview(hint: Hint) {
   return { summary: "The highlighted cells contain a logical next step.", explanation: "Review their candidates and shared units before revealing the exact deduction." };
 }
 
+function contextualExplanationBodyMarkup(explanation: ContextualHintExplanation): string {
+  const roles = explanation.roles?.length ? `<dl class="hint-role-list" aria-label="Pattern cell roles">${explanation.roles.map((role) => `<div><dt><span aria-hidden="true">${escapeHtml(role.badge)}</span>${escapeHtml(role.label)}</dt><dd>${escapeHtml(role.detail)}</dd></div>`).join("")}</dl>` : "";
+  return `${explanation.definition ? `<p class="hint-definition"><strong>Rule:</strong> ${escapeHtml(explanation.definition)}</p>` : ""}${roles}<h4>Why the elimination follows</h4><ol>${explanation.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`;
+}
+
 function hintExplanationMarkup(hint: Hint, game: Game): string {
   const explanation = contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre });
-  return `<details class="hint-reasoning"><summary>${escapeHtml(explanation.title)}</summary><ol>${explanation.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol></details>`;
+  return `<details class="hint-reasoning" open><summary>${escapeHtml(explanation.title)}</summary>${contextualExplanationBodyMarkup(explanation)}</details>`;
 }
 
 function hintTrainingMarkup(hint: Hint): string {
@@ -645,6 +659,7 @@ function renderPlayer() {
   const nextChallenge = game.completedAt ? nextChallengePuzzle(catalogue, game) : null;
   const patternShown = reviewingHistory ? historicalHintStage === "preview" : game.hintStage === "preview";
   const boardHint = patternShown ? activeHint : null;
+  const boardHintRoles = boardHint ? contextualHintExplanation(boardHint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre }).roles || [] : [];
   const hintPanel = activeHint && preview
     ? !patternShown
       ? `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}Minimal hint</span><h3>${escapeHtml(activeHint.technique)}</h3><p>Look for this strategy in the current grid.</p><div class="actions"><button id="show-hint-pattern" class="secondary compact">Show pattern</button><button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
@@ -659,7 +674,7 @@ function renderPlayer() {
     <section class="player-layout">
       <div class="board-column">
         <div class="board-status"><span id="timer" class="timer ${preferences.showTimer ? "" : "hidden"}">${formatTime(game.elapsed)}</span><span>${game.completedAt ? "Solved" : failed ? "Failed" : game.paused ? "Paused" : navigator.onLine ? "Saved on device" : "Saved · offline"}${mistakeStatus}</span></div>
-        <div class="sudoku-board ${game.mode === "line" ? "drawing-lines" : ""} ${game.paused && !terminal ? "paused" : ""} ${failed ? "failed" : ""} ${celebrating ? "celebrating" : ""}" role="grid" aria-label="Sudoku board">${Array.from({ length: 81 }, (_, cell) => cellMarkup(game, cell, boardHint, answerShown)).join("")}${lineMarkup(game)}${game.paused && !terminal ? `<button class="pause-cover" id="resume-board"><strong>Paused</strong><span>Tap to continue</span></button>` : failed ? `<div class="pause-cover failure-cover" role="status"><strong>Puzzle failed</strong><span>The fourth mistake ended this attempt.</span></div>` : ""}</div>
+        <div class="sudoku-board ${game.mode === "line" ? "drawing-lines" : ""} ${game.paused && !terminal ? "paused" : ""} ${failed ? "failed" : ""} ${celebrating ? "celebrating" : ""}" role="grid" aria-label="Sudoku board">${Array.from({ length: 81 }, (_, cell) => cellMarkup(game, cell, boardHint, answerShown, boardHintRoles)).join("")}${lineMarkup(game)}${game.paused && !terminal ? `<button class="pause-cover" id="resume-board"><strong>Paused</strong><span>Tap to continue</span></button>` : failed ? `<div class="pause-cover failure-cover" role="status"><strong>Puzzle failed</strong><span>The fourth mistake ended this attempt.</span></div>` : ""}</div>
         ${celebrating ? `<div class="completion-confetti" aria-hidden="true">${Array.from({ length: 14 }, () => "<i></i>").join("")}</div>` : ""}
         ${game.completedAt ? `<div class="completion-banner ${celebrating ? "celebrating" : ""}" role="status"><span aria-hidden="true">★</span><div><strong>Puzzle complete!</strong><small>${game.puzzle.difficulty} · ${rating(game.puzzle)} · ${formatTime(game.elapsed)}</small></div><button id="next-puzzle">${nextChallenge ? `Next: ${escapeHtml(nextChallenge.difficulty)}` : game.challenge ? "Challenge summary" : "Next puzzle"}</button></div>` : ""}
         ${failed ? `<div class="completion-banner failure-banner" role="status"><span aria-hidden="true">×</span><div><strong>Puzzle failed</strong><small>${game.mistakes} mistakes · ${formatTime(game.elapsed)}</small></div><button id="retry-puzzle">Try again</button></div>` : ""}

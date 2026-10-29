@@ -162,6 +162,26 @@ test("Skyscraper training explains the shown strong links and eliminations in pl
   await expect(explanation).not.toContainText("r5c6,r6c9");
 });
 
+test("W-Wing training defines the rule and labels both wings and both strong-link ends", async ({ page }) => {
+  await page.getByRole("button", { name: "Train", exact: true }).click();
+  await page.locator('[data-training="w-wing"]').last().click();
+  const explanation = page.locator(".lesson-explanation");
+  await expect(explanation).toContainText("Rule:");
+  await expect(explanation).toContainText("A W-Wing has no pivot");
+  await expect(explanation).toContainText("Wing A");
+  await expect(explanation).toContainText("R1C9 · candidates 1/4");
+  await expect(explanation).toContainText("Wing B");
+  await expect(explanation).toContainText("R8C7 · candidates 1/4");
+  await expect(explanation).toContainText("Link end A");
+  await expect(explanation).toContainText("Link end B");
+  await expect(explanation).toContainText("strong link for 1 in Column 3");
+  await expect(explanation).toContainText("at least one wing is 4");
+  await expect(page.locator('.training-cell[aria-label*="hint role Wing A"] .hint-role-badge')).toHaveText("W1");
+  await expect(page.locator('.training-cell[aria-label*="hint role Wing B"] .hint-role-badge')).toHaveText("W2");
+  await expect(page.locator('.training-cell[aria-label*="hint role Link end A"] .hint-role-badge')).toHaveText("L1");
+  await expect(page.locator('.training-cell[aria-label*="hint role Link end B"] .hint-role-badge')).toHaveText("L2");
+});
+
 test("the settings menu toggles back to the screen it opened from", async ({ page }) => {
   await page.getByRole("button", { name: "Settings and help" }).click();
   await expect(page.getByRole("heading", { name: "Settings & help" })).toBeVisible();
@@ -711,8 +731,8 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect.poll(() => page.locator(".sudoku-cell.hint-focus").count()).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
   const reasoning = page.locator(".hint-reasoning");
-  await expect(reasoning.locator("summary")).toContainText("Why is this");
-  await reasoning.locator("summary").click();
+  await expect(reasoning).toHaveAttribute("open", "");
+  await expect(reasoning.locator("summary")).toContainText(/Why is this|How this/);
   await expect(reasoning.locator("li")).not.toHaveCount(0);
   await expect(reasoning).toContainText(/R[1-9]C[1-9]/);
   await expect(page.getByRole("button", { name: "Dismiss hint" })).toBeVisible();

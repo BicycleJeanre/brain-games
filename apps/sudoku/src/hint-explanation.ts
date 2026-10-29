@@ -2,7 +2,16 @@ import type { Hint } from "./types.ts";
 
 export interface ContextualHintExplanation {
   title: string;
+  definition?: string;
+  roles?: HintCellRole[];
   steps: string[];
+}
+
+export interface HintCellRole {
+  cell: number;
+  label: string;
+  badge: string;
+  detail: string;
 }
 
 export interface ContextualHintContext {
@@ -34,6 +43,126 @@ function cellList(cells: readonly number[]): string {
 
 function targets(hint: Hint): string {
   return hint.targets.map(({ cell, digit }) => `${digit} at ${compactCell(cell)}`).join(", ");
+}
+
+const candidateText = (digits: readonly number[]) => digits.join("/");
+
+function viewFrom(cell: number, other: number): string {
+  return sharedHouse(cell, other) || "a shared unit";
+}
+
+function xyWingExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const targetDigit = hint.targets[0]?.digit;
+  const evidence = [...new Set(hint.evidence)];
+  if (!targetDigit || evidence.length !== 3 || !context.candidates) return null;
+  const pivot = evidence.find((cell) => {
+    const digits = context.candidates?.[cell] || [];
+    return digits.length === 2 && !digits.includes(targetDigit);
+  });
+  const wings = evidence.filter((cell) => cell !== pivot && (context.candidates?.[cell] || []).length === 2 && (context.candidates?.[cell] || []).includes(targetDigit));
+  if (pivot === undefined || wings.length !== 2 || wings.some((wing) => !sharedHouse(pivot, wing))) return null;
+  const pivotDigits = context.candidates[pivot];
+  const firstOther = context.candidates[wings[0]].find((digit) => digit !== targetDigit);
+  const secondOther = context.candidates[wings[1]].find((digit) => digit !== targetDigit);
+  if (!firstOther || !secondOther || firstOther === secondOther || !pivotDigits.includes(firstOther) || !pivotDigits.includes(secondOther)) return null;
+  const sightLines = hint.targets.map(({ cell }) => `${compactCell(cell)} sees Wing A through ${viewFrom(cell, wings[0])} and Wing B through ${viewFrom(cell, wings[1])}`);
+  return {
+    title: "How this XY-Wing works",
+    definition: `An XY-Wing has one two-candidate pivot and two two-candidate wings. The pivot sees both wings. Each wing shares one pivot digit, and both wings share a third digit. “Sees” means sharing a row, column, or box.`,
+    roles: [
+      { cell: pivot, label: "Pivot", badge: "P", detail: `${compactCell(pivot)} · candidates ${candidateText(pivotDigits)}` },
+      { cell: wings[0], label: "Wing A", badge: "W1", detail: `${compactCell(wings[0])} · candidates ${candidateText(context.candidates[wings[0]])}` },
+      { cell: wings[1], label: "Wing B", badge: "W2", detail: `${compactCell(wings[1])} · candidates ${candidateText(context.candidates[wings[1]])}` },
+    ],
+    steps: [
+      `${compactCell(pivot)} is the pivot because it contains ${candidateText(pivotDigits)} and sees both wings: ${compactCell(wings[0])} through ${viewFrom(pivot, wings[0])}, and ${compactCell(wings[1])} through ${viewFrom(pivot, wings[1])}.`,
+      `If the pivot is ${firstOther}, Wing A cannot be ${firstOther}, so Wing A must be ${targetDigit}. If the pivot is ${secondOther}, Wing B cannot be ${secondOther}, so Wing B must be ${targetDigit}. The pivot must take one of those two values, so at least one wing is ${targetDigit}.`,
+      `${sightLines.join("; ")}. Each target therefore sees whichever wing becomes ${targetDigit}.`,
+      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
+    ],
+  };
+}
+
+function xyzWingExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const targetDigit = hint.targets[0]?.digit;
+  const evidence = [...new Set(hint.evidence)];
+  if (!targetDigit || evidence.length !== 3 || !context.candidates) return null;
+  const pivot = evidence.find((cell) => (context.candidates?.[cell] || []).length === 3 && (context.candidates?.[cell] || []).includes(targetDigit));
+  const wings = evidence.filter((cell) => cell !== pivot && (context.candidates?.[cell] || []).length === 2 && (context.candidates?.[cell] || []).includes(targetDigit));
+  if (pivot === undefined || wings.length !== 2 || wings.some((wing) => !sharedHouse(pivot, wing))) return null;
+  const pivotDigits = context.candidates[pivot];
+  const firstOther = context.candidates[wings[0]].find((digit) => digit !== targetDigit);
+  const secondOther = context.candidates[wings[1]].find((digit) => digit !== targetDigit);
+  if (!firstOther || !secondOther || firstOther === secondOther || !pivotDigits.includes(firstOther) || !pivotDigits.includes(secondOther)) return null;
+  const sightLines = hint.targets.map(({ cell }) => `${compactCell(cell)} sees the pivot through ${viewFrom(cell, pivot)}, Wing A through ${viewFrom(cell, wings[0])}, and Wing B through ${viewFrom(cell, wings[1])}`);
+  return {
+    title: "How this XYZ-Wing works",
+    definition: `An XYZ-Wing has a three-candidate pivot and two two-candidate wings. Each wing shares one non-Z digit with the pivot, while the pivot and both wings all contain Z. A target that sees all three pattern cells cannot be Z.`,
+    roles: [
+      { cell: pivot, label: "Pivot", badge: "P", detail: `${compactCell(pivot)} · candidates ${candidateText(pivotDigits)}` },
+      { cell: wings[0], label: "Wing A", badge: "W1", detail: `${compactCell(wings[0])} · candidates ${candidateText(context.candidates[wings[0]])}` },
+      { cell: wings[1], label: "Wing B", badge: "W2", detail: `${compactCell(wings[1])} · candidates ${candidateText(context.candidates[wings[1]])}` },
+    ],
+    steps: [
+      `${compactCell(pivot)} is the pivot because it has the three candidates ${candidateText(pivotDigits)} and sees both two-candidate wings. The shared Z digit is ${targetDigit}.`,
+      `If the pivot is ${targetDigit}, Z is already in the pivot. If it is ${firstOther}, Wing A is forced to ${targetDigit}. If it is ${secondOther}, Wing B is forced to ${targetDigit}. One of the three highlighted pattern cells must therefore be ${targetDigit}.`,
+      `${sightLines.join("; ")}. Each target sees all three possible places for ${targetDigit}.`,
+      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
+    ],
+  };
+}
+
+function wWingExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const targetDigit = hint.targets[0]?.digit;
+  const evidence = [...new Set(hint.evidence)];
+  if (!targetDigit || evidence.length < 4 || !context.candidates) return null;
+  let wings: [number, number] | null = null;
+  for (let first = 0; first < evidence.length && !wings; first++) {
+    const firstDigits = context.candidates[evidence[first]] || [];
+    if (firstDigits.length !== 2 || !firstDigits.includes(targetDigit)) continue;
+    for (let second = first + 1; second < evidence.length; second++) {
+      const secondDigits = context.candidates[evidence[second]] || [];
+      if (secondDigits.length === 2 && firstDigits.every((digit) => secondDigits.includes(digit))) {
+        wings = [evidence[first], evidence[second]];
+        break;
+      }
+    }
+  }
+  if (!wings) return null;
+  const wingDigits = context.candidates[wings[0]];
+  const linkDigit = wingDigits.find((digit) => digit !== targetDigit);
+  const linkEnds = evidence.filter((cell) => !wings?.includes(cell) && (context.candidates?.[cell] || []).includes(linkDigit || 0));
+  if (!linkDigit || linkEnds.length < 2) return null;
+  let linked: { first: number; second: number; house: string } | null = null;
+  for (let first = 0; first < linkEnds.length && !linked; first++) {
+    for (let second = first + 1; second < linkEnds.length; second++) {
+      const house = sharedHouse(linkEnds[first], linkEnds[second]);
+      if (!house) continue;
+      const direct = sharedHouse(linkEnds[first], wings[0]) && sharedHouse(linkEnds[second], wings[1]);
+      const crossed = sharedHouse(linkEnds[first], wings[1]) && sharedHouse(linkEnds[second], wings[0]);
+      if (direct) linked = { first: linkEnds[first], second: linkEnds[second], house };
+      else if (crossed) linked = { first: linkEnds[second], second: linkEnds[first], house };
+    }
+  }
+  if (!linked) return null;
+  const sightLines = hint.targets.map(({ cell }) => `${compactCell(cell)} sees Wing A through ${viewFrom(cell, wings[0])} and Wing B through ${viewFrom(cell, wings[1])}`);
+  return {
+    title: "How this W-Wing works",
+    definition: `A W-Wing has no pivot. It uses two separated two-candidate wings with the same pair (${candidateText(wingDigits)}). A strong link on ${linkDigit} connects them indirectly: in ${linked.house}, ${linkDigit} can go in exactly one of two link-end cells. That forces at least one wing to take the other digit, ${targetDigit}.`,
+    roles: [
+      { cell: wings[0], label: "Wing A", badge: "W1", detail: `${compactCell(wings[0])} · candidates ${candidateText(wingDigits)}` },
+      { cell: wings[1], label: "Wing B", badge: "W2", detail: `${compactCell(wings[1])} · candidates ${candidateText(context.candidates[wings[1]])}` },
+      { cell: linked.first, label: "Link end A", badge: "L1", detail: `${compactCell(linked.first)} · sees Wing A through ${viewFrom(linked.first, wings[0])}` },
+      { cell: linked.second, label: "Link end B", badge: "L2", detail: `${compactCell(linked.second)} · sees Wing B through ${viewFrom(linked.second, wings[1])}` },
+    ],
+    steps: [
+      `${compactCell(wings[0])} and ${compactCell(wings[1])} are the wings because both contain only ${candidateText(wingDigits)}. Unlike an XY-Wing, a W-Wing does not have a pivot.`,
+      `${compactCell(linked.first)} and ${compactCell(linked.second)} are the two ends of the strong link for ${linkDigit} in ${linked.house}. “Strong link” means ${linkDigit} must be in one of those two cells.`,
+      `If ${compactCell(linked.first)} is ${linkDigit}, Wing A sees it and cannot be ${linkDigit}, so Wing A is ${targetDigit}. If ${compactCell(linked.second)} is ${linkDigit}, Wing B is forced to ${targetDigit}. Therefore at least one wing is ${targetDigit}.`,
+      `${sightLines.join("; ")}. Each target sees both wings, so it sees whichever wing becomes ${targetDigit}.`,
+      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
+    ],
+  };
 }
 
 function skyscraperExplanation(hint: Hint): ContextualHintExplanation | null {
@@ -217,6 +346,18 @@ function hiddenRectangleExplanation(hint: Hint, context: ContextualHintContext):
 }
 
 export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
+  if (hint.technique === "XY-Wing") {
+    const explanation = xyWingExplanation(hint, context);
+    if (explanation) return explanation;
+  }
+  if (hint.technique === "XYZ-Wing") {
+    const explanation = xyzWingExplanation(hint, context);
+    if (explanation) return explanation;
+  }
+  if (hint.technique === "W-Wing") {
+    const explanation = wWingExplanation(hint, context);
+    if (explanation) return explanation;
+  }
   if (hint.technique === "Skyscraper") {
     const explanation = skyscraperExplanation(hint);
     if (explanation) return explanation;
@@ -267,9 +408,10 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
   }
   if (hint.technique.includes("Wing")) {
     return {
-      title: `Why is this a ${hint.technique}?`,
+      title: `How this ${hint.technique} works`,
+      definition: "A wing pattern links a small set of restricted candidate cells so that every possible branch forces the same candidate outcome.",
       steps: [
-        `${evidence} are the pivot and wing cells. Their shared candidates create the linked either-or pattern required for a ${hint.technique}.`,
+        `${evidence} are the cells HoDoKu identified as the ${hint.technique} pattern. Their exact roles could not be reconstructed from the displayed candidates, so they are not labelled as a pivot or wing without proof.`,
         `Every valid branch of that pattern rules out ${target}.`,
       ],
     };
