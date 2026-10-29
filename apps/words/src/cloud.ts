@@ -153,7 +153,7 @@ export class CloudSync {
   private reconciledProgress = false;
   private reconciledSettings = false;
 
-  constructor(private store: Store, private changed: (dataChanged?: boolean) => void) {
+  constructor(private store: Store, private changed: (dataChanged?: boolean, settingsChanged?: boolean) => void) {
     addEventListener("online", () => { if (this.user) void this.flushNow(); });
   }
 
@@ -209,7 +209,7 @@ export class CloudSync {
         const before = JSON.stringify(this.store.data.deletedProgress);
         const localUpdatedAt = this.store.data.settingsUpdatedAt;
         await this.store.mergeRemote({ ...this.store.data, ...data, settingsCloudRevision: data.cloudRevision, progress: {} });
-        if (before !== JSON.stringify(this.store.data.deletedProgress) || data.settingsUpdatedAt > localUpdatedAt) this.changed(true);
+        if (before !== JSON.stringify(this.store.data.deletedProgress) || data.settingsUpdatedAt > localUpdatedAt) this.changed(true, data.settingsUpdatedAt > localUpdatedAt);
       }
       if (!snapshot.metadata.fromCache && !this.reconciledSettings) {
         this.reconciledSettings = true;

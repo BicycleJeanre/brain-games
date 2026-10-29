@@ -32,3 +32,10 @@
 - Date: 2026-10-27
 - Decision: Present Sudoku, Crosswords, Word Search, Word Grid, and Letter Mix as peers in one Brain Games library. Keep focused game engines modular, but route application-level Games, Progress, profile, appearance, player preferences, and backup controls through the shared shell.
 - Rationale: The product should behave as one application rather than two linked legacy families. Domain-specific player controls remain available in the shared Settings page, and game-specific puzzle, training, creation, and help workflows remain inside their focused players.
+
+## BG-006 — Canonical shell and theme authority
+
+- Status: Approved
+- Date: 2026-10-29
+- Decision: Render one shared Brain Games header and palette on the home, Sudoku, and word-game routes. Home, Play, Progress, Settings, profile access, theme, timers, and player-instruction visibility are application settings; domain modules may expose only contextual puzzle, training, creation, import, and help tools beneath the canonical shell.
+- Rationale: Repeating similar but independently implemented headers and theme preferences still makes navigation feel like separate linked products. A shared component and one canonical settings record keep the application identity stable while preserving modular game engines.

@@ -168,7 +168,7 @@ export class CloudSync {
   error = "";
   ready = false;
   private store: Store;
-  private changed: () => void;
+  private changed: (settingsChanged?: boolean) => void;
   private stops: Unsubscribe[] = [];
   private pendingGames = new Map<string, number>();
   private pendingDeletes = new Set<string>();
@@ -180,7 +180,7 @@ export class CloudSync {
   private reconciledGames = false;
   private reconciledSettings = false;
 
-  constructor(store: Store, changed: () => void) {
+  constructor(store: Store, changed: (settingsChanged?: boolean) => void) {
     this.store = store;
     this.changed = changed;
     addEventListener("online", () => {
@@ -237,7 +237,7 @@ export class CloudSync {
     }, (error) => this.fail(error)));
     this.stops.push(onSnapshot(settings, { includeMetadataChanges: true }, async (snapshot) => {
       const data = snapshot.data();
-      if (snapshot.exists() && validSettings(data) && await this.store.mergeCloudSettings(data)) this.changed();
+      if (snapshot.exists() && validSettings(data) && await this.store.mergeCloudSettings(data)) this.changed(true);
       if (!snapshot.metadata.fromCache && !this.reconciledSettings) {
         this.reconciledSettings = true;
         if (this.store.data.settingsCloudDirty || !snapshot.exists() || (validSettings(data) && (!this.store.data.settingsCloudRevision || !data.cloudRevision) && this.store.data.settingsUpdatedAt > data.updatedAt)) this.queueSettings();
