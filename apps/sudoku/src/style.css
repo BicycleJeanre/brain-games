@@ -349,6 +349,13 @@ textarea { min-height: 122px; padding: 12px; resize: vertical; font-family: ui-m
 .hint-conclusion { border: 1px solid var(--board-hint-outline); background: var(--board-hint); color: var(--text); }
 .hint-reasoning ol { display: grid; gap: 8px; margin: 12px 0 0; padding-left: 20px; color: var(--muted); }
 .hint-reasoning li { padding-left: 3px; line-height: 1.55; }
+.hint-guide { display: grid; gap: 5px; margin-top: 12px; }
+.hint-guide h4 { margin-top: 8px; }
+.hint-guide p { margin: 0 0 4px; color: var(--muted); line-height: 1.55; }
+.hint-aliases { font-size: 10px; }
+.hint-walkthrough { counter-reset: hint-step; }
+.hint-walkthrough li::marker { color: var(--accent); font-weight: 900; }
+.hint-source { display: block; margin-top: 12px; color: var(--faint); font-size: 9px; line-height: 1.45; }
 .hint-training-link { margin-top: 12px; }
 .sudoku-board.celebrating { animation: board-celebration 1.15s cubic-bezier(.2,.8,.2,1); }
 .completion-confetti { position: absolute; z-index: 12; top: 30px; left: 0; width: 100%; aspect-ratio: 1; overflow: hidden; pointer-events: none; }

@@ -129,6 +129,22 @@ export interface Hint {
     to: { cell: number; digit: number };
     strong: boolean;
   }>;
+  instruction?: {
+    provider: "sudokUI";
+    revision: string;
+    techniqueCode: string;
+    what: string;
+    why: string;
+    spot: string;
+    aliases: string[];
+    specific: string;
+    labels: { primary?: string; secondary?: string; fins?: string };
+    primary: Array<{ cell: number; digit: number }>;
+    secondary: Array<{ cell: number; digit: number }>;
+    fins: Array<{ cell: number; digit: number }>;
+    units: Array<{ unit: number; role: "primary" | "secondary" }>;
+    frames: Array<{ text: string; show: string[] }>;
+  };
 }
 
 export interface HintPath {

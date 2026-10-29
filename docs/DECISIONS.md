@@ -53,3 +53,10 @@
 - Date: 2026-10-29
 - Decision: The Show pattern tier may define the rule, label verified roles, and expose the evidence needed to derive a move, but it must not state the exact placement or elimination. Show answer is the only tier that exposes the final deduction. Advanced techniques need a technique-specific, grid-derived walkthrough; when one is not available, say that plainly instead of using generic text such as “the solver identified this pattern” as if it were proof. BUG +1 must define bivalue and the deadly balanced state, label the exceptional three-candidate cell, and show the odd candidate counts that identify the extra candidate.
 - Rationale: An explanation that merely repeats the solver result is circular, and revealing the exact move at the pattern tier removes the player's opportunity to reason from the evidence.
+
+## BG-009 — Live hints use one reviewed engine/content model
+
+- Status: Approved for implementation spike from player feedback
+- Date: 2026-10-29
+- Decision: Replace hand-authored, technique-name-based live hint prose with the pinned sudokUI engine's structured step data and reviewed technique guides. Show pattern must use the finder's assigned candidates, houses, labels, and pre-conclusion walkthrough frames. Keep the existing curated HoDoKu training catalogue during the spike, link only techniques that genuinely have an interactive lesson, and describe other coverage as a guide and in-puzzle walkthrough rather than training.
+- Rationale: Brain Games cannot reliably reconstruct dozens of advanced strategies from a flat list of cells. A single engine/content model keeps the detected pattern, terminology, explanation, and board drawing aligned and avoids inventing unsupported teaching material.

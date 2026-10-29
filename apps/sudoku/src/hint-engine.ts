@@ -1,8 +1,19 @@
-import { Board, solve, type Hint as HoDoKuHint } from "../vendor/hodoku-ts/dist/index.js";
-import { candidateList, units } from "./sudoku.ts";
+import {
+  applyStep,
+  bit,
+  emptyGrid,
+  findNextStep,
+  TECH_DOCS,
+  TECHS,
+  walkFrames,
+  type Grid,
+  type Step,
+} from "../vendor/sudokui/dist/index.js";
+import type { Hint as HoDoKuHint } from "../vendor/hodoku-ts/dist/index.js";
+import { candidateList } from "./sudoku.ts";
 import type { Hint, HintPath } from "./types.ts";
 
-export const HINT_ENGINE = "HoDoKu TS e5b01c91+fixed-givens.1";
+export const HINT_ENGINE = "sudokUI 1f7831c6";
 
 interface HintContext {
   visibleCandidates?: readonly (readonly number[])[];
@@ -10,7 +21,41 @@ interface HintContext {
   givens?: string;
 }
 
-const forbiddenTechniques = new Set(["BRUTE_FORCE", "GIVE_UP", "INCOMPLETE"]);
+// The existing 21 HoDoKu-authored training fixtures remain available while
+// live puzzle hints use sudokUI. This converter is intentionally limited to
+// that curated training catalogue.
+export function convertHoDoKuHint(hint: HoDoKuHint, _values: readonly string[], _candidates: readonly number[][]): Hint | null {
+  const kind: Hint["kind"] = hint.placements.length ? "place" : "eliminate";
+  const sourceTargets = kind === "place" ? hint.placements : hint.eliminations;
+  const targets = sourceTargets.map(({ index, value }) => ({ cell: index, digit: value }));
+  if (!targets.length) return null;
+  const targetCells = new Set(targets.map(({ cell }) => cell));
+  const evidence = [...new Set([
+    ...hint.raw.indices,
+    ...hint.raw.fins.map(({ index }) => index),
+    ...hint.raw.endoFins.map(({ index }) => index),
+    ...hint.raw.cannibalistic.map(({ index }) => index),
+    ...hint.raw.alses.flatMap(({ indices }) => indices),
+    ...hint.raw.colorCandidates.keys(),
+    ...hint.links.flatMap(({ from, to }) => [from.index, to.index]),
+  ])].filter((cell) => !targetCells.has(cell));
+  const name = hint.technique === "LOCKED_CANDIDATES_1" || hint.technique === "LOCKED_CANDIDATES_2" ? "Locked candidates" : hint.name;
+  return {
+    id: `hodoku-training-${hint.technique}-${targets.map(({ cell, digit }) => `${cell}-${digit}`).join("-")}`,
+    technique: name,
+    variant: hint.technique === "LOCKED_CANDIDATES_1" ? "pointing" : hint.technique === "LOCKED_CANDIDATES_2" ? "claiming" : undefined,
+    summary: `${name} produces the training deduction.`,
+    explanation: hint.explanation,
+    kind,
+    evidence,
+    targets,
+    links: hint.links.map(({ from, to, strong }) => ({
+      from: { cell: from.index, digit: from.value },
+      to: { cell: to.index, digit: to.value },
+      strong,
+    })),
+  };
+}
 
 function liveCandidates(
   values: readonly string[],
@@ -37,85 +82,36 @@ function hintStateKey(
   return `${givens || ""}|${values.map((value) => value || "0").join("")}|${candidates.map((digits) => digits.join("")).join(".")}`;
 }
 
-function toBoard(
+function toGrid(
   values: readonly string[],
   eliminated: readonly number[][],
   visibleCandidates?: readonly (readonly number[])[],
   givens?: string,
-): Board | null {
-  const board = Board.fromValues(values.map((value) => Number(value) || 0), false);
-  if (givens) {
-    for (let cell = 0; cell < 81; cell++) {
-      if (givens[cell] && givens[cell] !== "0" && values[cell] === givens[cell]) board.fixed[cell] = 1;
-    }
+): Grid | null {
+  const grid = emptyGrid();
+  for (let cell = 0; cell < 81; cell++) {
+    const digit = Number(values[cell]);
+    if (!digit) continue;
+    grid.values[cell] = digit;
+    grid.cands[cell] = 0;
+    if (givens?.[cell] && givens[cell] !== "0" && values[cell] === givens[cell]) grid.given[cell] = 1;
   }
   const candidates = liveCandidates(values, eliminated, visibleCandidates);
   for (let cell = 0; cell < 81; cell++) {
-    if (values[cell]) continue;
+    if (grid.values[cell]) continue;
     if (!candidates[cell].length) return null;
-    for (let digit = 1; digit <= 9; digit++) {
-      if (!candidates[cell].includes(digit) && !board.setCandidate(cell, digit, false)) return null;
-    }
+    grid.cands[cell] = candidates[cell].reduce((mask, digit) => mask | bit(digit), 0);
   }
-  return board;
+  return grid;
 }
 
-function unique(items: number[]): number[] {
-  return [...new Set(items.filter((cell) => cell >= 0 && cell < 81))];
-}
-
-function singleEvidence(
-  technique: string,
-  cell: number,
-  digit: number,
-  values: readonly string[],
-  candidates: readonly number[][],
-): number[] {
-  if (technique === "FULL_HOUSE") {
-    return units.find((unit) => unit.includes(cell) && unit.filter((index) => values[index]).length === 8)?.filter((index) => index !== cell) || [];
-  }
-  if (technique === "HIDDEN_SINGLE") {
-    return units.find((unit) => unit.includes(cell) && unit.filter((index) => !values[index] && candidates[index].includes(digit)).length === 1)?.filter((index) => index !== cell) || [];
-  }
-  if (technique === "NAKED_SINGLE") {
-    return unique(units.flatMap((unit) => unit.includes(cell) ? unit : []).filter((index) => index !== cell && values[index]));
-  }
-  return [];
-}
-
-function techniqueName(hint: HoDoKuHint): { name: string; variant?: "pointing" | "claiming" } {
-  if (hint.technique === "LOCKED_CANDIDATES_1") return { name: "Locked candidates", variant: "pointing" };
-  if (hint.technique === "LOCKED_CANDIDATES_2") return { name: "Locked candidates", variant: "claiming" };
-  const simple: Record<string, string> = {
-    FULL_HOUSE: "Full house",
-    NAKED_SINGLE: "Naked single",
-    HIDDEN_SINGLE: "Hidden single",
-    NAKED_PAIR: "Naked pair",
-    NAKED_TRIPLE: "Naked triple",
-    NAKED_QUADRUPLE: "Naked quadruple",
-    HIDDEN_PAIR: "Hidden pair",
-    HIDDEN_TRIPLE: "Hidden triple",
-    HIDDEN_QUADRUPLE: "Hidden quadruple",
-    LOCKED_PAIR: "Locked pair",
-    LOCKED_TRIPLE: "Locked triple",
-  };
-  return { name: simple[hint.technique] || hint.name };
-}
-
-function evidenceFor(hint: HoDoKuHint, targets: Hint["targets"], values: readonly string[], candidates: readonly number[][]): number[] {
-  const raw = hint.raw;
-  const evidence = [
-    ...raw.indices,
-    ...raw.fins.map(({ index }) => index),
-    ...raw.endoFins.map(({ index }) => index),
-    ...raw.cannibalistic.map(({ index }) => index),
-    ...raw.alses.flatMap(({ indices }) => indices),
-    ...raw.colorCandidates.keys(),
-    ...hint.links.flatMap(({ from, to }) => [from.index, to.index]),
-  ];
-  if (hint.placements.length === 1) evidence.push(...singleEvidence(hint.technique, hint.placements[0].index, hint.placements[0].value, values, candidates));
-  const targetCells = new Set(targets.map(({ cell }) => cell));
-  return unique(evidence).filter((cell) => !targetCells.has(cell));
+function uniqueCells(step: Step): number[] {
+  return [...new Set([
+    ...(step.primary || []).map(({ cell }) => cell),
+    ...(step.secondary || []).map(({ cell }) => cell),
+    ...(step.fins || []).map(({ cell }) => cell),
+    ...(step.links || []).flatMap(({ from, to }) => [...from, ...to].map(({ cell }) => cell)),
+  ])];
 }
 
 function targetMatchesContext(target: { cell: number; digit: number }, kind: Hint["kind"], context: HintContext): boolean {
@@ -130,31 +126,54 @@ function targetMatchesContext(target: { cell: number; digit: number }, kind: Hin
   return true;
 }
 
-export function convertHoDoKuHint(hint: HoDoKuHint, values: readonly string[], candidates: readonly number[][], context: HintContext = {}): Hint | null {
-  const kind: Hint["kind"] = hint.placements.length ? "place" : "eliminate";
-  const sourceTargets = kind === "place" ? hint.placements : hint.eliminations;
-  const targets = sourceTargets
-    .map(({ index, value }) => ({ cell: index, digit: value }))
+function convertStep(step: Step, context: HintContext = {}): Hint | null {
+  const kind: Hint["kind"] = step.placements.length ? "place" : "eliminate";
+  const targets = (kind === "place" ? step.placements : step.eliminations)
     .filter((target) => targetMatchesContext(target, kind, context));
   if (!targets.length) return null;
-  const technique = techniqueName(hint);
-  const evidence = evidenceFor(hint, targets, values, candidates);
-  if (technique.name.startsWith("Avoidable Rectangle") && context.givens && evidence.some((cell) => context.givens?.[cell] !== "0")) return null;
+  const upstreamName = TECHS[step.tech]?.name || step.tech;
+  const name = ({
+    "Full House": "Full house",
+    "Naked Single": "Naked single",
+    "Hidden Single": "Hidden single",
+    "Locked Pair": "Locked pair",
+    "Locked Triple": "Locked triple",
+    "Naked Pair": "Naked pair",
+    "Naked Triple": "Naked triple",
+    "Naked Quadruple": "Naked quadruple",
+    "Hidden Pair": "Hidden pair",
+    "Hidden Triple": "Hidden triple",
+    "Hidden Quadruple": "Hidden quadruple",
+  } as Record<string, string>)[upstreamName] || upstreamName;
+  const guide = TECH_DOCS[step.tech];
+  const targetCells = new Set(targets.map(({ cell }) => cell));
+  const evidence = uniqueCells(step).filter((cell) => !targetCells.has(cell));
   const targetKey = targets.map(({ cell, digit }) => `${cell}-${digit}`).join("-");
   return {
-    id: `hodoku-${hint.technique}-${targetKey}`,
-    technique: technique.name,
-    variant: technique.variant,
-    summary: `${technique.name} produces the next logical ${kind === "place" ? "placement" : "candidate elimination"}.`,
-    explanation: hint.explanation,
+    id: `sudokui-${step.tech}-${targetKey}`,
+    technique: name,
+    summary: step.description,
+    explanation: guide?.why || step.description,
     kind,
     evidence,
     targets,
-    links: hint.links.map(({ from, to, strong }) => ({
-      from: { cell: from.index, digit: from.value },
-      to: { cell: to.index, digit: to.value },
-      strong,
-    })),
+    links: (step.links || []).flatMap(({ from, to, strong }) => from.length === 1 && to.length === 1 ? [{ from: from[0], to: to[0], strong }] : []),
+    instruction: {
+      provider: "sudokUI",
+      revision: "1f7831c6dc0fa118e1c7638e61c99756b1fa9d48",
+      techniqueCode: step.tech,
+      what: guide?.what || "This pattern is identified directly from the candidates shown on the board.",
+      why: guide?.why || step.description,
+      spot: guide?.spot || "Follow the highlighted candidates and their shared houses.",
+      aliases: guide?.aka || [],
+      specific: step.description,
+      labels: step.labels || {},
+      primary: step.primary || [],
+      secondary: step.secondary || [],
+      fins: step.fins || [],
+      units: step.units || [],
+      frames: walkFrames(step).map((frame) => ({ text: frame.text, show: [...frame.show] })),
+    },
   };
 }
 
@@ -168,25 +187,20 @@ export function buildHintPath(values: readonly string[], eliminated: readonly nu
   if (context.solution && values.some((value, cell) => value && value !== context.solution?.[cell])) {
     return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   }
-  const board = toBoard(values, eliminated, context.visibleCandidates, context.givens);
-  if (!board) return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
-  const result = solve(board);
-  const forbiddenIndex = result.steps.findIndex((step) => forbiddenTechniques.has(step.technique));
-  const logical = result.steps.slice(0, forbiddenIndex < 0 ? result.steps.length : forbiddenIndex);
-  const pathValues = [...values];
-  const pathEliminated = Array.from({ length: 81 }, (_, cell) => [...(eliminated[cell] || [])]);
+  const grid = toGrid(values, eliminated, context.visibleCandidates, context.givens);
+  if (!grid) return { engine: HINT_ENGINE, generatedAt, stateKey, complete: false, hints: [] };
   const hints: Hint[] = [];
-  for (const step of logical) {
-    const pathCandidates = liveCandidates(pathValues, pathEliminated);
-    const hint = convertHoDoKuHint(step, pathValues, pathCandidates, context);
-    if (!hint) continue;
+  for (let guard = 0; guard < 1000 && grid.values.some((value) => !value); guard++) {
+    const step = findNextStep(grid);
+    if (!step) break;
+    const hint = convertStep(step, context);
+    if (!hint) break;
     hints.push(hint);
-    for (const { cell, digit } of hint.targets) {
-      if (hint.kind === "place") pathValues[cell] = String(digit);
-      else if (!pathEliminated[cell].includes(digit)) pathEliminated[cell].push(digit);
-    }
+    applyStep(grid, step);
   }
-  return { engine: HINT_ENGINE, generatedAt, stateKey, complete: result.solved && forbiddenIndex < 0, hints };
+  const solved = !grid.values.some((value) => !value);
+  const correct = !context.solution || [...context.solution].every((digit, cell) => Number(digit) === grid.values[cell]);
+  return { engine: HINT_ENGINE, generatedAt, stateKey, complete: solved && correct, hints };
 }
 
 export function nextHintFromPath(path: HintPath | undefined, values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): Hint | null {
@@ -202,6 +216,5 @@ export function nextHintFromPath(path: HintPath | undefined, values: readonly st
 }
 
 export function findHint(values: readonly string[], eliminated: readonly number[][] = [], context: HintContext = {}): Hint | null {
-  const path = buildHintPath(values, eliminated, context);
-  return nextHintFromPath(path, values, eliminated, context);
+  return nextHintFromPath(buildHintPath(values, eliminated, context), values, eliminated, context);
 }
