@@ -778,6 +778,38 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect(page.locator(".hint-panel")).toHaveCount(0);
 });
 
+test("a blocked candidate state offers an undoable rebuild instead of a stale engine-limit toast", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readwrite");
+    const state = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = state.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = state.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const empty = game.values.findIndex((value: string) => !value);
+    game.eliminated[empty] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    game.hintPath = undefined;
+    state.put(game, `game:${game.id}`);
+    await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
+    db.close();
+  });
+  await page.reload();
+  await page.getByRole("button", { name: /Open Easy puzzle/ }).click();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Your candidate notes are blocking the next hint");
+  await expect(dialog).toContainText("sudokUI can continue from the placed digits");
+  await expect(page.locator("#toast")).not.toContainText("HoDoKu");
+  await dialog.getByRole("button", { name: "Rebuild candidates" }).click();
+  await expect(dialog).not.toBeVisible();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await expect(page.locator(".hint-panel")).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.locator(".hint-panel")).toHaveCount(0);
+});
+
 test("BUG +1 teaches the exceptional candidate before revealing the exact placement", async ({ page }) => {
   const position = "548162000903480026026390480360004870807003600452876000285741369030629008600538210";
   const candidateRows = [
