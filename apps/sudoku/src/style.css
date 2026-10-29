@@ -344,6 +344,9 @@ textarea { min-height: 122px; padding: 12px; resize: vertical; font-family: ui-m
 .hint-role-list dt { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 10px; font-weight: 850; }
 .hint-role-list dt span { display: inline-grid; min-width: 24px; min-height: 20px; place-items: center; border: 1px solid var(--board-hint-outline); border-radius: 5px; background: var(--board-hint); color: var(--board-given); font-size: 8px; }
 .hint-role-list dd { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.hint-question, .hint-conclusion { margin: 12px 0 0; padding: 9px 10px; border-radius: 7px; line-height: 1.5; }
+.hint-question { border: 1px dashed var(--border-strong); background: var(--panel-soft); color: var(--muted); }
+.hint-conclusion { border: 1px solid var(--board-hint-outline); background: var(--board-hint); color: var(--text); }
 .hint-reasoning ol { display: grid; gap: 8px; margin: 12px 0 0; padding-left: 20px; color: var(--muted); }
 .hint-reasoning li { padding-left: 3px; line-height: 1.55; }
 .hint-training-link { margin-top: 12px; }

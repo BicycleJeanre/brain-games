@@ -46,3 +46,10 @@
 - Date: 2026-10-29
 - Decision: When an XY-Wing, XYZ-Wing, or W-Wing hint reveals its pattern, define the technique in plain language, label every reconstructed pattern cell by role on both the grid and the explanation panel, define relational terms such as “sees” and “strong link,” and trace the exact candidate branches to the elimination. Never assign a role such as pivot, wing, or link end unless that role can be derived from the displayed candidates and units.
 - Rationale: A technique name and list of coordinates do not teach the rule. In particular, W-Wing has no pivot; grouping all highlighted cells as “pivot and wing cells” is both unclear and wrong.
+
+## BG-008 — Hint reasoning and answers are separate disclosures
+
+- Status: Approved from player feedback
+- Date: 2026-10-29
+- Decision: The Show pattern tier may define the rule, label verified roles, and expose the evidence needed to derive a move, but it must not state the exact placement or elimination. Show answer is the only tier that exposes the final deduction. Advanced techniques need a technique-specific, grid-derived walkthrough; when one is not available, say that plainly instead of using generic text such as “the solver identified this pattern” as if it were proof. BUG +1 must define bivalue and the deadly balanced state, label the exceptional three-candidate cell, and show the odd candidate counts that identify the extra candidate.
+- Rationale: An explanation that merely repeats the solver result is circular, and revealing the exact move at the pattern tier removes the player's opportunity to reason from the evidence.
