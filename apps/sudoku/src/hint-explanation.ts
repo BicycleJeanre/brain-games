@@ -5,6 +5,7 @@ export interface ContextualHintExplanation {
   definition?: string;
   roles?: HintCellRole[];
   steps: string[];
+  conclusion: string;
 }
 
 export interface HintCellRole {
@@ -45,6 +46,11 @@ function targets(hint: Hint): string {
   return hint.targets.map(({ cell, digit }) => `${digit} at ${compactCell(cell)}`).join(", ");
 }
 
+function actionConclusion(hint: Hint): string {
+  if (hint.kind === "place") return `Place ${targets(hint)}.`;
+  return `Remove ${targets(hint)}.`;
+}
+
 const candidateText = (digits: readonly number[]) => digits.join("/");
 
 function viewFrom(cell: number, other: number): string {
@@ -78,8 +84,8 @@ function xyWingExplanation(hint: Hint, context: ContextualHintContext): Contextu
       `${compactCell(pivot)} is the pivot because it contains ${candidateText(pivotDigits)} and sees both wings: ${compactCell(wings[0])} through ${viewFrom(pivot, wings[0])}, and ${compactCell(wings[1])} through ${viewFrom(pivot, wings[1])}.`,
       `If the pivot is ${firstOther}, Wing A cannot be ${firstOther}, so Wing A must be ${targetDigit}. If the pivot is ${secondOther}, Wing B cannot be ${secondOther}, so Wing B must be ${targetDigit}. The pivot must take one of those two values, so at least one wing is ${targetDigit}.`,
       `${sightLines.join("; ")}. Each target therefore sees whichever wing becomes ${targetDigit}.`,
-      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
     ],
+    conclusion: `Remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
   };
 }
 
@@ -107,8 +113,8 @@ function xyzWingExplanation(hint: Hint, context: ContextualHintContext): Context
       `${compactCell(pivot)} is the pivot because it has the three candidates ${candidateText(pivotDigits)} and sees both two-candidate wings. The shared Z digit is ${targetDigit}.`,
       `If the pivot is ${targetDigit}, Z is already in the pivot. If it is ${firstOther}, Wing A is forced to ${targetDigit}. If it is ${secondOther}, Wing B is forced to ${targetDigit}. One of the three highlighted pattern cells must therefore be ${targetDigit}.`,
       `${sightLines.join("; ")}. Each target sees all three possible places for ${targetDigit}.`,
-      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
     ],
+    conclusion: `Remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
   };
 }
 
@@ -160,8 +166,8 @@ function wWingExplanation(hint: Hint, context: ContextualHintContext): Contextua
       `${compactCell(linked.first)} and ${compactCell(linked.second)} are the two ends of the strong link for ${linkDigit} in ${linked.house}. “Strong link” means ${linkDigit} must be in one of those two cells.`,
       `If ${compactCell(linked.first)} is ${linkDigit}, Wing A sees it and cannot be ${linkDigit}, so Wing A is ${targetDigit}. If ${compactCell(linked.second)} is ${linkDigit}, Wing B is forced to ${targetDigit}. Therefore at least one wing is ${targetDigit}.`,
       `${sightLines.join("; ")}. Each target sees both wings, so it sees whichever wing becomes ${targetDigit}.`,
-      `Therefore remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
     ],
+    conclusion: `Remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
   };
 }
 
@@ -205,8 +211,8 @@ function skyscraperExplanation(hint: Hint): ContextualHintExplanation | null {
       `${compactCell(firstBase)} and ${compactCell(secondBase)} are the bases. They share ${shape.baseHouse}, so they cannot both be ${digit}; at least one base must be false.`,
       `If ${compactCell(firstBase)} is not ${digit}, its strong link forces ${compactCell(firstRoof)} to be ${digit}. If ${compactCell(secondBase)} is not ${digit}, its strong link forces ${compactCell(secondRoof)} to be ${digit}. Therefore at least one roof is ${digit}.`,
       `${sightLines.join("; ")}. Because every target sees both roofs, it sees whichever roof becomes ${digit}.`,
-      `Therefore remove ${digit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
     ],
+    conclusion: `Remove ${digit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
   };
 }
 
@@ -268,8 +274,9 @@ function emptyRectangleExplanation(hint: Hint): ContextualHintExplanation | null
       `In Box ${box + 1}, every highlighted ${digit} candidate (${cellList(blockCells)}) lies on ${rowArm} or ${columnArm}. Those two arms inside one box are the Empty Rectangle shape.`,
       `${compactCell(armEnd)} and ${compactCell(otherEnd)} form the outside strong link for ${digit} in ${linkHouse}: one of those two ends must contain ${digit}.`,
       `If ${compactCell(armEnd)} is ${digit}, it clears the ${clearedArm} arm and forces the box's ${digit} onto ${forcedArm}, which sees ${compactCell(target)}. If ${compactCell(otherEnd)} is ${digit}, it sees ${compactCell(target)} directly through ${directHouse}.`,
-      `Both possible ends eliminate ${digit} from ${compactCell(target)}, which is why that candidate is the hint's answer.`,
+      `Both possible ends affect the same outlined target. That is the candidate you can now test yourself.`,
     ],
+    conclusion: `Remove ${digit} from ${compactCell(target)}.`,
   };
 }
 
@@ -299,8 +306,8 @@ function avoidableRectangleType1Explanation(hint: Hint, context: ContextualHintC
       `${cellList(cells)} are the four corners in Rows ${rows.map((row) => row + 1).join(" and ")} and Columns ${columns.map((column) => column + 1).join(" and ")}. The three filled corners are ${cornerValues}.`,
       `If ${compactCell(target.cell)} were ${target.digit}, the rectangle would alternate ${target.digit}–${otherDigit} / ${otherDigit}–${target.digit}.`,
       `${editable ? "Because the three filled corners are player entries rather than original givens, " : ""}all four ${target.digit}s and ${otherDigit}s could then be swapped while every row, column, box, and original clue still worked. That would give the puzzle a second solution. It is called “avoidable” because the filled editable corners let us prevent that ambiguity.`,
-      result,
     ],
+    conclusion: result,
   };
 }
 
@@ -340,12 +347,59 @@ function hiddenRectangleExplanation(hint: Hint, context: ContextualHintContext):
       `In Row ${rowOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(rowMate)} or ${compactCell(target.cell)}. In Column ${columnOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(columnMate)} or ${compactCell(target.cell)}. Those are the two strong links that make the rectangle “hidden.”`,
       `Assume ${compactCell(target.cell)} were ${target.digit}. It could not be ${strongDigit}, so the row strong link would force ${compactCell(rowMate)}=${strongDigit}, and the column strong link would force ${compactCell(columnMate)}=${strongDigit}. That leaves ${compactCell(opposite)}=${target.digit}.`,
       `The four corners would then use only ${target.digit} and ${strongDigit}, and all four values could be swapped ${target.digit}↔${strongDigit} while every row, column, box, and clue still worked. That would give the puzzle two solutions.`,
-      `Because this puzzle has one solution, the assumption is impossible: remove ${target.digit} from ${compactCell(target.cell)}.`,
+      `Because this puzzle has one solution, that assumption is impossible. Use the contradiction to decide which candidate cannot remain in the outlined corner.`,
     ],
+    conclusion: `Remove ${target.digit} from ${compactCell(target.cell)}.`,
+  };
+}
+
+function bugPlusOneExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  if (hint.technique !== "Bivalue Universal Grave + 1" || hint.kind !== "eliminate" || !context.candidates) return null;
+  const targetCells = [...new Set(hint.targets.map(({ cell }) => cell))];
+  if (targetCells.length !== 1) return null;
+  const focus = targetCells[0];
+  const focusCandidates = context.candidates[focus] || [];
+  const removed = [...new Set(hint.targets.map(({ digit }) => digit))];
+  const survivors = focusCandidates.filter((digit) => !removed.includes(digit));
+  if (focusCandidates.length !== 3 || survivors.length !== 1) return null;
+  const extra = survivors[0];
+  const row = rowOf(focus);
+  const column = columnOf(focus);
+  const box = boxOf(focus);
+  const rowCells = Array.from({ length: 9 }, (_, offset) => row * 9 + offset);
+  const columnCells = Array.from({ length: 9 }, (_, offset) => offset * 9 + column);
+  const boxRow = Math.floor(row / 3) * 3;
+  const boxColumn = Math.floor(column / 3) * 3;
+  const boxCells = Array.from({ length: 9 }, (_, offset) => (boxRow + Math.floor(offset / 3)) * 9 + boxColumn + (offset % 3));
+  const occurrenceCount = (cells: readonly number[]) => cells.filter((cell) => (context.candidates?.[cell] || []).includes(extra)).length;
+  const counts = [occurrenceCount(rowCells), occurrenceCount(columnCells), occurrenceCount(boxCells)];
+  const shownCandidates = context.candidates.filter((digits) => digits.length > 0);
+  const otherShownCellsAreBivalue = shownCandidates.every((digits) => digits === focusCandidates || digits.length === 2);
+
+  return {
+    title: "How this BUG +1 works",
+    definition: "Bivalue means a cell has two candidates. A BUG is a near-finished grid where every unsolved cell is bivalue and every candidate is paired evenly in its row, column, and box. That balanced pattern would allow two solutions. BUG +1 has one exceptional cell with a third candidate; that extra candidate must break the ambiguity.",
+    roles: [{
+      cell: focus,
+      label: "The +1 cell",
+      badge: "+1",
+      detail: `${compactCell(focus)} · the only cell with three candidates: ${candidateText(focusCandidates)}`,
+    }],
+    steps: [
+      `${compactCell(focus)} is the exception because it has ${candidateText(focusCandidates)}. ${otherShownCellsAreBivalue ? "Every other unsolved cell shown has exactly two candidates." : "The remaining candidate cells form the bivalue pattern checked by the solver."}`,
+      `The candidate ${extra} is the “+1”: it appears ${counts[0]} times in Row ${row + 1}, ${counts[1]} times in Column ${column + 1}, and ${counts[2]} times in Box ${box + 1}. Those odd counts are what break the otherwise paired pattern.`,
+      `If ${compactCell(focus)} used one of its other candidates (${removed.join(" or ")}), ${extra} would disappear from this cell. The grid would fall back to the balanced BUG pattern, leaving two interchangeable solutions.`,
+      `This puzzle has one solution, so the balanced alternative is impossible. The +1 candidate is therefore the value that must remain in ${compactCell(focus)}.`,
+    ],
+    conclusion: `Remove ${removed.join(" and ")} from ${compactCell(focus)}. ${extra} is the only candidate left.`,
   };
 }
 
 export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
+  if (hint.technique === "Bivalue Universal Grave + 1") {
+    const explanation = bugPlusOneExplanation(hint, context);
+    if (explanation) return explanation;
+  }
   if (hint.technique === "XY-Wing") {
     const explanation = xyWingExplanation(hint, context);
     if (explanation) return explanation;
@@ -376,14 +430,14 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
   }
 
   const evidence = cellList(hint.evidence);
-  const target = targets(hint);
   if (hint.technique === "Full house" || hint.technique === "Last digit" || hint.technique.includes("single")) {
     return {
       title: `Why is this a ${hint.technique}?`,
       steps: [
         `The highlighted cells around ${evidence} leave the focus cell with the defining restriction for a ${hint.technique}.`,
-        `Following that restriction produces ${target}.`,
+        `Use that restriction to decide which value belongs in the outlined cell.`,
       ],
+      conclusion: actionConclusion(hint),
     };
   }
   if (hint.technique === "Locked candidates") {
@@ -393,8 +447,9 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
         hint.variant === "pointing"
           ? `The highlighted occurrences at ${evidence} all lie in one box and on the same row or column.`
           : `The highlighted occurrences at ${evidence} all lie on one row or column and inside the same box.`,
-        `Because the candidate must stay in that overlap, the same candidate can be removed at ${target}.`,
+        `Because the candidate must stay in that overlap, it cannot also remain in the outlined cell outside the overlap.`,
       ],
+      conclusion: actionConclusion(hint),
     };
   }
   if (hint.technique.includes("pair") || hint.technique.includes("triple") || hint.technique.includes("quadruple")) {
@@ -402,8 +457,9 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
       title: `Why is this a ${hint.technique}?`,
       steps: [
         `${evidence} are the highlighted cells that contain the restricted candidate set defining this ${hint.technique}.`,
-        `That set occupies all of its available places, so the resulting deduction is ${target}.`,
+        `That set occupies all of its available places, so the same candidates cannot remain in the outlined target outside the set.`,
       ],
+      conclusion: actionConclusion(hint),
     };
   }
   if (hint.technique.includes("Wing")) {
@@ -412,22 +468,27 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
       definition: "A wing pattern links a small set of restricted candidate cells so that every possible branch forces the same candidate outcome.",
       steps: [
         `${evidence} are the cells HoDoKu identified as the ${hint.technique} pattern. Their exact roles could not be reconstructed from the displayed candidates, so they are not labelled as a pivot or wing without proof.`,
-        `Every valid branch of that pattern rules out ${target}.`,
+        `Brain Games does not yet have a verified cell-by-cell walkthrough for this variant. The exact deduction remains hidden rather than presenting an unproved explanation.`,
       ],
+      conclusion: actionConclusion(hint),
     };
   }
   if (hint.links?.length) {
     const links = hint.links.map((link) => `${compactCell(link.from.cell)}(${link.from.digit}) ${link.strong ? "strongly" : "weakly"} links to ${compactCell(link.to.cell)}(${link.to.digit})`);
     return {
       title: `Why is this a ${hint.technique}?`,
-      steps: [...links, `Following those links to their conclusion produces ${target}.`],
+      definition: "A strong link means one endpoint must be true. A weak link means both endpoints cannot be true. Follow the links in order and look for the outcome shared by every possible branch.",
+      steps: [...links, "The linked chain reaches the same outlined target from every valid starting state. Decide which candidate that makes impossible before revealing the deduction."],
+      conclusion: actionConclusion(hint),
     };
   }
   return {
-    title: `Why is this a ${hint.technique}?`,
+    title: `About this ${hint.technique} hint`,
+    definition: "This is an advanced pattern verified by the solver, but Brain Games does not yet have a verified cell-by-cell lesson for this exact technique.",
     steps: [
-      `${evidence} are the cells HoDoKu identified as the ${hint.technique} pattern in this grid.`,
-      `Applying that pattern's constraint produces ${target}.`,
+      `The highlighted cells are the solver's evidence for the pattern; the outlined cell is where its consequence occurs.`,
+      `The exact deduction is intentionally hidden. Reveal it only if you want the answer; this panel will not pretend that naming the pattern is an explanation.`,
     ],
+    conclusion: actionConclusion(hint),
   };
 }

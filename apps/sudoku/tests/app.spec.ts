@@ -158,7 +158,7 @@ test("Skyscraper training explains the shown strong links and eliminations in pl
   await expect(explanation).toContainText("Column 9");
   await expect(explanation).toContainText("R3C9 or R6C9");
   await expect(explanation).toContainText("at least one roof is 6");
-  await expect(explanation).toContainText("remove 6 from R5C7, R5C8, R6C4 and R6C5");
+  await expect(explanation).toContainText("Remove 6 from R5C7, R5C8, R6C4 and R6C5");
   await expect(explanation).not.toContainText("r5c6,r6c9");
 });
 
@@ -166,7 +166,7 @@ test("W-Wing training defines the rule and labels both wings and both strong-lin
   await page.getByRole("button", { name: "Train", exact: true }).click();
   await page.locator('[data-training="w-wing"]').last().click();
   const explanation = page.locator(".lesson-explanation");
-  await expect(explanation).toContainText("Rule:");
+  await expect(explanation).toContainText("Rule in plain language:");
   await expect(explanation).toContainText("A W-Wing has no pivot");
   await expect(explanation).toContainText("Wing A");
   await expect(explanation).toContainText("R1C9 · candidates 1/4");
@@ -773,6 +773,62 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect(page.getByRole("button", { name: "Apply deduction" })).toHaveCount(0);
   await page.getByRole("button", { name: "Close review" }).click();
   await expect(page.locator(".hint-panel")).toHaveCount(0);
+});
+
+test("BUG +1 teaches the exceptional candidate before revealing the exact removals", async ({ page }) => {
+  const position = "548162000903480026026390480360004870807003600452876000285741369030629008600538210";
+  const candidateRows = [
+    ["", "", "", "", "", "", "79", "39", "37"],
+    ["", "17", "", "", "", "57", "15", "", ""],
+    ["17", "", "", "", "", "57", "", "", "15"],
+    ["", "", "19", "29", "15", "", "", "", "25"],
+    ["", "19", "", "29", "15", "", "", "45", "245"],
+    ["", "", "", "", "", "", "19", "39", "13"],
+    ["", "", "", "", "", "", "", "", ""],
+    ["17", "", "14", "", "", "", "57", "45", ""],
+    ["", "79", "49", "", "", "", "", "", "47"],
+  ];
+
+  await page.getByRole("button", { name: "Open" }).click();
+  await page.getByLabel("81-character puzzle").fill(position);
+  await page.getByRole("button", { name: "Validate puzzle" }).click();
+  await page.getByRole("button", { name: "Play now" }).click();
+  await page.evaluate(async (centre) => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readwrite");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    game.centre = centre;
+    game.eliminated = Array.from({ length: 81 }, () => []);
+    game.hintStage = "none";
+    game.hintId = null;
+    store.put(game, `game:${game.id}`);
+    await new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
+    db.close();
+  }, candidateRows.flat().map((digits) => [...digits].map(Number)));
+  await page.reload();
+  await page.locator("[data-game]").first().click();
+  await page.getByRole("button", { name: "Get a logical hint" }).click();
+  await page.getByRole("button", { name: "Show pattern" }).click();
+
+  const panel = page.locator(".hint-panel");
+  await expect(panel).toContainText("One three-candidate cell breaks an otherwise paired grid");
+  await expect(panel).toContainText("Rule in plain language:");
+  await expect(panel).toContainText("Bivalue means a cell has two candidates");
+  await expect(panel).toContainText("The +1 cell");
+  await expect(panel).toContainText("R5C9 · the only cell with three candidates: 2/4/5");
+  await expect(panel).toContainText("3 times in Row 5, 3 times in Column 9, and 3 times in Box 6");
+  await expect(panel).toContainText("Your turn:");
+  await expect(panel).not.toContainText("Remove 2 and 4 from R5C9");
+  await expect(panel.locator(".hint-answer")).toHaveCount(0);
+  await expect(page.locator('[data-cell="44"] .hint-role-badge')).toHaveText("+1");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "Show answer" }).click();
+  await expect(panel.locator(".hint-answer")).toContainText("Remove 2 from Row 5, column 9; Remove 4 from Row 5, column 9");
 });
 
 test("a supported hint opens its matching strategy lesson", async ({ page }) => {

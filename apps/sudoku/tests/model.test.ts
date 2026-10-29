@@ -82,7 +82,7 @@ test("contextual Empty Rectangle explanation names the actual box, arms, link an
   assert.match(explanation.steps[0], /Column 1/);
   assert.match(explanation.steps[1], /R1C5 and R4C5/);
   assert.match(explanation.steps[1], /strong link for 7 in Column 5/);
-  assert.match(explanation.steps.at(-1) || "", /eliminate 7 from R4C1/);
+  assert.match(explanation.conclusion, /Remove 7 from R4C1/);
 });
 
 test("contextual Skyscraper explanation traces both strong links, the shared base and every elimination", () => {
@@ -103,7 +103,7 @@ test("contextual Skyscraper explanation traces both strong links, the shared bas
   assert.match(explanation.steps[2], /at least one roof is 6/);
   assert.match(explanation.steps[3], /R5C7 sees R5C6 through Row 5 and R6C9 through Box 6/);
   assert.match(explanation.steps[3], /R6C4 sees R5C6 through Box 5 and R6C9 through Row 6/);
-  assert.match(explanation.steps[4], /remove 6 from R5C7, R5C8, R6C4 and R6C5/);
+  assert.match(explanation.conclusion, /Remove 6 from R5C7, R5C8, R6C4 and R6C5/);
 });
 
 test("contextual Avoidable Rectangle Type 1 explanation traces the shown corners and elimination", () => {
@@ -130,8 +130,8 @@ test("contextual Avoidable Rectangle Type 1 explanation traces the shown corners
   assert.match(explanation.steps[1], /4–2 \/ 2–4/);
   assert.match(explanation.steps[2], /player entries rather than original givens/);
   assert.match(explanation.steps[2], /second solution/);
-  assert.match(explanation.steps[3], /only displayed candidate left is 8/);
-  assert.match(explanation.steps[3], /R6C6 becomes 8/);
+  assert.match(explanation.conclusion, /only displayed candidate left is 8/);
+  assert.match(explanation.conclusion, /R6C6 becomes 8/);
 });
 
 test("contextual Hidden Rectangle explanation traces both strong links and the uniqueness contradiction", () => {
@@ -156,7 +156,7 @@ test("contextual Hidden Rectangle explanation traces both strong links and the u
   assert.match(explanation.steps.join(" "), /Column 9.*R1C9.*R6C9/);
   assert.match(explanation.steps.join(" "), /Assume R6C9 were 6/);
   assert.match(explanation.steps.join(" "), /swapped 6↔9/);
-  assert.match(explanation.steps.at(-1) || "", /remove 6 from R6C9/);
+  assert.match(explanation.conclusion, /Remove 6 from R6C9/);
 });
 
 test("XY-Wing explanation defines the rule and labels the pivot and both wings", () => {
@@ -183,7 +183,7 @@ test("XY-Wing explanation defines the rule and labels the pivot and both wings",
   ]);
   assert.match(explanation.steps.join(" "), /R4C1 is the pivot/);
   assert.match(explanation.steps.join(" "), /at least one wing is 9/);
-  assert.match(explanation.steps.at(-1) || "", /remove 9 from R4C2/);
+  assert.match(explanation.conclusion, /Remove 9 from R4C2/);
 });
 
 test("XYZ-Wing explanation labels its three-candidate pivot and proves the shared Z", () => {
@@ -242,7 +242,38 @@ test("W-Wing explanation states that there is no pivot and names both wings and 
   assert.match(explanation.steps[1], /R2C2 and R2C6.*strong link for 7 in Row 2/);
   assert.match(explanation.steps[2], /Wing A is 5.*Wing B is forced to 5/);
   assert.match(explanation.steps[3], /R3C1 sees Wing A through Column 1 and Wing B through Row 3/);
-  assert.match(explanation.steps[4], /remove 5 from R3C1/);
+  assert.match(explanation.conclusion, /Remove 5 from R3C1/);
+});
+
+test("BUG +1 explains the exceptional cell and parity before separating the deduction", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[44] = [2, 4, 5];
+  candidates[36] = [2, 5];
+  candidates[40] = [4, 5];
+  candidates[8] = [3, 5];
+  candidates[71] = [1, 5];
+  candidates[34] = [5, 7];
+  candidates[52] = [5, 8];
+  const explanation = contextualHintExplanation({
+    id: "bug-plus-one",
+    technique: "Bivalue Universal Grave + 1",
+    summary: "",
+    explanation: "",
+    kind: "eliminate",
+    evidence: [],
+    targets: [{ cell: 44, digit: 2 }, { cell: 44, digit: 4 }],
+  }, { candidates });
+
+  assert.equal(explanation.title, "How this BUG +1 works");
+  assert.match(explanation.definition || "", /Bivalue means a cell has two candidates/);
+  assert.deepEqual(explanation.roles?.map(({ cell, label, badge }) => ({ cell, label, badge })), [
+    { cell: 44, label: "The +1 cell", badge: "+1" },
+  ]);
+  assert.match(explanation.steps.join(" "), /R5C9 is the exception/);
+  assert.match(explanation.steps.join(" "), /candidate 5 is the “\+1”/);
+  assert.doesNotMatch(explanation.steps.join(" "), /Remove 2 and 4/);
+  assert.match(explanation.conclusion, /Remove 2 and 4 from R5C9/);
+  assert.match(explanation.conclusion, /5 is the only candidate left/);
 });
 
 test("original clues cannot be used as editable corners of an Avoidable Rectangle", () => {
