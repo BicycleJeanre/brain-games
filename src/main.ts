@@ -1,12 +1,13 @@
 import "./style.css";
+import "./app-shell.css";
 import { leaveProfile, profileConfigured, profileError, resetProfilePassword, useProfile, watchProfile, type ProfileUser } from "./auth.ts";
+import { canonicalHeader, canonicalSettings, canonicalThemePreference, initialiseCanonicalSettings, installCanonicalTheme, setCanonicalSettings, setCanonicalTheme } from "./app-shell.ts";
 import { DEFAULT_SUDOKU_PREFERENCES, DEFAULT_WORD_PREFERENCES, loadGamePreferences, saveSharedTheme, saveSudokuPreferences, saveWordPreferences, type GamePreferences, type Theme } from "./preferences.ts";
 import { createCombinedBackup, importBackup, importLegacyData, migrationPreview, type ImportResult, type MigrationPreview } from "./storage.ts";
 
 type ShellView = "home" | "play" | "progress" | "settings";
 
 const base = import.meta.env.BASE_URL;
-const themeKey = "brain-games-theme";
 const validViews = new Set<ShellView>(["home", "play", "progress", "settings"]);
 let preview: MigrationPreview | null = null;
 let dataMessage = "";
@@ -22,20 +23,7 @@ let gamePreferences: GamePreferences = {
 const requestedView = new URLSearchParams(location.search).get("view") as ShellView | null;
 let view: ShellView = requestedView && validViews.has(requestedView) ? requestedView : "home";
 
-function savedTheme(): Theme {
-  const value = localStorage.getItem(themeKey);
-  return value === "light" || value === "dark" ? value : "system";
-}
-
-function applyTheme(theme = savedTheme()) {
-  const resolved = theme === "system"
-    ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-    : theme;
-  document.documentElement.dataset.theme = resolved;
-  document.documentElement.dataset.themePreference = theme;
-}
-
-applyTheme();
+installCanonicalTheme();
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 
@@ -121,7 +109,8 @@ const toggleSetting = (domain: "sudoku" | "words" | "shared", key: string, title
   <label class="toggle settings-field"><input type="checkbox" data-preference-domain="${domain}" data-preference-key="${key}" ${checked ? "checked" : ""}/><span><strong>${title}</strong><small>${detail}</small></span></label>`;
 
 function settingsView() {
-  const theme = savedTheme();
+  const theme = canonicalThemePreference();
+  const sharedSettings = canonicalSettings();
   const legacySudoku = preview?.legacySudoku.games ?? 0;
   const legacyWords = preview?.legacyWords.progress ?? 0;
   const combined = preview ? preview.combinedSudoku.games + preview.combinedWords.progress : 0;
@@ -142,8 +131,8 @@ function settingsView() {
       <section class="settings-card full-settings-card card" aria-labelledby="appearance-heading">
         <span class="eyebrow">Across every game</span><h2 id="appearance-heading">Appearance &amp; play</h2><p>These choices apply consistently to Sudoku and every word game.</p>
         <label class="settings-field"><span><strong>Colour theme</strong><small>Use the device setting or keep one theme everywhere.</small></span><select data-theme-select><option value="system" ${theme === "system" ? "selected" : ""}>System</option><option value="light" ${theme === "light" ? "selected" : ""}>Light</option><option value="dark" ${theme === "dark" ? "selected" : ""}>Dark</option></select></label>
-        ${toggleSetting("shared", "showTimer", "Show timers", "Keep elapsed time visible in all game players.", gamePreferences.sudoku.showTimer && gamePreferences.words.showTimer)}
-        ${toggleSetting("shared", "showControlHelp", "Show player instructions", "Keep keyboard, touch, and selection reminders visible.", gamePreferences.sudoku.showControlHelp && gamePreferences.words.showControlHelp)}
+        ${toggleSetting("shared", "showTimer", "Show timers", "Keep elapsed time visible in all game players.", sharedSettings.showTimer)}
+        ${toggleSetting("shared", "showControlHelp", "Show player instructions", "Keep keyboard, touch, and selection reminders visible.", sharedSettings.showControlHelp)}
       </section>
       <section class="settings-card full-settings-card card" aria-labelledby="sudoku-settings-heading">
         <span class="eyebrow">Sudoku</span><h2 id="sudoku-settings-heading">Grid &amp; assistance</h2>
@@ -193,16 +182,12 @@ function viewContent() {
 
 function render() {
   document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-    <header class="app-header">
-      <button class="brand" data-view="home" aria-label="Brain Games home"><span aria-hidden="true">B</span><strong>Brain Games</strong></button>
-      <button class="profile-pill" data-view="settings" aria-label="${profileUser ? `Manage Brain Games profile for ${escapeHtml(profileUser.email || "signed-in user")}` : "Sign in to Brain Games"}">${profileUser ? escapeHtml(profileUser.email || "Profile") : "Sign in"}</button>
-      <nav aria-label="Brain Games">
-        <button data-view="home" class="${view === "home" ? "active" : ""}" ${view === "home" ? 'aria-current="page"' : ""}>Home</button>
-        <button data-view="play" class="${view === "play" ? "active" : ""}" ${view === "play" ? 'aria-current="page"' : ""}>Play</button>
-        <button data-view="progress" class="${view === "progress" ? "active" : ""}" ${view === "progress" ? 'aria-current="page"' : ""}>Progress</button>
-        <button data-view="settings" class="${view === "settings" ? "active" : ""}" ${view === "settings" ? 'aria-current="page"' : ""}>Settings</button>
-      </nav>
-    </header>
+    ${canonicalHeader({
+      base,
+      active: view,
+      profileLabel: profileUser?.email || "Sign in",
+      profileAriaLabel: profileUser ? `Manage Brain Games profile for ${profileUser.email || "signed-in user"}` : "Sign in to Brain Games",
+    })}
     <main id="main" tabindex="-1">${viewContent()}</main>
     <footer><span>Brain Games · Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/brain-games">Source code</a></footer>`;
   bindView();
@@ -220,7 +205,11 @@ function navigate(next: ShellView, replace = false) {
 }
 
 function bindView() {
-  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.view as ShellView)));
+  document.querySelectorAll<HTMLElement>("[data-view]").forEach((element) => element.addEventListener("click", () => navigate(element.dataset.view as ShellView)));
+  document.querySelectorAll<HTMLAnchorElement>("[data-shell-view]").forEach((link) => link.addEventListener("click", (event) => {
+    event.preventDefault();
+    navigate(link.dataset.shellView as ShellView);
+  }));
   const reportSettingsSaved = (message = "Saved for every game. Changes sync when each game connects.") => {
     settingsMessage = message;
     const status = document.querySelector<HTMLElement>("[data-settings-status]");
@@ -228,8 +217,7 @@ function bindView() {
   };
   document.querySelector<HTMLSelectElement>("[data-theme-select]")?.addEventListener("change", async (event) => {
     const next = (event.currentTarget as HTMLSelectElement).value as Theme;
-    localStorage.setItem(themeKey, next);
-    applyTheme(next);
+    setCanonicalTheme(next);
     await saveSharedTheme(next, gamePreferences);
     reportSettingsSaved("Theme saved for the complete app.");
   });
@@ -240,6 +228,7 @@ function bindView() {
     if (domain === "shared") {
       (gamePreferences.sudoku as unknown as Record<string, unknown>)[key] = value;
       (gamePreferences.words as unknown as Record<string, unknown>)[key] = value;
+      setCanonicalSettings({ [key]: value });
       await Promise.all([saveSudokuPreferences(gamePreferences.sudoku), saveWordPreferences(gamePreferences.words)]);
     } else if (domain === "sudoku") {
       (gamePreferences.sudoku as unknown as Record<string, unknown>)[key] = value;
@@ -330,7 +319,14 @@ async function refreshPreview() {
 }
 
 async function refreshGamePreferences() {
-  try { gamePreferences = await loadGamePreferences(); }
+  try {
+    gamePreferences = await loadGamePreferences();
+    initialiseCanonicalSettings({
+      theme: canonicalThemePreference(),
+      showTimer: gamePreferences.sudoku.showTimer && gamePreferences.words.showTimer,
+      showControlHelp: gamePreferences.sudoku.showControlHelp && gamePreferences.words.showControlHelp,
+    });
+  }
   catch { settingsMessage = "Player preferences could not be loaded. Your saved games are unaffected."; }
   render();
 }
@@ -340,8 +336,6 @@ addEventListener("popstate", () => {
   view = next && validViews.has(next) ? next : "home";
   render();
 });
-matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (savedTheme() === "system") applyTheme("system"); });
-
 render();
 void refreshPreview();
 void refreshGamePreferences();

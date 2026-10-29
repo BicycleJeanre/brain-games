@@ -1,4 +1,6 @@
 import "./style.css";
+import "../../../src/app-shell.css";
+import { adoptCanonicalSettings, applyCanonicalTheme, canonicalHeader, initialiseCanonicalSettings, installCanonicalTheme } from "../../../src/app-shell.ts";
 import { createBackup, parseBackup } from "./backup.ts";
 import { CATALOGUE_VERSION, connectedWordGrids, crosswords, downloadPuzzle, letterMixes, loadCatalogue, puzzleById, puzzles, registerLocalPuzzle, wordSearches } from "./catalogue.ts";
 import { challengeSet, challengeStats } from "./challenges.ts";
@@ -13,13 +15,14 @@ type LibraryType = "all" | PuzzleKind | "letter-mix";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
 const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
+if (combinedBuild) installCanonicalTheme();
 const store = new Store();
 const requested = new URLSearchParams(location.search);
 const requestedView = requested.get("view");
 const requestedGame = requested.get("game") as LibraryType | null;
 const requestedLibraryType = requestedGame && ["word-search", "crossword", "word-grid", "letter-mix"].includes(requestedGame) ? requestedGame : null;
 if (combinedBuild && requestedView === "settings") location.replace(`${brainGamesHome}?view=settings`);
-let view: View = requestedLibraryType ? "library" : requestedView === "settings" ? "settings" : "home";
+let view: View = requestedLibraryType || combinedBuild ? "library" : requestedView === "settings" ? "settings" : "home";
 let viewBeforeSettings: Exclude<View, "settings"> = "home";
 let activePuzzle: Puzzle | null = null;
 let activeSessionId: string | null = null;
@@ -57,7 +60,8 @@ const matchesLibraryType = (puzzle: PuzzleSummary) => libraryType === "all"
     : libraryType === "word-grid" ? puzzle.kind === "word-grid" && puzzle.wordGridMode !== "shuffle"
       : puzzle.kind === libraryType);
 
-const cloud = new CloudSync(store, (dataChanged = false) => {
+const cloud = new CloudSync(store, (dataChanged = false, settingsChanged = false) => {
+  if (combinedBuild && settingsChanged) adoptCanonicalSettings(store.data.preferences, store.data.settingsUpdatedAt);
   document.querySelectorAll<HTMLElement>("[data-cloud-status]").forEach((element) => { element.textContent = cloud.status(); });
   if (dataChanged || view !== "player") render();
 });
@@ -65,31 +69,62 @@ let authReady: ReturnType<typeof watchAuth> | undefined;
 
 function applyPreferences() {
   const preferences = store.data.preferences;
+  if (combinedBuild) {
+    const shared = initialiseCanonicalSettings({ theme: preferences.theme, showTimer: preferences.showTimer, showControlHelp: preferences.showControlHelp }, store.data.settingsUpdatedAt);
+    preferences.showTimer = shared.showTimer;
+    preferences.showControlHelp = shared.showControlHelp;
+  }
   Object.assign(document.documentElement.dataset, {
-    theme: preferences.theme,
     gridTextSize: preferences.gridTextSize,
     clueTextSize: preferences.clueTextSize,
     menuTextSize: preferences.menuTextSize,
     highlightColour: preferences.highlightColour,
   });
+  if (combinedBuild) applyCanonicalTheme();
+  else document.documentElement.dataset.theme = preferences.theme;
 }
 
 function chrome(content: string) {
   const active = view === "player" ? "library" : view;
-  return `
-    <header class="app-header">
-      ${combinedBuild
-        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid">B</span><span>Brain Games</span></a><span class="module-title">Word games</span>`
-        : `<button class="brand" data-nav="home" aria-label="Word games home"><span class="brand-grid">A</span><span>Word games</span></button>`}
-      <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
-      <span class="cloud-state" data-cloud-status>${escapeHtml(cloud.status())}</span>
-      <nav aria-label="Primary">
-        ${combinedBuild
-          ? `<a href="${brainGamesHome}">Games</a><button data-nav="library" class="${active === "library" ? "active" : ""}">Puzzles</button><button data-nav="create" class="${active === "create" ? "active" : ""}">Create</button><button data-nav="help" class="${active === "help" ? "active" : ""}">Help</button><a href="${brainGamesHome}?view=progress">Progress</a><a href="${brainGamesHome}?view=settings">Settings</a>`
-          : [["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
+  const contextType: LibraryType = activePuzzle
+    ? activePuzzle.kind === "word-grid" && activePuzzle.wordGridMode === "shuffle" ? "letter-mix" : activePuzzle.kind
+    : libraryType;
+  const contextLabel = contextType === "crossword" ? "Crosswords"
+    : contextType === "word-search" ? "Word Search"
+      : contextType === "word-grid" ? "Word Grid"
+        : contextType === "letter-mix" ? "Letter Mix"
+          : "Word games";
+  const contextMark = contextType === "crossword" ? "CW"
+    : contextType === "word-search" ? "WS"
+      : contextType === "word-grid" ? "WG"
+        : contextType === "letter-mix" ? "LM"
+          : "A";
+  const header = combinedBuild
+    ? canonicalHeader({
+        base: brainGamesHome,
+        active: "play",
+        profileLabel: cloud.user?.email || "Sign in",
+        profileAriaLabel: cloud.user?.email ? `Manage Brain Games profile for ${cloud.user.email}` : "Sign in to Brain Games",
+      })
+    : `<header class="app-header">
+        <button class="brand" data-nav="home" aria-label="Word games home"><span class="brand-grid">A</span><span>Word games</span></button>
+        <span class="connectivity ${navigator.onLine ? "online" : "offline"}">${navigator.onLine ? "Online" : "Offline"}</span>
+        <span class="cloud-state" data-cloud-status>${escapeHtml(cloud.status())}</span>
+        <nav aria-label="Primary">
+          ${[["home","Home"],["library","Puzzles"],["create","Create"],["settings","Settings"],["help","Help"]].map(([id, label]) => `<button data-nav="${id}" class="${active === id ? "active" : ""}">${label}</button>`).join("")}
+        </nav>
+      </header>`;
+  const context = combinedBuild ? `<section class="game-context" aria-label="${contextLabel} tools">
+      <div class="game-context-title"><span class="game-context-mark" aria-hidden="true">${contextMark}</span><button data-nav="library">${contextLabel}</button><span class="game-context-status" data-cloud-status>${escapeHtml(cloud.status())}</span></div>
+      <nav class="game-tools" aria-label="Word-game tools">
+        <button data-nav="library" class="${active === "library" ? "active" : ""}">Puzzles</button>
+        <button data-nav="create" class="${active === "create" ? "active" : ""}">Create</button>
+        <button data-nav="help" class="${active === "help" ? "active" : ""}">Help</button>
       </nav>
-    </header>
-    <main id="main" class="${view === "player" ? "player-main" : ""}">${content}</main>
+    </section>` : "";
+  return `
+    ${header}
+    <main id="main" class="${view === "player" ? "player-main" : ""}">${context}${content}</main>
     <footer class="app-footer"><span>Brain Games · Offline-first · No ads or analytics</span><a href="https://github.com/BicycleJeanre/${combinedBuild ? "brain-games" : "wtrack"}">Source & provenance</a></footer>`;
 }
 

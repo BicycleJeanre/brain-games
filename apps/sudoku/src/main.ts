@@ -1,4 +1,6 @@
 import "./style.css";
+import "../../../src/app-shell.css";
+import { adoptCanonicalSettings, applyCanonicalTheme, canonicalHeader, initialiseCanonicalSettings, installCanonicalTheme } from "../../../src/app-shell.ts";
 import catalogueJson from "./data/puzzles.json";
 import { challengePeriodKey, challengeSet, challengeStats, nextChallengePuzzle, type ChallengeCadence } from "./challenges.ts";
 import { CloudSync, cloudConfigured, sendReset, signInAccount, signOutAccount, watchAuth, type CloudUser } from "./cloud.ts";
@@ -14,6 +16,7 @@ import type { AnnotationColour, Difficulty, EntryMode, Game, Hint, Puzzle, Train
 const catalogue = catalogueJson as Puzzle[];
 const combinedBuild = import.meta.env.VITE_BRAIN_GAMES === "true";
 const brainGamesHome = combinedBuild ? new URL("../", location.origin + import.meta.env.BASE_URL).pathname : "";
+if (combinedBuild) installCanonicalTheme();
 const store = new Store();
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const dialog = document.querySelector<HTMLDialogElement>("#dialog")!;
@@ -56,7 +59,8 @@ let trainingTrack: TrainingTrackId | null = null;
 let challengeCadence: ChallengeCadence = "daily";
 const highlightedDigits = new Set<number>();
 const annotationColours: AnnotationColour[] = ["cyan", "amber", "violet", "green", "rose", "slate", "lime", "orange", "indigo"];
-const cloud = new CloudSync(store, () => {
+const cloud = new CloudSync(store, (settingsChanged = false) => {
+  if (combinedBuild && settingsChanged) adoptCanonicalSettings(store.data.preferences, store.data.settingsUpdatedAt);
   document.querySelectorAll<HTMLElement>("[data-cloud-status]").forEach((element) => { element.textContent = cloud.status(); });
   if (["home", "training", "library", "settings"].includes(view) && app.querySelector("main")) render();
 });
@@ -82,8 +86,12 @@ function notify(message: string) {
 
 function applyPreferences() {
   const preferences = store.data.preferences;
+  if (combinedBuild) {
+    const shared = initialiseCanonicalSettings({ theme: preferences.theme, showTimer: preferences.showTimer, showControlHelp: preferences.showControlHelp }, store.data.settingsUpdatedAt);
+    preferences.showTimer = shared.showTimer;
+    preferences.showControlHelp = shared.showControlHelp;
+  }
   Object.assign(document.documentElement.dataset, {
-    theme: preferences.theme,
     noteSize: preferences.noteSize,
     menuSize: preferences.menuSize,
     digitSize: preferences.digitSize,
@@ -92,24 +100,42 @@ function applyPreferences() {
     digitColour: preferences.digitColour,
     highlightColour: preferences.highlightColour,
   });
+  if (combinedBuild) applyCanonicalTheme();
+  else document.documentElement.dataset.theme = preferences.theme;
 }
 
 function shell(content: string, title: string) {
   const online = navigator.onLine;
-  app.innerHTML = `
-    <header class="app-header">
-      ${combinedBuild
-        ? `<a class="brand" href="${brainGamesHome}" aria-label="Brain Games home"><span class="brand-grid" aria-hidden="true">B</span><span>Brain Games</span></a><span class="module-title">Sudoku</span>`
-        : `<button class="brand" data-nav="home" aria-label="Sudoku home"><span class="brand-grid" aria-hidden="true">9</span><span>Sudoku</span></button>`}
-      <span class="cloud-state" data-cloud-status>${cloud.status()}</span><nav aria-label="Main navigation">
-        ${combinedBuild ? `<a href="${brainGamesHome}">Games</a>` : ""}
-        <button data-nav="training" class="${view === "training" ? "active" : ""}">Train</button>
-        <button data-nav="library" class="${view === "library" ? "active" : ""}">Puzzles</button>
-        <button data-nav="import" class="${view === "import" ? "active" : ""}">Open</button>
-        ${combinedBuild ? `<button data-help>Help</button><a href="${brainGamesHome}?view=progress">Progress</a><a href="${brainGamesHome}?view=settings">Settings</a>` : `<button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">Settings</button>`}
+  const contextualView = view === "player" ? "library" : view;
+  const header = combinedBuild
+    ? canonicalHeader({
+        base: brainGamesHome,
+        active: "play",
+        profileLabel: cloudUser?.email || "Sign in",
+        profileAriaLabel: cloudUser?.email ? `Manage Brain Games profile for ${cloudUser.email}` : "Sign in to Brain Games",
+      })
+    : `<header class="app-header">
+        <button class="brand" data-nav="home" aria-label="Sudoku home"><span class="brand-grid" aria-hidden="true">9</span><span>Sudoku</span></button>
+        <span class="cloud-state" data-cloud-status>${cloud.status()}</span><nav aria-label="Main navigation">
+          <button data-nav="training" class="${view === "training" ? "active" : ""}">Train</button>
+          <button data-nav="library" class="${view === "library" ? "active" : ""}">Puzzles</button>
+          <button data-nav="import" class="${view === "import" ? "active" : ""}">Open</button>
+          <button data-nav="settings" class="${view === "settings" ? "active" : ""}" aria-label="${view === "settings" ? "Close settings and help" : "Settings and help"}" aria-pressed="${view === "settings"}">Settings</button>
+        </nav>
+      </header>`;
+  const context = combinedBuild ? `<section class="game-context" aria-label="Sudoku tools">
+      <div class="game-context-title"><span class="game-context-mark" aria-hidden="true">9</span><button data-nav="home">Sudoku</button><span class="game-context-status" data-cloud-status>${escapeHtml(cloud.status())}</span></div>
+      <nav class="game-tools" aria-label="Sudoku tools">
+        <button data-nav="library" class="${contextualView === "library" ? "active" : ""}">Puzzles</button>
+        <button data-nav="training" class="${contextualView === "training" ? "active" : ""}">Train</button>
+        <button data-nav="import" class="${contextualView === "import" ? "active" : ""}">Open</button>
+        <button data-help>Help</button>
       </nav>
-    </header>
+    </section>` : "";
+  app.innerHTML = `
+    ${header}
     <main id="main" class="${view === "player" ? "player-main" : ""}" tabindex="-1">
+      ${context}
       <div class="page-heading"><div><span class="eyebrow">${online ? "Ready offline" : "Offline"}</span><h1>${escapeHtml(title)}</h1></div></div>
       ${content}
     </main>

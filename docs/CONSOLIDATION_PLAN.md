@@ -41,13 +41,14 @@ Started: 2026-10-15
 
 - [x] Add consistent Brain Games navigation inside both modules.
 - [x] Replace inherited app identities with one Brain Games header, game switcher, footer language, and responsive shell navigation.
-- [ ] Consolidate all remaining domain-specific theme tokens and update messaging.
+- [x] Consolidate the application palette and theme authority across the shell, Sudoku, and every word game while retaining game-specific board-highlight tokens.
 - [ ] Establish Play, Train, Learn, Progress, and Library routes.
 - [x] Add shell-level accessibility and mobile tests.
 - [x] Add a cross-game Progress dashboard for active sessions, completions, and recorded average times.
 - [x] Replace the scrolling launcher anchors with distinct Home, Play, Progress, and Settings views, including browser history and direct settings deep links.
 - [x] Replace separate Sudoku and Word Games family cards with one first-class game list for Sudoku, Crosswords, Word Search, Word Grid, and Letter Mix.
 - [x] Consolidate player preferences into the shared Settings surface and redirect older module settings links to it.
+- [x] Keep one canonical Home/Play/Progress/Settings header across all routes and move puzzle, training, creation, import, and help actions into contextual game tools.
 
 ### Stage 3 — Local persistence and backups
 
