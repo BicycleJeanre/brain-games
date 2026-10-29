@@ -100,6 +100,26 @@ export function fillAllCandidates(game: Game) {
   return true;
 }
 
+/**
+ * Recovery action for a candidate state that no longer admits a logical step.
+ * Unlike ordinary candidate calculation, this deliberately forgets prior
+ * candidate removals and rebuilds every note from the placed digits. The
+ * previous notes and eliminations remain available through Undo.
+ */
+export function resetAllCandidates(game: Game) {
+  const candidates = game.values.map((value, cell) => value || game.puzzle.givens[cell] !== "0" ? [] : candidateList(game.values, cell));
+  const changed = game.eliminated.some((digits) => digits.length > 0) || game.corner.some((digits) => digits.length > 0) || game.centre.some((digits, cell) => digits.join("") !== candidates[cell].join(""));
+  if (!changed) return false;
+  startChange(game);
+  for (let cell = 0; cell < 81; cell++) {
+    game.eliminated[cell] = [];
+    if (game.values[cell] || game.puzzle.givens[cell] !== "0") continue;
+    game.corner[cell] = [];
+    game.centre[cell] = candidates[cell];
+  }
+  return true;
+}
+
 export function enterDigit(game: Game, digit: number, cleanCandidates = true, multipleNoteMode: "corner" | "centre" = "corner", mistakeLimit = true) {
   const editable = game.selected.filter((cell) => game.puzzle.givens[cell] === "0");
   if (!editable.length) return;

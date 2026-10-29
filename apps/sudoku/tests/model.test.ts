@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, promoteSoleCentre, redo, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
+import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, promoteSoleCentre, redo, resetAllCandidates, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
 import { contextualHintExplanation } from "../src/hint-explanation.ts";
 import { buildHintPath, findHint, hintRespectsGivens, nextHintFromPath } from "../src/hint-engine.ts";
 import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
@@ -515,6 +515,22 @@ test("all candidates replace corner notes with centre notes and are undone toget
   assert.equal(undo(game), true);
   assert.deepEqual(game.corner[2], [4]);
   assert.deepEqual(game.centre[2], []);
+});
+
+test("candidate recovery clears eliminations, rebuilds notes, and remains undoable", () => {
+  const game = createGame(fixture, 1);
+  game.corner[2] = [4];
+  game.centre[3] = [2];
+  game.eliminated[2] = candidateList(game.values, 2);
+  assert.equal(resetAllCandidates(game), true);
+  assert.deepEqual(game.eliminated[2], []);
+  assert.deepEqual(game.corner[2], []);
+  assert.deepEqual(game.centre[2], candidateList(game.values, 2));
+  assert.deepEqual(game.centre[3], candidateList(game.values, 3));
+  assert.equal(undo(game), true);
+  assert.deepEqual(game.eliminated[2], candidateList(game.values, 2));
+  assert.deepEqual(game.corner[2], [4]);
+  assert.deepEqual(game.centre[3], [2]);
 });
 
 test("entering a value clears both corner and centre notes", () => {
