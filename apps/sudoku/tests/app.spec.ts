@@ -337,6 +337,36 @@ test("normal, corner, centre, colour, multi-select, undo and keyboard flows work
   expect(await page.locator(".sudoku-cell.selected").count()).toBeGreaterThan(1);
 });
 
+test("modifier keys temporarily select corner and centre entry modes", async ({ page }) => {
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  const cell = page.locator(".sudoku-cell:not(.given)").first();
+  const digitMode = page.getByRole("button", { name: "Digit", exact: true });
+  const cornerMode = page.getByRole("button", { name: "Corner", exact: true });
+  const centreMode = page.getByRole("button", { name: "Centre", exact: true });
+  await cell.click();
+
+  await page.keyboard.down("Control");
+  await expect(cornerMode).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("1");
+  await expect(cell.locator(".corner-marks")).toContainText("1");
+  await page.keyboard.up("Control");
+  await expect(digitMode).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.down("Meta");
+  await expect(cornerMode).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("3");
+  await expect(cell.locator(".corner-marks")).toContainText("3");
+  await page.keyboard.up("Meta");
+  await expect(digitMode).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.down("Shift");
+  await expect(centreMode).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("2");
+  await expect(cell.locator(".centre-marks")).toContainText("2");
+  await page.keyboard.up("Shift");
+  await expect(digitMode).toHaveAttribute("aria-pressed", "true");
+});
+
 test("double-clicking a sole centre note promotes it to the full digit", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const cell = page.locator(".sudoku-cell:not(.given)").first();
