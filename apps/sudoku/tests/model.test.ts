@@ -408,6 +408,39 @@ test("sudokUI explains the reported Finned Jellyfish with exact roles and a pre-
   assert.equal(hint?.instruction?.frames.at(-1)?.show.includes("conclusion"), true);
 });
 
+test("Chute Remote Pair explains the reported grid with real cells and digits", () => {
+  const position = "048162000903480026026390480360004870807003600452876000285741369030629008600538210";
+  const candidateRows = [
+    ["57", "", "", "", "", "", "579", "39", "357"],
+    ["", "17", "", "", "", "57", "15", "", ""],
+    ["157", "", "", "", "", "57", "", "", "157"],
+    ["", "", "19", "29", "15", "", "", "", "25"],
+    ["", "19", "", "29", "15", "", "", "45", "245"],
+    ["", "", "", "", "", "", "19", "39", "13"],
+    ["", "", "", "", "", "", "", "", ""],
+    ["17", "", "14", "", "", "", "57", "45", ""],
+    ["", "79", "49", "", "", "", "", "", "47"],
+  ];
+  const values = [...position].map((value) => value === "0" ? "" : value);
+  const visibleCandidates = candidateRows.flat().map((digits) => [...digits].map(Number));
+  const hint = findHint(values, [], { visibleCandidates });
+
+  assert.equal(hint?.technique, "Chute Remote Pair");
+  assert.deepEqual(hint?.targets, [{ cell: 18, digit: 5 }]);
+  assert.match(hint?.instruction?.what || "", /R1C1 and R3C6/);
+  assert.match(hint?.instruction?.what || "", /exactly two candidates: \{5, 7\}/);
+  assert.match(hint?.instruction?.why || "", /R2C7, R2C8 and R2C9/);
+  assert.match(hint?.instruction?.why || "", /at least one of R1C1 and R3C6 is 5/);
+  assert.doesNotMatch(hint?.instruction?.what || "", /\bX\b|\bY\b/);
+  assert.deepEqual(hint?.instruction?.frames.slice(0, 4).map(({ text }) => text), [
+    "R1C1 and R3C6 are both restricted to {5, 7}; they are in different boxes of the same top band.",
+    "7 is absent from R2C7, R2C8 and R2C9 in box 3.",
+    "Box 3 must place 7 on row 1 or row 3. Whichever line it uses, that line's pair cell is forced to 5.",
+    "So inspect cells that see both R1C1 and R3C6; 5 cannot remain in such a cell.",
+  ]);
+  assert.equal(hint?.instruction?.frames.at(-1)?.show.includes("conclusion"), true);
+});
+
 test("applying a hint keeps solver eliminations and visible notes in sync", () => {
   const game = createGame(fixture, 1);
   game.corner[2] = [4, 7];
