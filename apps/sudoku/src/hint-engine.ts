@@ -126,6 +126,88 @@ function targetMatchesContext(target: { cell: number; digit: number }, kind: Hin
   return true;
 }
 
+type TailoredInstruction = Pick<NonNullable<Hint["instruction"]>, "what" | "why" | "spot" | "labels" | "frames">;
+
+function cellName(cell: number): string {
+  return `R${Math.floor(cell / 9) + 1}C${cell % 9 + 1}`;
+}
+
+function cellNames(cells: readonly number[]): string {
+  if (cells.length < 2) return cells.map(cellName).join("");
+  return `${cells.slice(0, -1).map(cellName).join(", ")} and ${cellName(cells.at(-1)!)}`;
+}
+
+function chuteRemotePairInstruction(step: Step, targets: readonly { cell: number; digit: number }[]): TailoredInstruction | null {
+  if (step.tech !== "CHUTE_REMOTE_PAIR") return null;
+  const pairCells = [...new Set((step.primary || []).map(({ cell }) => cell))];
+  const pairDigits = [...new Set((step.primary || []).map(({ digit }) => digit))].sort();
+  if (pairCells.length !== 2 || pairDigits.length !== 2) return null;
+
+  const [first, second] = pairCells;
+  const firstRow = Math.floor(first / 9);
+  const secondRow = Math.floor(second / 9);
+  const firstColumn = first % 9;
+  const secondColumn = second % 9;
+  const horizontal = Math.floor(firstRow / 3) === Math.floor(secondRow / 3);
+  const lineOne = horizontal ? firstRow : firstColumn;
+  const lineTwo = horizontal ? secondRow : secondColumn;
+  const chuteIndex = Math.floor(lineOne / 3);
+  const remainingLine = [chuteIndex * 3, chuteIndex * 3 + 1, chuteIndex * 3 + 2]
+    .find((line) => line !== lineOne && line !== lineTwo);
+  const boxOf = (cell: number) => Math.floor(Math.floor(cell / 9) / 3) * 3 + Math.floor((cell % 9) / 3);
+  const boxes = horizontal
+    ? [chuteIndex * 3, chuteIndex * 3 + 1, chuteIndex * 3 + 2]
+    : [chuteIndex, chuteIndex + 3, chuteIndex + 6];
+  const remainingBox = boxes.find((box) => box !== boxOf(first) && box !== boxOf(second));
+  if (remainingLine === undefined || remainingBox === undefined) return null;
+
+  const miniLine = Array.from({ length: 9 }, (_, index) => horizontal ? remainingLine * 9 + index : index * 9 + remainingLine)
+    .filter((cell) => boxOf(cell) === remainingBox);
+  const presentDigits = [...new Set((step.secondary || []).map(({ digit }) => digit))]
+    .filter((digit) => pairDigits.includes(digit));
+  const missingDigits = pairDigits.filter((digit) => !presentDigits.includes(digit));
+  const removedDigits = [...new Set(targets.map(({ digit }) => digit))].sort();
+  const pair = `{${pairDigits.join(", ")}}`;
+  const pairCellNames = cellNames(pairCells);
+  const miniLineNames = cellNames(miniLine);
+  const lineKind = horizontal ? "row" : "column";
+  const pairLines = [lineOne + 1, lineTwo + 1];
+  const chuteNames = horizontal ? ["top band", "middle band", "bottom band"] : ["left stack", "centre stack", "right stack"];
+  const chuteDefinition = horizontal
+    ? "A band is three adjacent rows crossing three boxes."
+    : "A stack is three adjacent columns crossing three boxes.";
+  const absent = missingDigits.length === 1
+    ? `${missingDigits[0]} is absent`
+    : `${missingDigits.join(" and ")} are absent`;
+  const forcedDigit = removedDigits[0];
+
+  const what = `${chuteDefinition} ${pairCellNames} are bivalue cells, meaning each has exactly two candidates: ${pair}. They sit in different boxes of the same ${chuteNames[chuteIndex]} and do not see each other.`;
+  const why = missingDigits.length === 1
+    ? `In box ${remainingBox + 1}, ${missingDigits[0]} cannot go in ${miniLineNames}. Box ${remainingBox + 1} must still contain ${missingDigits[0]}, so it must be placed on ${lineKind} ${pairLines[0]} or ${lineKind} ${pairLines[1]}. A ${missingDigits[0]} on either line removes ${missingDigits[0]} from that line's pair cell, forcing that pair cell to ${forcedDigit}. Therefore at least one of ${pairCellNames} is ${forcedDigit}, and any cell that sees both pair cells cannot contain ${forcedDigit}.`
+    : `In box ${remainingBox + 1}, neither ${pairDigits[0]} nor ${pairDigits[1]} can go in ${miniLineNames}. Both digits must therefore use ${lineKind}s ${pairLines[0]} and ${pairLines[1]} in that box. Those placements force ${pairCellNames} to take ${pairDigits[0]} and ${pairDigits[1]} in some order. Any cell that sees both pair cells can contain neither digit.`;
+  const spot = `First compare ${pairCellNames}. Then check ${miniLineNames}: ${absent} there. Finally, look for a cell that sees both pair cells and still contains ${removedDigits.join(" or ")}.`;
+  const frames = [
+    { text: `${pairCellNames} are both restricted to ${pair}; they are in different boxes of the same ${chuteNames[chuteIndex]}.`, show: ["units", "primary"] },
+    { text: `${absent[0].toUpperCase()}${absent.slice(1)} from ${miniLineNames} in box ${remainingBox + 1}.`, show: ["units", "primary", "secondary"] },
+    ...(missingDigits.length === 1
+      ? [{ text: `Box ${remainingBox + 1} must place ${missingDigits[0]} on ${lineKind} ${pairLines[0]} or ${lineKind} ${pairLines[1]}. Whichever line it uses, that line's pair cell is forced to ${forcedDigit}.`, show: ["units", "primary", "secondary"] }]
+      : [{ text: `Box ${remainingBox + 1} must place ${pairDigits.join(" and ")} on ${lineKind}s ${pairLines.join(" and ")}, forcing the pair cells to opposite values.`, show: ["units", "primary", "secondary"] }]),
+    { text: `So inspect cells that see both ${pairCellNames}; ${removedDigits.join(" and ")} cannot remain in such a cell.`, show: ["units", "primary", "secondary"] },
+    { text: step.description, show: ["units", "primary", "secondary", "conclusion"] },
+  ];
+
+  return {
+    what,
+    why,
+    spot,
+    labels: {
+      primary: `${pairCellNames}: the ${pair} pair`,
+      secondary: `${miniLineNames}: ${absent}`,
+    },
+    frames,
+  };
+}
+
 function convertStep(step: Step, context: HintContext = {}): Hint | null {
   const kind: Hint["kind"] = step.placements.length ? "place" : "eliminate";
   const targets = (kind === "place" ? step.placements : step.eliminations)
@@ -146,6 +228,7 @@ function convertStep(step: Step, context: HintContext = {}): Hint | null {
     "Hidden Quadruple": "Hidden quadruple",
   } as Record<string, string>)[upstreamName] || upstreamName;
   const guide = TECH_DOCS[step.tech];
+  const tailored = chuteRemotePairInstruction(step, targets);
   const targetCells = new Set(targets.map(({ cell }) => cell));
   const evidence = uniqueCells(step).filter((cell) => !targetCells.has(cell));
   const targetKey = targets.map(({ cell, digit }) => `${cell}-${digit}`).join("-");
@@ -162,17 +245,17 @@ function convertStep(step: Step, context: HintContext = {}): Hint | null {
       provider: "sudokUI",
       revision: "1f7831c6dc0fa118e1c7638e61c99756b1fa9d48",
       techniqueCode: step.tech,
-      what: guide?.what || "This pattern is identified directly from the candidates shown on the board.",
-      why: guide?.why || step.description,
-      spot: guide?.spot || "Follow the highlighted candidates and their shared houses.",
+      what: tailored?.what || guide?.what || "This pattern is identified directly from the candidates shown on the board.",
+      why: tailored?.why || guide?.why || step.description,
+      spot: tailored?.spot || guide?.spot || "Follow the highlighted candidates and their shared houses.",
       aliases: guide?.aka || [],
       specific: step.description,
-      labels: step.labels || {},
+      labels: tailored?.labels || step.labels || {},
       primary: step.primary || [],
       secondary: step.secondary || [],
       fins: step.fins || [],
       units: step.units || [],
-      frames: walkFrames(step).map((frame) => ({ text: frame.text, show: [...frame.show] })),
+      frames: tailored?.frames || walkFrames(step).map((frame) => ({ text: frame.text, show: [...frame.show] })),
     },
   };
 }
