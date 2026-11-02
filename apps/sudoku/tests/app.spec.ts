@@ -367,6 +367,38 @@ test("modifier keys temporarily select corner and centre entry modes", async ({ 
   await expect(digitMode).toHaveAttribute("aria-pressed", "true");
 });
 
+test("paused puzzles resume from the toolbar and board after a reload", async ({ page }) => {
+  const savedState = () => page.evaluate(async () => {
+    const request = indexedDB.open("strack-v1");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction("state", "readonly");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => { const get = store.get("meta"); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    const game = await new Promise<any>((resolve, reject) => { const get = store.get(`game:${meta.activeGameId}`); get.onsuccess = () => resolve(get.result); get.onerror = () => reject(get.error); });
+    db.close();
+    return { paused: game.paused, completedAt: game.completedAt, failedAt: game.failedAt };
+  });
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+  await page.getByRole("button", { name: "Pause puzzle" }).click();
+  await expect(page.locator(".board-status")).toContainText("Paused");
+  await expect(page.getByRole("button", { name: "Paused Tap to continue" })).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator("#resume")).toContainText("Resume puzzle");
+  await page.locator("#resume").click();
+  await expect(page.getByRole("button", { name: "Resume puzzle" })).toBeVisible();
+  await expect(savedState()).resolves.toEqual({ paused: true, completedAt: null, failedAt: null });
+  await page.locator("#pause").click();
+  await expect(savedState()).resolves.toEqual({ paused: false, completedAt: null, failedAt: null });
+  await expect(page.locator(".board-status")).not.toContainText("Paused");
+  await expect(page.locator("#resume-board")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Pause puzzle" }).click();
+  await page.locator("#resume-board").click();
+  await expect(page.locator(".board-status")).not.toContainText("Paused");
+  await expect(page.locator("#resume-board")).toHaveCount(0);
+});
+
 test("double-clicking a sole centre note promotes it to the full digit", async ({ page }) => {
   await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
   const cell = page.locator(".sudoku-cell:not(.given)").first();
