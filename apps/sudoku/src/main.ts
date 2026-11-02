@@ -832,8 +832,8 @@ function bindPlayer(game: Game) {
     renderPlayer();
   });
   app.querySelector("#fill-candidates")?.addEventListener("click", () => changeGame(game, () => { if (fillAllCandidates(game)) notify("Candidates calculated for every empty cell"); }));
-  app.querySelector("#pause")?.addEventListener("click", () => changeGame(game, () => { game.paused = !game.paused; game.updatedAt = Date.now(); }));
-  app.querySelector("#resume-board")?.addEventListener("click", () => changeGame(game, () => { game.paused = false; game.updatedAt = Date.now(); }));
+  app.querySelector("#pause")?.addEventListener("click", () => setGamePaused(game, !game.paused));
+  app.querySelector("#resume-board")?.addEventListener("click", () => setGamePaused(game, false));
   app.querySelector("#puzzle-info")?.addEventListener("click", () => showPuzzleInfo(game.puzzle));
   app.querySelector("#hint")?.addEventListener("click", async () => {
     historicalHintReview = null;
@@ -1062,6 +1062,15 @@ function bindCellDrag(game: Game) {
   });
   board.addEventListener("pointerup", finish);
   board.addEventListener("pointercancel", (event) => { pointerCancelled = true; finish(event); });
+}
+
+async function setGamePaused(game: Game, paused: boolean) {
+  if (game.failedAt || game.completedAt || game.paused === paused) return;
+  game.paused = paused;
+  game.updatedAt = Date.now();
+  const saved = store.putGame(game);
+  renderPlayer();
+  await saved;
 }
 
 async function changeGame(game: Game, change: () => unknown) {
