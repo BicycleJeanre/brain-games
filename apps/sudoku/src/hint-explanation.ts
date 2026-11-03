@@ -53,6 +53,131 @@ function actionConclusion(hint: Hint): string {
 
 const candidateText = (digits: readonly number[]) => digits.join("/");
 
+function normalizeGridText(text: string): string {
+  const normalized = text
+    .replace(/\br(\d)c(\d)\b/gi, "R$1C$2")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return normalized;
+  return `${normalized[0].toUpperCase()}${normalized.slice(1)}`;
+}
+
+function uniqueCells(items: readonly { cell: number; digit: number }[]): number[] {
+  return [...new Set(items.map(({ cell }) => cell))];
+}
+
+function uniqueDigits(items: readonly { cell: number; digit: number }[]): number[] {
+  return [...new Set(items.map(({ digit }) => digit))].sort((a, b) => a - b);
+}
+
+function instructionRoles(hint: Hint, context: ContextualHintContext): HintCellRole[] {
+  const instruction = hint.instruction;
+  if (!instruction) return [];
+  const roles: HintCellRole[] = [];
+  const add = (items: readonly { cell: number; digit: number }[], label: string, badge: string, detail: string) => {
+    for (const cell of uniqueCells(items)) {
+      if (roles.some((role) => role.cell === cell)) continue;
+      const shown = context.candidates?.[cell] || [];
+      const value = context.values?.[cell];
+      const state = shown.length
+        ? `candidates ${candidateText(shown)}`
+        : value
+          ? `value ${value}`
+          : `highlighted ${candidateText(uniqueDigits(items.filter((item) => item.cell === cell)))} candidate${items.filter((item) => item.cell === cell).length === 1 ? "" : "s"}`;
+      roles.push({ cell, label, badge, detail: `${compactCell(cell)} · ${state}. ${normalizeGridText(detail)}` });
+    }
+  };
+  add(instruction.primary, "Pattern", "P", instruction.labels.primary || "A defining pattern cell.");
+  add(instruction.secondary, "Support", "S", instruction.labels.secondary || "A supporting candidate or house.");
+  add(instruction.fins, "Fin", "F", instruction.labels.fins || "A candidate outside the regular pattern that limits the deduction.");
+  return roles;
+}
+
+function gridSpecificInstructionExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const instruction = hint.instruction;
+  if (!instruction) return null;
+  const code = instruction.techniqueCode;
+  const primaryCells = uniqueCells(instruction.primary);
+  const primaryDigits = uniqueDigits(instruction.primary);
+  const targetDigits = uniqueDigits(hint.targets);
+  const relevantDigits = primaryDigits.length ? primaryDigits : targetDigits;
+  const digitText = relevantDigits.length ? relevantDigits.join("/") : "the highlighted digit";
+  const patternCells = cellList(primaryCells.length ? primaryCells : hint.evidence);
+  const targetDigitText = targetDigits.length ? targetDigits.join(" and ") : "the target candidate";
+  const rawFrames = instruction.frames
+    .filter((frame) => !frame.show.includes("conclusion"))
+    .map((frame) => normalizeGridText(frame.text))
+    .filter(Boolean);
+  let definition = `This ${hint.technique} uses the highlighted candidates at ${patternCells} to force the same result in every valid branch.`;
+  let proof: string[] = [];
+
+  if (code === "FULL_HOUSE") {
+    definition = `${rawFrames[0] || "The highlighted house has one empty cell"} A row, column, or box must contain each digit from 1 to 9 exactly once.`;
+    proof = ["Compare the eight placed digits with 1–9. The one missing digit is the only value that can fill the outlined cell."];
+  } else if (code === "NAKED_SINGLE") {
+    definition = `${compactCell(hint.targets[0].cell)} has only one candidate left after its row, column, and box rule out the other eight digits.`;
+    proof = ["An empty Sudoku cell must contain one digit. With eight digits excluded, its remaining candidate is forced."];
+  } else if (code === "HIDDEN_SINGLE") {
+    definition = rawFrames[0] || `Only one highlighted cell in the house can contain ${targetDigitText}.`;
+    proof = [`The house must contain ${targetDigitText} once. Every other position is blocked by a placed ${targetDigitText}, so the highlighted position is forced.`];
+  } else if (code === "LOCKED_CANDIDATES_1" || code === "LOCKED_CANDIDATES_2") {
+    definition = rawFrames[0] || `${targetDigitText} is confined to the highlighted overlap of one box and one row or column.`;
+    proof = [code === "LOCKED_CANDIDATES_1"
+      ? `The box must contain ${targetDigitText}. Because every possible position in that box lies on the same line, that line's ${targetDigitText} must be inside the box and cannot appear elsewhere on the line.`
+      : `The row or column must contain ${targetDigitText}. Because every possible position on that line lies in the same box, that box's ${targetDigitText} must be on the line and cannot appear elsewhere in the box.`];
+  } else if (/^(?:LOCKED_|NAKED_)(?:PAIR|TRIPLE|QUADRUPLE)$/.test(code)) {
+    definition = `${primaryCells.length} highlighted cells at ${patternCells} contain only the ${primaryDigits.length} digits ${digitText} between them.`;
+    proof = [`Those ${primaryCells.length} cells must use ${digitText} in some order. They use every available place for those digits in their shared house, so no other cell in that house can contain ${digitText}.`];
+  } else if (/^HIDDEN_(?:PAIR|TRIPLE|QUADRUPLE)$/.test(code)) {
+    definition = `In one house, the digits ${digitText} can appear only in the ${primaryCells.length} highlighted cells at ${patternCells}.`;
+    proof = [`That house still needs every digit ${digitText}, and there are exactly enough highlighted cells for them. Those cells must therefore be reserved for ${digitText}, so their other candidates can be removed.`];
+  } else if (/^(?:X_WING|SWORDFISH|JELLYFISH|SQUIRMBAG|WHALE|LEVIATHAN)$/.test(code)) {
+    definition = `${targetDigitText} in the highlighted base houses is confined to the same number of cover houses.`;
+    proof = [`Each base house must place ${targetDigitText} once. Those placements fill the available ${targetDigitText} positions in the cover houses, so ${targetDigitText} cannot occur elsewhere in any cover house.`];
+  } else if (/^(?:FINNED|SASHIMI|FRANKEN)_/.test(code)) {
+    definition = `${targetDigitText} forms the highlighted base-and-cover pattern, with the cells marked Fin lying outside the regular fish.`;
+    proof = [`If every fin is false, the regular fish fills the cover houses and removes ${targetDigitText} from the target. If a fin is true, the target sees that fin and still cannot be ${targetDigitText}. The removal is valid in both branches.`];
+  } else if (code === "CHUTE_REMOTE_PAIR") {
+    definition = instruction.what;
+  } else if (/^ALS_/.test(code)) {
+    definition = "An almost-locked set has one more candidate than cells. The highlighted sets are linked by candidates that cannot be true in both sets at once.";
+    proof = [`Follow the actual set branches below. Removing a linking candidate from one set fills that set with its other digits and forces the next link, until every valid branch gives the same result for ${targetDigitText}.`];
+  } else if (/WING$/.test(code) || code.includes("WING_")) {
+    definition = `The highlighted restricted cells form a ${hint.technique} on the actual candidates shown. Every possible value of its pivot or linking cells forces ${targetDigitText} into at least one pattern cell.`;
+    proof = [`A target that sees every possible pattern cell containing ${targetDigitText} cannot itself contain ${targetDigitText}. Follow the branches below to see where that forced candidate comes from.`];
+  } else if (/UNIQUENESS|RECTANGLE/.test(code)) {
+    const rectangleCells = uniqueCells([...instruction.primary, ...instruction.secondary, ...hint.targets]);
+    definition = `${cellList(rectangleCells)} form the highlighted rectangle or loop used by ${hint.technique}.`;
+    proof = [`If the highlighted base candidates completed the interchangeable pattern, they could be swapped while preserving every row, column, box, and original clue. Because this puzzle has one solution, the highlighted extra candidate or strong link must break that pattern.`];
+  } else if (code.includes("FORCING")) {
+    definition = `The walkthrough assumes the opposite of the proposed ${targetDigitText} result and follows the forced consequences on this grid.`;
+    proof = ["That assumption eventually leaves a cell with no value or a house with no place for a required digit. The assumption is impossible, so its opposite is forced."];
+  } else if (/CHAIN|LOOP|AIC|COLOR|MEDUSA|TURBOT|KITE|SKYSCRAPER|EMPTY_RECTANGLE|REMOTE_PAIR/.test(code)) {
+    definition = `The walkthrough follows the actual candidates in this ${hint.technique}. A strong link means one of its two endpoints must be true; a weak link means both endpoints cannot be true.`;
+    proof = [`Read each “if” step in order. Every valid starting state reaches the same result for ${targetDigitText}, which is why the outlined deduction is forced.`];
+  } else if (code === "BUG_PLUS_1") {
+    definition = `${patternCells} contains the extra candidate in an otherwise bivalue grid; “bivalue” means every other unsolved cell has two candidates.`;
+    proof = ["Removing the extra candidate would restore a perfectly paired pattern with two interchangeable solutions. The puzzle has one solution, so the extra candidate must remain."];
+  } else if (code === "PATTERN_OVERLAY") {
+    definition = `The solver checked every complete way to place ${targetDigitText} once in every row, column, and box.`;
+    proof = [`None of those complete placements uses the outlined candidate. A candidate absent from every valid placement of ${targetDigitText} cannot be true.`];
+  }
+
+  const steps = [...rawFrames, ...proof]
+    .filter((step, index, all) => all.indexOf(step) === index);
+  while (steps.length < 2) {
+    steps.push(`The highlighted restriction leaves the target with the same outcome in every valid arrangement of ${digitText}.`);
+  }
+
+  return {
+    title: `How this ${hint.technique} works`,
+    definition: normalizeGridText(definition),
+    roles: instructionRoles(hint, context),
+    steps,
+    conclusion: actionConclusion(hint),
+  };
+}
+
 function viewFrom(cell: number, other: number): string {
   return sharedHouse(cell, other) || "a shared unit";
 }
@@ -103,15 +228,15 @@ function xyzWingExplanation(hint: Hint, context: ContextualHintContext): Context
   const sightLines = hint.targets.map(({ cell }) => `${compactCell(cell)} sees the pivot through ${viewFrom(cell, pivot)}, Wing A through ${viewFrom(cell, wings[0])}, and Wing B through ${viewFrom(cell, wings[1])}`);
   return {
     title: "How this XYZ-Wing works",
-    definition: `An XYZ-Wing has a three-candidate pivot and two two-candidate wings. Each wing shares one non-Z digit with the pivot, while the pivot and both wings all contain Z. A target that sees all three pattern cells cannot be Z.`,
+    definition: `An XYZ-Wing has a three-candidate pivot and two two-candidate wings. Each wing shares one other pivot digit, while the pivot and both wings all contain ${targetDigit}. A target that sees all three pattern cells cannot contain ${targetDigit}.`,
     roles: [
       { cell: pivot, label: "Pivot", badge: "P", detail: `${compactCell(pivot)} · candidates ${candidateText(pivotDigits)}` },
       { cell: wings[0], label: "Wing A", badge: "W1", detail: `${compactCell(wings[0])} · candidates ${candidateText(context.candidates[wings[0]])}` },
       { cell: wings[1], label: "Wing B", badge: "W2", detail: `${compactCell(wings[1])} · candidates ${candidateText(context.candidates[wings[1]])}` },
     ],
     steps: [
-      `${compactCell(pivot)} is the pivot because it has the three candidates ${candidateText(pivotDigits)} and sees both two-candidate wings. The shared Z digit is ${targetDigit}.`,
-      `If the pivot is ${targetDigit}, Z is already in the pivot. If it is ${firstOther}, Wing A is forced to ${targetDigit}. If it is ${secondOther}, Wing B is forced to ${targetDigit}. One of the three highlighted pattern cells must therefore be ${targetDigit}.`,
+      `${compactCell(pivot)} is the pivot because it has the three candidates ${candidateText(pivotDigits)} and sees both two-candidate wings. The digit shared by all three pattern cells is ${targetDigit}.`,
+      `If the pivot is ${targetDigit}, that digit is already in the pivot. If it is ${firstOther}, Wing A is forced to ${targetDigit}. If it is ${secondOther}, Wing B is forced to ${targetDigit}. One of the three highlighted pattern cells must therefore be ${targetDigit}.`,
       `${sightLines.join("; ")}. Each target sees all three possible places for ${targetDigit}.`,
     ],
     conclusion: `Remove ${targetDigit} from ${cellList(hint.targets.map(({ cell }) => cell))}.`,
@@ -171,6 +296,36 @@ function wWingExplanation(hint: Hint, context: ContextualHintContext): Contextua
   };
 }
 
+function wxyzWingExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const instruction = hint.instruction;
+  const targetDigit = hint.targets[0]?.digit;
+  if (!instruction || instruction.techniqueCode !== "WXYZ_WING" || !targetDigit || !context.candidates) return null;
+  const houseCells = uniqueCells([...instruction.primary, ...instruction.secondary]);
+  const bridge = uniqueCells(instruction.fins)[0];
+  if (houseCells.length !== 3 || bridge === undefined) return null;
+  const bridgeDigits = context.candidates[bridge] || [];
+  const linkDigit = bridgeDigits.find((digit) => digit !== targetDigit);
+  if (bridgeDigits.length !== 2 || !linkDigit) return null;
+  const linkedCells = houseCells.filter((cell) => (context.candidates?.[cell] || []).includes(linkDigit));
+  const targetHouseCells = houseCells.filter((cell) => (context.candidates?.[cell] || []).includes(targetDigit));
+  if (!linkedCells.length || !targetHouseCells.length) return null;
+
+  return {
+    title: "How this WXYZ-Wing works",
+    definition: `Three cells in one house (${cellList(houseCells)}) contain four digits between them. The two-candidate bridge ${compactCell(bridge)} contains ${candidateText(bridgeDigits)} and sees every house cell that can contain ${linkDigit}.`,
+    roles: [
+      ...houseCells.map((cell, index) => ({ cell, label: `House cell ${index + 1}`, badge: `H${index + 1}`, detail: `${compactCell(cell)} · candidates ${candidateText(context.candidates?.[cell] || [])}` })),
+      { cell: bridge, label: "Bridge", badge: "B", detail: `${compactCell(bridge)} · candidates ${candidateText(bridgeDigits)}` },
+    ],
+    steps: [
+      `If ${compactCell(bridge)} is ${linkDigit}, every ${linkDigit} it sees at ${cellList(linkedCells)} is false. The three house cells are then left with three other digits for three cells, so one of them must be ${targetDigit}.`,
+      `If ${compactCell(bridge)} is not ${linkDigit}, its only other candidate is ${targetDigit}.`,
+      `Either ${compactCell(bridge)} or one of ${cellList(targetHouseCells)} must therefore contain ${targetDigit}. Any target seeing all those possibilities cannot contain ${targetDigit}.`,
+    ],
+    conclusion: actionConclusion(hint),
+  };
+}
+
 function skyscraperExplanation(hint: Hint): ContextualHintExplanation | null {
   const digit = hint.targets[0]?.digit;
   const evidence = [...new Set(hint.evidence)];
@@ -206,6 +361,7 @@ function skyscraperExplanation(hint: Hint): ContextualHintExplanation | null {
 
   return {
     title: "Why does this Skyscraper eliminate these candidates?",
+    definition: `A Skyscraper uses two strong links for the same digit. Their base cells see each other, so at least one of the two roof cells must contain ${digit}; any cell seeing both roofs cannot contain ${digit}.`,
     steps: [
       `In ${shape.strongHouses[0]}, ${digit} is restricted to ${compactCell(firstBase)} or ${compactCell(firstRoof)}. In ${shape.strongHouses[1]}, it is restricted to ${compactCell(secondBase)} or ${compactCell(secondRoof)}. These are the two strong links.`,
       `${compactCell(firstBase)} and ${compactCell(secondBase)} are the bases. They share ${shape.baseHouse}, so they cannot both be ${digit}; at least one base must be false.`,
@@ -270,6 +426,7 @@ function emptyRectangleExplanation(hint: Hint): ContextualHintExplanation | null
 
   return {
     title: "Why is this an Empty Rectangle?",
+    definition: `An Empty Rectangle occurs when one box's candidates for a digit lie only along one row and one column. An outside strong link connects to one arm so that either possible link endpoint produces the same elimination.`,
     steps: [
       `In Box ${box + 1}, every highlighted ${digit} candidate (${cellList(blockCells)}) lies on ${rowArm} or ${columnArm}. Those two arms inside one box are the Empty Rectangle shape.`,
       `${compactCell(armEnd)} and ${compactCell(otherEnd)} form the outside strong link for ${digit} in ${linkHouse}: one of those two ends must contain ${digit}.`,
@@ -302,6 +459,7 @@ function avoidableRectangleType1Explanation(hint: Hint, context: ContextualHintC
 
   return {
     title: "Why is this an Avoidable Rectangle Type 1?",
+    definition: `An Avoidable Rectangle uses three editable values and one unsolved corner. A candidate that would complete an interchangeable two-digit rectangle must be removed to preserve the puzzle's single solution.`,
     steps: [
       `${cellList(cells)} are the four corners in Rows ${rows.map((row) => row + 1).join(" and ")} and Columns ${columns.map((column) => column + 1).join(" and ")}. The three filled corners are ${cornerValues}.`,
       `If ${compactCell(target.cell)} were ${target.digit}, the rectangle would alternate ${target.digit}–${otherDigit} / ${otherDigit}–${target.digit}.`,
@@ -342,6 +500,7 @@ function hiddenRectangleExplanation(hint: Hint, context: ContextualHintContext):
 
   return {
     title: "Why is this a Hidden Rectangle?",
+    definition: `A Hidden Rectangle uses four corners and two strong links for one of their digits. A candidate that would turn all four corners into an interchangeable two-digit rectangle must be removed.`,
     steps: [
       `${cellList(cells)} are the four corners of a rectangle in Rows ${rows.map((row) => row + 1).join(" and ")} and Columns ${columns.map((column) => column + 1).join(" and ")}. The opposite corner ${compactCell(opposite)} is restricted to the pair ${pair.join("/")}.`,
       `In Row ${rowOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(rowMate)} or ${compactCell(target.cell)}. In Column ${columnOf(target.cell) + 1}, ${strongDigit} can appear only at ${compactCell(columnMate)} or ${compactCell(target.cell)}. Those are the two strong links that make the rectangle “hidden.”`,
@@ -412,6 +571,10 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
     const explanation = wWingExplanation(hint, context);
     if (explanation) return explanation;
   }
+  if (hint.technique === "WXYZ-Wing") {
+    const explanation = wxyzWingExplanation(hint, context);
+    if (explanation) return explanation;
+  }
   if (hint.technique === "Skyscraper") {
     const explanation = skyscraperExplanation(hint);
     if (explanation) return explanation;
@@ -428,6 +591,9 @@ export function contextualHintExplanation(hint: Hint, context: ContextualHintCon
     const explanation = hiddenRectangleExplanation(hint, context);
     if (explanation) return explanation;
   }
+
+  const instructionExplanation = gridSpecificInstructionExplanation(hint, context);
+  if (instructionExplanation) return instructionExplanation;
 
   const evidence = cellList(hint.evidence);
   if (hint.technique === "Full house" || hint.technique === "Last digit" || hint.technique.includes("single")) {

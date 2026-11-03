@@ -208,7 +208,7 @@ test("XYZ-Wing explanation labels its three-candidate pivot and proves the share
     { cell: 12, label: "Wing A" },
     { cell: 24, label: "Wing B" },
   ]);
-  assert.match(explanation.steps.join(" "), /shared Z digit is 6/);
+  assert.match(explanation.steps.join(" "), /digit shared by all three pattern cells is 6/);
   assert.match(explanation.steps.join(" "), /sees all three possible places for 6/);
 });
 
@@ -439,6 +439,48 @@ test("Chute Remote Pair explains the reported grid with real cells and digits", 
     "So inspect cells that see both R1C1 and R3C6; 5 cannot remain in such a cell.",
   ]);
   assert.equal(hint?.instruction?.frames.at(-1)?.show.includes("conclusion"), true);
+});
+
+test("every catalogue hint has a grid-specific explanation without symbolic placeholders", async () => {
+  const puzzles = JSON.parse(await readFile(new URL("../src/data/puzzles.json", import.meta.url), "utf8")) as Puzzle[];
+  const techniques = new Set<string>();
+  let explanationCount = 0;
+
+  for (const puzzle of puzzles) {
+    const values = [...puzzle.givens].map((value) => value === "0" ? "" : value);
+    const eliminated = Array.from({ length: 81 }, () => [] as number[]);
+    const path = buildHintPath(values, eliminated, { solution: puzzle.solution, givens: puzzle.givens });
+    assert.equal(path.complete, true, `${puzzle.id} must retain a complete explanation path`);
+
+    for (const hint of path.hints) {
+      const candidates = values.map((value, cell) => value ? [] : candidateList(values, cell, eliminated));
+      const explanation = contextualHintExplanation(hint, { values, givens: puzzle.givens, candidates });
+      const teachingText = [explanation.definition || "", ...explanation.steps, ...(explanation.roles || []).map(({ detail }) => detail)].join(" ");
+      techniques.add(hint.technique);
+      explanationCount += 1;
+
+      assert.ok(explanation.definition, `${hint.technique} must define the pattern in plain language`);
+      assert.ok(explanation.steps.length >= 2, `${hint.technique} must provide at least two reasoning steps`);
+      assert.doesNotMatch(teachingText, /\b[WXYZ]\b(?!-)/, `${hint.technique} must use the grid's digits instead of symbolic placeholders`);
+      assert.doesNotMatch(teachingText, /could not be reconstructed|does not yet have|not yet have/i, `${hint.technique} must not expose an unfinished explanation`);
+      assert.equal(explanation.steps.some((step) => /^(?:pivot|pincers?)\.?$/i.test(step)), false, `${hint.technique} must explain cell roles rather than merely naming them`);
+      assert.match(teachingText, /R\dC\d|row|column|box|house|cell/i, `${hint.technique} must connect the rule to this grid`);
+      assert.match(explanation.conclusion, /^(?:Place|Remove) /, `${hint.technique} must keep a separate revealable conclusion`);
+      if (hint.technique === "WXYZ-Wing") {
+        assert.match(explanation.definition || "", /two-candidate bridge/i);
+        assert.match(explanation.steps.join(" "), /If R\dC\d is \d.*If R\dC\d is not \d/s);
+      }
+      if (hint.technique === "Chute Remote Pair") {
+        assert.match(explanation.definition || "", /band|stack/);
+        assert.match(explanation.steps.join(" "), /forcing the pair cells to opposite values|pair cell is forced/s);
+      }
+
+      applyLogicalHint(values, eliminated, hint);
+    }
+  }
+
+  assert.ok(techniques.size >= 42, "the audit must cover every technique currently reached by the catalogue");
+  assert.ok(explanationCount >= 4500, "the audit must cover the complete current catalogue path");
 });
 
 test("applying a hint keeps solver eliminations and visible notes in sync", () => {

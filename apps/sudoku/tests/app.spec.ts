@@ -794,12 +794,12 @@ test("hints can show answers, be dismissed, and remain available in history", as
   await expect(page.getByRole("button", { name: "Show answer" })).toBeVisible();
   const reasoning = page.locator(".hint-reasoning");
   await expect(reasoning).toHaveAttribute("open", "");
-  await expect(reasoning.locator("summary")).toContainText("Learn and walk through");
-  await expect(reasoning).toContainText("What the rule means");
-  await expect(reasoning).toContainText("Why it works");
-  await expect(reasoning).toContainText("How to spot it");
+  await expect(reasoning.locator("summary")).toContainText("How this");
+  await expect(reasoning).toContainText("Rule in plain language");
+  await expect(reasoning).toContainText("Follow the logic");
+  await expect(reasoning).toContainText("Your turn:");
   await expect(reasoning.locator("li")).not.toHaveCount(0);
-  await expect(reasoning).toContainText(/Row [1-9], column [1-9]/);
+  await expect(reasoning).toContainText(/R[1-9]C[1-9]|row|column|box/i);
   await expect(page.getByRole("button", { name: "Dismiss hint" })).toBeVisible();
 
   await page.getByRole("button", { name: "Show answer" }).click();
@@ -911,16 +911,16 @@ test("BUG +1 teaches the exceptional candidate before revealing the exact placem
   await page.getByRole("button", { name: "Show pattern" }).click();
 
   const panel = page.locator(".hint-panel");
-  await expect(panel).toContainText("All unsolved cells are bivalue cells except one with three candidates");
-  await expect(panel).toContainText("Why it works");
-  await expect(panel).toContainText("Without X in that cell, the grid would be all bivalue cells");
-  await expect(panel).toContainText("the one cell with three candidates; 5 is the extra");
-  await expect(panel).toContainText("Row 5, column 9 · 5");
+  await expect(panel).toContainText("R5C9 contains the extra candidate in an otherwise bivalue grid");
+  await expect(panel).toContainText(/bivalue.*means every other unsolved cell has two candidates/);
+  await expect(panel).toContainText("Removing the extra candidate would restore a perfectly paired pattern");
+  await expect(panel).toContainText("The one cell with three candidates; 5 is the extra");
+  await expect(panel).toContainText("R5C9 · candidates 2/4/5");
   await expect(panel).toContainText("Its row, column and box, each holding 5 three times");
   await expect(panel).toContainText("Your turn:");
   await expect(panel).not.toContainText("Place 5 in Row 5, column 9");
   await expect(panel.locator(".hint-answer")).toHaveCount(0);
-  await expect(page.locator('[data-cell="44"] .hint-role-badge')).toHaveText("B");
+  await expect(page.locator('[data-cell="44"] .hint-role-badge')).toHaveText("P");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 
@@ -1069,13 +1069,13 @@ test("Finned Jellyfish names its exact roles and teaches the logic before the an
 
   const panel = page.locator(".hint-panel");
   await expect(panel).toContainText("Finned Jellyfish");
-  await expect(panel).toContainText("What the rule means");
-  await expect(panel).toContainText("If no fin is true");
+  await expect(panel).toContainText("Rule in plain language");
+  await expect(panel).toContainText("If every fin is false");
   await expect(panel).toContainText("Base rows: the 6s of the fish");
   await expect(panel).toContainText("Cover columns: where the base's 6s must land");
-  await expect(panel).toContainText("Row 1, column 9");
-  await expect(panel).toContainText("Row 3, column 8");
-  await expect(panel).toContainText("Row 3, column 9");
+  await expect(panel).toContainText("R1C9");
+  await expect(panel).toContainText("R3C8");
+  await expect(panel).toContainText("R3C9");
   await expect(panel).not.toContainText("Remove 6 from Row 2, column 7");
   await expect(page.locator('[data-cell="8"] .hint-role-badge')).toHaveText("F");
   await page.getByRole("button", { name: "Show answer" }).click();
