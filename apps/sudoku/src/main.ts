@@ -617,8 +617,14 @@ function hintAnswer(hint: Hint) {
   return hint.targets.map((target) => `${action} ${target.digit}${joiner}${cellLabel(target.cell)}`).join("; ") + ".";
 }
 
-function hintPreview(hint: Hint) {
-  if (hint.instruction) return { summary: hint.instruction.what, explanation: hint.instruction.spot };
+function hintPreview(hint: Hint, game: Game) {
+  if (hint.instruction) {
+    const guide = contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre });
+    return {
+      summary: guide.definition || guide.steps[0] || `The highlighted cells form a ${hint.technique}.`,
+      explanation: guide.definition ? guide.steps[0] || "Follow the grid-specific walkthrough below." : guide.steps[1] || "Follow the grid-specific walkthrough below.",
+    };
+  }
   if (hint.technique === "Full house") return { summary: "One highlighted unit has a single empty cell.", explanation: "Identify the only digit missing from that row, column, or box." };
   if (hint.technique === "Last digit") return { summary: "One digit has already been placed eight times.", explanation: "Scan the grid for the only row and column where its final copy can go." };
   if (hint.technique === "Naked single") return { summary: "One focus cell has only one possible candidate.", explanation: "Use the placed digits in its row, column, and box to rule out the other candidates." };
@@ -655,39 +661,16 @@ function contextualExplanationBodyMarkup(explanation: ContextualHintExplanation,
   return `${explanation.definition ? `<p class="hint-definition"><strong>Rule in plain language:</strong> ${escapeHtml(explanation.definition)}</p>` : ""}${roles}<h4>Follow the logic</h4><ol>${explanation.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>${conclusion}`;
 }
 
-function hintExplanationMarkup(hint: Hint, game: Game): string {
-  if (hint.instruction) {
-    const guide = hint.instruction;
-    const walkthrough = guide.frames.filter((frame) => !frame.show.includes("conclusion"));
-    const aliases = guide.aliases.length ? `<p class="hint-aliases"><strong>Also called:</strong> ${guide.aliases.map(escapeHtml).join(", ")}</p>` : "";
-    const roleRows = [
-      ["Pattern", guide.labels.primary || "Pattern candidates", guide.primary],
-      ["Support", guide.labels.secondary || "Supporting candidates", guide.secondary],
-      ["Fin", guide.labels.fins || "Exception candidates", guide.fins],
-    ] as const;
-    const roles = roleRows.filter(([, , items]) => items.length).map(([role, label, items]) => `<div><dt>${escapeHtml(role)}</dt><dd><strong>${escapeHtml(label)}</strong><br>${items.map(({ cell, digit }) => `${cellLabel(cell)} · ${digit}`).join(", ")}</dd></div>`).join("");
-    return `<details class="hint-reasoning" open><summary>Learn and walk through ${escapeHtml(hint.technique)}</summary>
-      <div class="hint-guide"><h4>What the rule means</h4><p>${escapeHtml(guide.what)}</p><h4>Why it works</h4><p>${escapeHtml(guide.why)}</p><h4>How to spot it</h4><p>${escapeHtml(guide.spot)}</p>${aliases}</div>
-      ${roles ? `<h4>What the highlighted cells mean</h4><dl class="hint-role-list">${roles}</dl>` : ""}
-      <h4>Walk through this grid</h4><ol class="hint-walkthrough">${walkthrough.map((frame) => `<li>${escapeHtml(frame.text)}</li>`).join("")}</ol>
-      <p class="hint-question"><strong>Your turn:</strong> Use the highlighted roles and the steps above to find the deduction. The answer remains hidden until you choose Show answer.</p>
-      <small class="hint-source">Explanation and pattern data: sudokUI · pinned revision ${escapeHtml(guide.revision.slice(0, 8))}</small>
-    </details>`;
-  }
+function hintExplanationMarkup(hint: Hint, game: Game, revealConclusion: boolean): string {
   const explanation = contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre });
-  return `<details class="hint-reasoning" open><summary>${escapeHtml(explanation.title)}</summary>${contextualExplanationBodyMarkup(explanation, false)}</details>`;
+  const source = hint.instruction
+    ? `<small class="hint-source">Pattern verified by sudokUI · pinned revision ${escapeHtml(hint.instruction.revision.slice(0, 8))}</small>`
+    : "";
+  return `<details class="hint-reasoning" open><summary>${escapeHtml(explanation.title)}</summary>${contextualExplanationBodyMarkup(explanation, revealConclusion)}${source}</details>`;
 }
 
 function hintCellRoles(hint: Hint, game: Game): HintCellRole[] {
-  if (!hint.instruction) return contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre }).roles || [];
-  const roles: HintCellRole[] = [];
-  const add = (items: Array<{ cell: number; digit: number }>, label: string, badge: string, detail: string) => {
-    for (const item of items) if (!roles.some((role) => role.cell === item.cell)) roles.push({ cell: item.cell, label, badge, detail: `${detail} Candidate ${item.digit}.` });
-  };
-  add(hint.instruction.primary, "Pattern", "B", hint.instruction.labels.primary || "A base pattern cell.");
-  add(hint.instruction.secondary, "Support", "C", hint.instruction.labels.secondary || "A supporting or cover cell.");
-  add(hint.instruction.fins, "Fin", "F", hint.instruction.labels.fins || "An exception cell that constrains the deduction.");
-  return roles;
+  return contextualHintExplanation(hint, { values: game.values, givens: game.puzzle.givens, candidates: game.centre }).roles || [];
 }
 
 function hintTrainingMarkup(hint: Hint): string {
@@ -739,7 +722,7 @@ function renderPlayer() {
     }
   } else activeHint = null;
   const answerShown = activeHint?.id === revealedHintId;
-  const preview = activeHint ? hintPreview(activeHint) : null;
+  const preview = activeHint ? hintPreview(activeHint, game) : null;
   const nextChallenge = game.completedAt ? nextChallengePuzzle(catalogue, game) : null;
   const patternShown = reviewingHistory ? historicalHintStage === "preview" : game.hintStage === "preview";
   const boardHint = patternShown ? activeHint : null;
@@ -747,7 +730,7 @@ function renderPlayer() {
   const hintPanel = activeHint && preview
     ? !patternShown
       ? `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}Minimal hint</span><h3>${escapeHtml(activeHint.technique)}</h3><p>Look for this strategy in the current grid.</p><div class="actions"><button id="show-hint-pattern" class="secondary compact">Show pattern</button><button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
-      : `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${hintExplanationMarkup(activeHint, game)}${hintTrainingMarkup(activeHint)}${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown && !reviewingHistory ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : !answerShown ? `<button id="show-hint-answer" class="secondary compact">Show answer</button>` : ""}<button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
+      : `<div class="hint-panel" role="status"><span class="eyebrow">${reviewingHistory ? "Previous hint · " : ""}${escapeHtml(activeHint.technique)}</span><h3>${escapeHtml(preview.summary)}</h3><p>${escapeHtml(preview.explanation)}</p>${hintExplanationMarkup(activeHint, game, answerShown)}${hintTrainingMarkup(activeHint)}${answerShown ? `<p class="hint-answer"><strong>Answer:</strong> ${escapeHtml(hintAnswer(activeHint))}</p>` : ""}<div class="actions">${answerShown && !reviewingHistory ? `<button id="apply-hint" class="primary compact">Apply deduction</button>` : !answerShown ? `<button id="show-hint-answer" class="secondary compact">Show answer</button>` : ""}<button id="dismiss-hint" class="text-button">${reviewingHistory ? "Close review" : "Dismiss hint"}</button></div></div>`
     : "";
   const celebrating = celebratingGameId === game.id && Boolean(game.completedAt);
   const failed = Boolean(game.failedAt);
