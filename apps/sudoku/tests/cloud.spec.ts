@@ -158,7 +158,6 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   });
   await first.reload();
   await expect(first.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible();
-  await second.getByRole("button", { name: /Home/ }).click();
   await expect(second.getByRole("heading", { name: "Completed puzzles" })).toBeVisible();
   await expect(second.getByRole("button", { name: /Review Easy puzzle/ })).toBeVisible();
 
