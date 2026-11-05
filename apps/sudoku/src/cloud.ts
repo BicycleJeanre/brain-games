@@ -24,6 +24,7 @@ import {
 } from "firebase/firestore";
 import type { Store } from "./store.ts";
 import type { AnnotationColour, AppData, BoardSnapshot, Game, Preferences, TrainingProgress } from "./types.ts";
+import { compareSyncVersions, remoteWinsConcurrentWrite } from "../../../src/sync-version.ts";
 
 const environment = import.meta.env ?? {};
 const config = {
@@ -228,7 +229,7 @@ export class CloudSync {
         this.reconciledGames = true;
         for (const game of Object.values(this.store.data.games)) {
           const remote = remoteGames.get(game.id);
-          if (game.cloudDirty || !remote || ((!game.cloudRevision || !remote.cloudRevision) && game.updatedAt > remote.updatedAt)) this.queueGame(game);
+          if (game.cloudDirty || !remote || compareSyncVersions(game, remote) > 0) this.queueGame(game);
         }
         for (const id of Object.keys(this.store.data.deletedGames)) if (remoteGames.has(id)) this.queueDelete(id);
         this.updateReady();
@@ -276,18 +277,24 @@ export class CloudSync {
     if (!this.user || !database) return true;
     const game = this.store.data.games[id];
     if (!game) return true;
-    const syncedUpdatedAt = Math.max(game.updatedAt, queuedUpdatedAt);
+    const snapshot = structuredClone(game);
+    const syncedUpdatedAt = Math.max(snapshot.updatedAt, queuedUpdatedAt);
     const reference = doc(database, "users", this.user.uid, "sudokuGames", game.id);
     try {
-      const encoded = encodeCloudGame(game);
-      const revision = await runTransaction(database, async (transaction) => {
+      const encoded = encodeCloudGame(snapshot);
+      const result = await runTransaction(database, async (transaction) => {
         const remote = await transaction.get(reference);
         const remoteGame = decodeCloudGame(remote.data());
-        const nextRevision = Math.max(remoteGame?.cloudRevision || 0, game.cloudRevision || 0) + 1;
+        if (remoteGame && remoteWinsConcurrentWrite(snapshot, remoteGame)) return { revision: remoteGame.cloudRevision || 0, remote: remoteGame };
+        const nextRevision = Math.max(remoteGame?.cloudRevision || 0, snapshot.cloudRevision || 0) + 1;
         transaction.set(reference, { ...encoded, cloudRevision: nextRevision });
-        return nextRevision;
+        return { revision: nextRevision, remote: null };
       });
-      await this.store.markGameSynced(id, revision, syncedUpdatedAt);
+      if (result.remote) {
+        if (await this.store.acceptCloudGameConflict(result.remote, snapshot.updatedAt)) this.changed();
+        return true;
+      }
+      await this.store.markGameSynced(id, result.revision, syncedUpdatedAt);
       return true;
     } catch (error) {
       this.fail(error);

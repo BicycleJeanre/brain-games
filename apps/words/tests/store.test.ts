@@ -50,6 +50,35 @@ test("store persists found words in IndexedDB", async () => {
   assert.deepEqual(reloaded.data.progress[puzzle.id]?.foundWordIds, [puzzle.words[0]!.id]);
 });
 
+test("cloud conflict resolution uses edit time before revision and preserves edits made in flight", async () => {
+  const { remoteWinsConcurrentWrite } = await import("../../../src/sync-version.ts");
+  const puzzle = wordSearches[0]!;
+  const store = new Store();
+  await store.load();
+  await store.clearProgress("all");
+  const local = newProgress(puzzle, 500);
+  local.updatedAt = 700;
+  local.cloudRevision = 3;
+  local.foundWordIds = ["local"];
+  store.data.progress[puzzle.id] = local;
+  delete store.data.deletedProgress[puzzle.id];
+  await store.persistProgress(puzzle.id);
+
+  const staleHigherRevision = { ...structuredClone(local), updatedAt: 650, cloudRevision: 4, foundWordIds: ["stale"] };
+  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), false, "a stale device cannot win by incrementing the revision");
+
+  const newerRemote = { ...structuredClone(staleHigherRevision), updatedAt: 750 };
+  assert.equal(remoteWinsConcurrentWrite(local, newerRemote), true);
+  assert.equal(await store.acceptRemoteProgressConflict(puzzle.id, newerRemote, 700), true);
+  assert.deepEqual(store.data.progress[puzzle.id]?.foundWordIds, ["stale"]);
+
+  store.data.progress[puzzle.id]!.updatedAt = 800;
+  store.data.progress[puzzle.id]!.foundWordIds = ["in-flight"];
+  const newestRemote = { ...structuredClone(newerRemote), updatedAt: 900 };
+  assert.equal(await store.acceptRemoteProgressConflict(puzzle.id, newestRemote, 700), false, "an edit made while the transaction runs is not replaced");
+  assert.deepEqual(store.data.progress[puzzle.id]?.foundWordIds, ["in-flight"]);
+});
+
 test("word sessions use independent IndexedDB records", async () => {
   const store = new Store();
   await store.load();

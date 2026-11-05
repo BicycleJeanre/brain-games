@@ -136,10 +136,10 @@ test("cloud merge keeps the newest puzzle and settings versions", async () => {
   local.values[0] = "1";
   await store.putGame(local);
   await store.markGameSynced(local.id, 1, local.updatedAt);
-  const older = structuredClone(local); older.updatedAt = 250; older.values[0] = "2";
+  const older = structuredClone(local); older.updatedAt = local.updatedAt - 50; older.values[0] = "2";
   assert.equal(await store.mergeCloudGame(older), false);
   assert.equal(store.data.games[local.id].values[0], "1");
-  const newer = structuredClone(local); newer.cloudRevision = 2; newer.updatedAt = 350; newer.values[0] = "3";
+  const newer = structuredClone(local); newer.cloudRevision = 2; newer.updatedAt = local.updatedAt + 50; newer.values[0] = "3";
   assert.equal(await store.mergeCloudGame(newer), true);
   assert.equal(store.data.games[local.id].values[0], "3");
   await store.markSettingsSynced(1, store.data.settingsUpdatedAt);
@@ -147,6 +147,39 @@ test("cloud merge keeps the newest puzzle and settings versions", async () => {
   assert.equal(await store.mergeCloudSettings({ cloudRevision: 2, preferences: remotePreferences, activeGameId: local.id, trainingProgress: { "naked-single": { attempts: 3, correct: 3, completed: 3, mastered: true, lastPracticedAt: 123 } }, updatedAt: store.data.settingsUpdatedAt + 10 }), true);
   assert.equal(store.data.preferences.theme, "dark");
   assert.equal(store.data.trainingProgress["naked-single"]?.mastered, true);
+});
+
+test("cloud conflict resolution uses edit time before revision and preserves edits made in flight", async () => {
+  const { Store } = await import("../src/store.ts");
+  const { remoteWinsConcurrentWrite } = await import("../../../src/sync-version.ts");
+  const store = new Store();
+  await store.clear("all");
+  const local = createGame(puzzle, 500);
+  local.updatedAt = 700;
+  local.cloudRevision = 3;
+  local.cloudDirty = true;
+  local.values[0] = "1";
+  await store.putGame(local, false, false);
+
+  const staleHigherRevision = structuredClone(local);
+  staleHigherRevision.updatedAt = 650;
+  staleHigherRevision.cloudRevision = 4;
+  staleHigherRevision.cloudDirty = false;
+  staleHigherRevision.values[0] = "2";
+  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), false, "a stale device cannot win by incrementing the revision");
+
+  const newerRemote = structuredClone(staleHigherRevision);
+  newerRemote.updatedAt = 750;
+  assert.equal(remoteWinsConcurrentWrite(local, newerRemote), true);
+  assert.equal(await store.acceptCloudGameConflict(newerRemote, 700), true);
+  assert.equal(store.data.games[local.id].values[0], "2");
+
+  store.data.games[local.id].updatedAt = 800;
+  store.data.games[local.id].values[0] = "3";
+  const newestRemote = structuredClone(newerRemote);
+  newestRemote.updatedAt = 900;
+  assert.equal(await store.acceptCloudGameConflict(newestRemote, 700), false, "an edit made while the transaction runs is not replaced");
+  assert.equal(store.data.games[local.id].values[0], "3");
 });
 
 test("deleted puzzles stay deleted when a stale cloud game arrives", async () => {

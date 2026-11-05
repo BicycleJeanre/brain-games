@@ -2,6 +2,7 @@ import type { Auth, User } from "firebase/auth";
 import type { Firestore, Unsubscribe } from "firebase/firestore";
 import { normalizeData, type Store } from "./store.ts";
 import type { AppData, Preferences, PuzzleProgress } from "./types.ts";
+import { compareSyncVersions, remoteWinsConcurrentWrite } from "../../../src/sync-version.ts";
 
 const environment = import.meta.env ?? {};
 const config = {
@@ -195,9 +196,7 @@ export class CloudSync {
         this.reconciledProgress = true;
         for (const [id, progress] of Object.entries(this.store.data.progress)) {
           const cloud = remote.get(id);
-          const localRevision = progress.cloudRevision || 0;
-          const remoteRevision = cloud?.cloudRevision || 0;
-          if (!cloud || localRevision > remoteRevision || localRevision === remoteRevision && progress.updatedAt > cloud.updatedAt) this.queueProgress(progress, id);
+          if (!cloud || compareSyncVersions(progress, cloud) > 0) this.queueProgress(progress, id);
         }
         this.updateReady();
       }
@@ -260,16 +259,22 @@ export class CloudSync {
     const progress = this.store.data.progress[id];
     if (!this.user || !available || !progress) return true;
     const { database, firestoreApi } = await available;
+    const snapshot = structuredClone(progress);
     const reference = firestoreApi.doc(database, "users", this.user.uid, "wordProgress", id);
-    const encoded = encodeProgress(id, progress);
+    const encoded = encodeProgress(id, snapshot);
     try {
-      const revision = await firestoreApi.runTransaction(database, async (transaction) => {
+      const result = await firestoreApi.runTransaction(database, async (transaction) => {
         const remote = decodeProgress((await transaction.get(reference)).data());
-        const nextRevision = Math.max(remote?.progress.cloudRevision || 0, progress.cloudRevision || 0) + 1;
+        if (remote && remoteWinsConcurrentWrite(snapshot, remote.progress)) return { revision: remote.progress.cloudRevision || 0, remote: remote.progress };
+        const nextRevision = Math.max(remote?.progress.cloudRevision || 0, snapshot.cloudRevision || 0) + 1;
         transaction.set(reference, { ...encoded, cloudRevision: nextRevision });
-        return nextRevision;
+        return { revision: nextRevision, remote: null };
       });
-      if ((this.store.data.progress[id]?.updatedAt || 0) <= queuedUpdatedAt) await this.store.markProgressSynced(id, revision);
+      if (result.remote) {
+        if (await this.store.acceptRemoteProgressConflict(id, result.remote, snapshot.updatedAt)) this.changed(true);
+        return true;
+      }
+      if ((this.store.data.progress[id]?.updatedAt || 0) <= Math.max(queuedUpdatedAt, snapshot.updatedAt)) await this.store.markProgressSynced(id, result.revision);
       return true;
     } catch (error) { this.fail(error); return false; }
   }

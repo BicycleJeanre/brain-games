@@ -1,4 +1,5 @@
 import { openDB } from "idb";
+import { compareSyncVersions } from "../../../src/sync-version.ts";
 import { CATALOGUE_VERSION } from "./catalogue.ts";
 import { isPuzzleComplete } from "./puzzles.ts";
 import type { AppData, ChallengeCadence, Difficulty, Preferences, Puzzle, PuzzleProgress } from "./types.ts";
@@ -334,9 +335,7 @@ export class Store {
     for (const [id, progress] of Object.entries(incoming.progress)) {
       if ((this.data.deletedProgress[id] ?? 0) >= progress.updatedAt) continue;
       const local = this.data.progress[id];
-      const remoteIsNewer = !local || (local.cloudRevision && progress.cloudRevision
-        ? progress.cloudRevision > local.cloudRevision || progress.cloudRevision === local.cloudRevision && progress.updatedAt > local.updatedAt
-        : local.updatedAt < progress.updatedAt);
+      const remoteIsNewer = !local || compareSyncVersions(progress, local) > 0;
       if (remoteIsNewer) { this.data.progress[id] = progress; changedProgress.add(id); }
     }
     for (const [id, deletedAt] of Object.entries(incoming.deletedProgress)) {
@@ -366,11 +365,20 @@ export class Store {
     const normalized = normalizeData({ version: 1, progress: { [sessionId]: progress } }).progress[sessionId];
     if (!normalized || (this.data.deletedProgress[sessionId] ?? 0) >= normalized.updatedAt) return false;
     const local = this.data.progress[sessionId];
-    const remoteIsNewer = !local || (local.cloudRevision && normalized.cloudRevision
-      ? normalized.cloudRevision > local.cloudRevision || normalized.cloudRevision === local.cloudRevision && normalized.updatedAt > local.updatedAt
-      : normalized.updatedAt > local.updatedAt);
+    const remoteIsNewer = !local || compareSyncVersions(normalized, local) > 0;
     if (!remoteIsNewer) return false;
     const contentChanged = !local || JSON.stringify({ ...local, cloudRevision: 0 }) !== JSON.stringify({ ...normalized, cloudRevision: 0 });
+    this.data.progress[sessionId] = normalized;
+    await this.saveProgress(sessionId, false);
+    return contentChanged;
+  }
+
+  async acceptRemoteProgressConflict(sessionId: string, progress: PuzzleProgress, expectedLocalUpdatedAt: number) {
+    const normalized = normalizeData({ version: 1, progress: { [sessionId]: progress } }).progress[sessionId];
+    if (!normalized || (this.data.deletedProgress[sessionId] ?? 0) >= normalized.updatedAt) return false;
+    const local = this.data.progress[sessionId];
+    if (!local || local.updatedAt !== expectedLocalUpdatedAt || compareSyncVersions(normalized, local) < 0) return false;
+    const contentChanged = JSON.stringify({ ...local, cloudRevision: 0 }) !== JSON.stringify({ ...normalized, cloudRevision: 0 });
     this.data.progress[sessionId] = normalized;
     await this.saveProgress(sessionId, false);
     return contentChanged;
