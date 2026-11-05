@@ -95,6 +95,8 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
     if (game.updatedAt !== contentUpdatedAt) throw new Error("Timer-only save changed the content timestamp");
   });
 
+  await first.getByRole("button", { name: "Sudoku home" }).click();
+  await first.getByRole("button", { name: /Resume puzzle/ }).click();
   await first.locator(`[data-cell="${laterCell}"]`).click();
   await first.keyboard.press("2");
   await first.waitForTimeout(2_500);
