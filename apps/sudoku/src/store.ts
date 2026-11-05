@@ -1,4 +1,5 @@
 import { openDB } from "idb";
+import { compareSyncVersions } from "../../../src/sync-version.ts";
 import type { AnnotationColour, AppData, BoardSnapshot, ColourLine, Game, HintPath, Preferences, TrainingProgress, TrainingTechniqueId } from "./types.ts";
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -289,14 +290,18 @@ export class Store {
     if (this.data.deletedGames[game.id]) return false;
     const local = this.data.games[game.id];
     if (local?.cloudDirty) return false;
-    if (local) {
-      const localRevision = local.cloudRevision || 0;
-      const remoteRevision = game.cloudRevision || 0;
-      const remoteIsNewer = localRevision > 0 && remoteRevision > 0
-        ? remoteRevision > localRevision
-        : game.updatedAt > local.updatedAt;
-      if (!remoteIsNewer) return false;
-    }
+    if (local && compareSyncVersions(game, local) <= 0) return false;
+    this.data.games[game.id] = game;
+    await (await database).put(stateStore, game, gameKey(game.id));
+    return true;
+  }
+
+  async acceptCloudGameConflict(game: Game, expectedLocalUpdatedAt: number) {
+    normalizeGame(game);
+    if (this.data.deletedGames[game.id]) return false;
+    const local = this.data.games[game.id];
+    if (!local || local.updatedAt !== expectedLocalUpdatedAt || compareSyncVersions(game, local) < 0) return false;
+    game.cloudDirty = false;
     this.data.games[game.id] = game;
     await (await database).put(stateStore, game, gameKey(game.id));
     return true;
