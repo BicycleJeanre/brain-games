@@ -50,7 +50,22 @@ test("store persists found words in IndexedDB", async () => {
   assert.deepEqual(reloaded.data.progress[puzzle.id]?.foundWordIds, [puzzle.words[0]!.id]);
 });
 
-test("cloud conflict resolution uses edit time before revision and preserves edits made in flight", async () => {
+test("opening an existing session does not queue a new cloud revision", async () => {
+  const puzzle = wordSearches[0]!;
+  const store = new Store();
+  await store.load();
+  await store.clearProgress("all");
+  let queued = 0;
+  store.onProgressSaved = () => { queued++; };
+  await store.start(puzzle);
+  assert.equal(queued, 1, "creating a session queues its initial state");
+  const updatedAt = store.data.progress[puzzle.id]!.updatedAt;
+  await store.start(puzzle);
+  assert.equal(queued, 1, "reopening the same session is not a progress edit");
+  assert.equal(store.data.progress[puzzle.id]!.updatedAt, updatedAt);
+});
+
+test("cloud conflict resolution requires current revision ancestry and preserves edits made in flight", async () => {
   const { remoteWinsConcurrentWrite } = await import("../../../src/sync-version.ts");
   const puzzle = wordSearches[0]!;
   const store = new Store();
@@ -65,9 +80,9 @@ test("cloud conflict resolution uses edit time before revision and preserves edi
   await store.persistProgress(puzzle.id);
 
   const staleHigherRevision = { ...structuredClone(local), updatedAt: 650, cloudRevision: 4, foundWordIds: ["stale"] };
-  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), false, "a stale device cannot win by incrementing the revision");
+  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), true, "a newer cloud revision wins even when the stale device has a later edit time");
 
-  const newerRemote = { ...structuredClone(staleHigherRevision), updatedAt: 750 };
+  const newerRemote = structuredClone(staleHigherRevision);
   assert.equal(remoteWinsConcurrentWrite(local, newerRemote), true);
   assert.equal(await store.acceptRemoteProgressConflict(puzzle.id, newerRemote, 700), true);
   assert.deepEqual(store.data.progress[puzzle.id]?.foundWordIds, ["stale"]);

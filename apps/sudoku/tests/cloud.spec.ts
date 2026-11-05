@@ -63,6 +63,69 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   await expect(second.locator(".sudoku-cell:not(.given)").first().locator(".colour-cues i")).toHaveCount(2);
   await expect(second.locator(".annotation-line.colour-rose:not(.preview)")).toHaveCount(1);
 
+  const laterCell = Number(await second.locator(".sudoku-cell:not(.given)").nth(1).getAttribute("data-cell"));
+  await secondContext.setOffline(true);
+  await second.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("strack-v1", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction("state", "readwrite");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const contentUpdatedAt = game.updatedAt;
+    game.elapsed += 30;
+    game.cloudDirty = true;
+    store.put(game, `game:${game.id}`);
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+    if (game.updatedAt !== contentUpdatedAt) throw new Error("Timer-only save changed the content timestamp");
+  });
+
+  await first.getByRole("button", { name: "Sudoku home" }).click();
+  await first.getByRole("button", { name: /Resume puzzle/ }).click();
+  await first.locator(`[data-cell="${laterCell}"]`).click();
+  await first.keyboard.press("2");
+  await first.waitForTimeout(2_500);
+  await expect(first.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible({ timeout: 10_000 });
+
+  await secondContext.setOffline(false);
+  await second.reload();
+  await expect.poll(() => second.evaluate(async (cell) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("strack-v1", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction("state", "readonly");
+    const store = transaction.objectStore("state");
+    const meta = await new Promise<any>((resolve, reject) => {
+      const request = store.get("meta");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const game = await new Promise<any>((resolve, reject) => {
+      const request = store.get(`game:${meta.activeGameId}`);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return { value: game.values[cell], dirty: game.cloudDirty };
+  }, laterCell), { timeout: 10_000 }).toEqual({ value: "2", dirty: false });
+
   await first.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("strack-v1", 1);
@@ -95,7 +158,6 @@ test("a signed-in puzzle session continues on a second device", async ({ browser
   });
   await first.reload();
   await expect(first.locator("[data-cloud-status]").filter({ hasText: "Synced" }).first()).toBeVisible();
-  await second.getByRole("button", { name: /Home/ }).click();
   await expect(second.getByRole("heading", { name: "Completed puzzles" })).toBeVisible();
   await expect(second.getByRole("button", { name: /Review Easy puzzle/ })).toBeVisible();
 

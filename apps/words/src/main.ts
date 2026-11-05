@@ -44,7 +44,6 @@ let cachedPuzzleIds = new Set<string>();
 let settingsMessage = "";
 let settingsError = false;
 let renderToken = 0;
-let timerSaveCounter = 0;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]!);
 const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -380,7 +379,7 @@ function help() {
       <article class="card help-card"><h2>Word Grid</h2><p>Trace or tap adjacent letters to build words of three or more letters. Move horizontally, vertically, or diagonally without reusing a tile. Each round has a fixed hidden target list; find every listed word to complete the puzzle. Other valid words earn bonus points.</p></article>
       <article class="card help-card"><h2>Letter Mix</h2><p>Tap letters in any order to build words of three or more letters without reusing a tile. Shuffle the tray for a new arrangement; targets, score, hints, and found words stay unchanged.</p></article>
       <article class="card help-card"><h2>Hints</h2><p>Word-search hints highlight one useful cell. Crossword hints reveal one letter. Word Grid hints reveal one letter at a time inside a hidden round-word entry without marking any grid tile. Hints work locally and stay recorded with your progress.</p></article>
-      <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected. When devices reconnect, the most recently saved edit wins; cloud revisions break same-time ties instead of letting an older snapshot win because it uploaded later.</p></article>
+      <article class="card help-card"><h2>Offline & privacy</h2><p>Your progress saves to IndexedDB first. The app shell, catalogue index, and ten most recently opened puzzles work offline. Older puzzle payloads are removed automatically without deleting progress. Firebase sync is optional and owner-protected. A device can upload progress only from the cloud revision it last received. If another device already advanced that revision, the newer cloud state loads first; opening a stale copy or saving its timer cannot make it authoritative.</p></article>
       <article class="card help-card"><h2>Challenges</h2><p>Daily and weekly selections are deterministic for every difficulty. Each challenge has its own saved session, works offline after its puzzle has been opened, and contributes to completion, average-time, and streak summaries.</p></article>
       <article class="card help-card"><h2>Backups & deletion</h2><p>Backup restore is non-destructive: it adds missing sessions and keeps existing ones. Delete one saved session from Home, or use scoped controls in Settings. Signed-in deletions synchronize through private tombstones.</p></article>
       <article class="card help-card"><h2>Puzzle provenance</h2><p>Every published puzzle names its source, generator version, and licence. Imported or generated previews are not published automatically.</p></article>
@@ -880,8 +879,7 @@ async function boot() {
     const sessionId = activeSessionId;
     if (!progress || !sessionId || progress.completedAt) return;
     progress.elapsedSeconds += 1;
-    progress.updatedAt = Date.now();
-    await store.persistProgress(sessionId, ++timerSaveCounter % 30 === 0);
+    await store.persistProgress(sessionId, false);
     const timer = app.querySelector<HTMLElement>(".timer");
     if (timer && store.data.preferences.showTimer) timer.textContent = formatTime(progress.elapsedSeconds);
   }, 1000);

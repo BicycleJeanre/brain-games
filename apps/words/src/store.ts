@@ -212,11 +212,14 @@ export class Store {
 
   async start(puzzle: Puzzle, sessionId = puzzle.id, challenge?: PuzzleProgress["challenge"]) {
     const existing = this.data.progress[sessionId];
+    let progressChanged = !existing;
     if (!existing) this.data.progress[sessionId] = newProgress(puzzle, Date.now(), challenge);
     else if (existing.completedAt && !isPuzzleComplete(puzzle, existing.foundWordIds, existing.entries)) {
       existing.completedAt = null;
       existing.updatedAt = Date.now();
+      progressChanged = true;
     }
+    if (sessionId in this.data.deletedProgress) progressChanged = true;
     delete this.data.deletedProgress[sessionId];
     if (this.data.activePuzzleId !== sessionId) this.data.settingsUpdatedAt = Date.now();
     this.data.activePuzzleId = sessionId;
@@ -226,7 +229,7 @@ export class Store {
       await transaction.store.put(this.meta(), META_KEY);
       await transaction.done;
     }
-    this.onProgressSaved?.(this.data.progress[sessionId]!, sessionId);
+    if (progressChanged) this.onProgressSaved?.(this.data.progress[sessionId]!, sessionId);
     this.onSettingsSaved?.();
     return this.data.progress[sessionId]!;
   }

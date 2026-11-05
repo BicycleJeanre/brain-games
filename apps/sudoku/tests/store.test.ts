@@ -112,6 +112,12 @@ test("local UI saves stay off the cloud queue while durable changes retain retry
   await store.markGameSynced(game.id, 4, savedAt);
   assert.equal(game.cloudRevision, 4);
   assert.equal(game.cloudDirty, false);
+
+  const contentUpdatedAt = game.updatedAt;
+  game.elapsed += 30;
+  await store.putGame(game, false, true, false);
+  assert.equal(game.updatedAt, contentUpdatedAt, "timer-only sync does not make an unchanged board newer");
+  assert.equal(game.cloudDirty, true);
 });
 
 test("rapid cloud-bound saves keep a strict order and stale acknowledgements stay dirty", async () => {
@@ -149,7 +155,7 @@ test("cloud merge keeps the newest puzzle and settings versions", async () => {
   assert.equal(store.data.trainingProgress["naked-single"]?.mastered, true);
 });
 
-test("cloud conflict resolution uses edit time before revision and preserves edits made in flight", async () => {
+test("cloud conflict resolution requires current revision ancestry and preserves edits made in flight", async () => {
   const { Store } = await import("../src/store.ts");
   const { remoteWinsConcurrentWrite } = await import("../../../src/sync-version.ts");
   const store = new Store();
@@ -166,10 +172,9 @@ test("cloud conflict resolution uses edit time before revision and preserves edi
   staleHigherRevision.cloudRevision = 4;
   staleHigherRevision.cloudDirty = false;
   staleHigherRevision.values[0] = "2";
-  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), false, "a stale device cannot win by incrementing the revision");
+  assert.equal(remoteWinsConcurrentWrite(local, staleHigherRevision), true, "a newer cloud revision wins even when the stale device has a later edit time");
 
   const newerRemote = structuredClone(staleHigherRevision);
-  newerRemote.updatedAt = 750;
   assert.equal(remoteWinsConcurrentWrite(local, newerRemote), true);
   assert.equal(await store.acceptCloudGameConflict(newerRemote, 700), true);
   assert.equal(store.data.games[local.id].values[0], "2");
