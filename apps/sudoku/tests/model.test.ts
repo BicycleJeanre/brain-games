@@ -3,9 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyColour, applyHint as applyGameHint, clearAllColours, clearColour, clearColours, clearLines, clearLinesByColour, createGame, digitIsComplete, enterDigit, fillAllCandidates, MAX_MISTAKES, promoteSoleCentre, redo, resetAllCandidates, selectCell, setMode, toggleLine, undo } from "../src/game.ts";
 import { contextualHintExplanation } from "../src/hint-explanation.ts";
-import { buildHintPath, findHint, hintRespectsGivens, nextHintFromPath } from "../src/hint-engine.ts";
+import { buildHintPath, buildStructuredInference, findHint, hintRespectsGivens, nextHintFromPath } from "../src/hint-engine.ts";
 import { applyHint as applyLogicalHint, candidateList, isHintApplicable, normalizePuzzle, solvePuzzle, validatePuzzle } from "../src/sudoku.ts";
 import type { Hint, Puzzle } from "../src/types.ts";
+import { emptyGrid, findStep, setValue } from "../vendor/sudokui/dist/index.js";
 
 const classic = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
 const solution = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
@@ -274,6 +275,77 @@ test("BUG +1 explains the exceptional cell and parity before separating the dedu
   assert.doesNotMatch(explanation.steps.join(" "), /Remove 2 and 4/);
   assert.match(explanation.conclusion, /Remove 2 and 4 from R5C9/);
   assert.match(explanation.conclusion, /5 is the only candidate left/);
+});
+
+test("Nice Loop explanation names every link reason and distinguishes the starting assumption", () => {
+  const candidates = Array.from({ length: 81 }, () => [] as number[]);
+  candidates[0] = [2, 7];
+  candidates[5] = [1, 2];
+  candidates[4] = [1, 2, 5];
+  candidates[31] = [1, 7, 8];
+  candidates[29] = [4, 7, 8];
+  candidates[2] = [4, 7, 8];
+  const explanation = contextualHintExplanation({
+    id: "nice-loop",
+    technique: "Nice Loop",
+    summary: "",
+    explanation: "",
+    kind: "place",
+    evidence: [0, 5, 4, 31, 29, 2],
+    targets: [{ cell: 0, digit: 7 }],
+    inference: {
+      premise: { candidate: { cell: 0, digit: 7 }, assumed: "false" },
+      closure: "premise-forces-opposite",
+      links: [
+        { from: [{ cell: 0, digit: 7 }], to: [{ cell: 0, digit: 2 }], strong: true, reason: { kind: "only-candidates-in-cell", cell: 0, digits: [2, 7] } },
+        { from: [{ cell: 0, digit: 2 }], to: [{ cell: 5, digit: 2 }], strong: false, reason: { kind: "shared-house-conflict", house: { kind: "row", index: 0 }, digit: 2 } },
+        { from: [{ cell: 5, digit: 2 }], to: [{ cell: 5, digit: 1 }], strong: true, reason: { kind: "only-candidates-in-cell", cell: 5, digits: [1, 2] } },
+        { from: [{ cell: 5, digit: 1 }], to: [{ cell: 4, digit: 1 }], strong: false, reason: { kind: "shared-house-conflict", house: { kind: "row", index: 0 }, digit: 1 } },
+        { from: [{ cell: 4, digit: 1 }], to: [{ cell: 31, digit: 1 }], strong: true, reason: { kind: "only-places-in-house", house: { kind: "column", index: 4 }, digit: 1 } },
+        { from: [{ cell: 31, digit: 1 }], to: [{ cell: 31, digit: 7 }], strong: false, reason: { kind: "same-cell-conflict", cell: 31 } },
+        { from: [{ cell: 31, digit: 7 }], to: [{ cell: 29, digit: 7 }], strong: true, reason: { kind: "only-places-in-house", house: { kind: "row", index: 3 }, digit: 7 } },
+        { from: [{ cell: 29, digit: 7 }], to: [{ cell: 2, digit: 7 }], strong: false, reason: { kind: "shared-house-conflict", house: { kind: "column", index: 2 }, digit: 7 } },
+        { from: [{ cell: 2, digit: 7 }], to: [{ cell: 0, digit: 7 }], strong: true, reason: { kind: "only-places-in-house", house: { kind: "row", index: 0 }, digit: 7 } },
+      ],
+    },
+  }, { candidates });
+
+  assert.equal(explanation.title, "Walk through this Nice Loop");
+  assert.match(explanation.definition || "", /tests the assumption that 7 at R1C1 is false/i);
+  assert.deepEqual(explanation.roles?.map(({ cell, label, badge }) => ({ cell, label, badge })), [
+    { cell: 0, label: "Start assumption", badge: "A" },
+    { cell: 5, label: "Chain step 1", badge: "1" },
+    { cell: 4, label: "Chain step 2", badge: "2" },
+    { cell: 31, label: "Chain step 3", badge: "3" },
+    { cell: 29, label: "Chain step 4", badge: "4" },
+    { cell: 2, label: "Chain step 5", badge: "5" },
+  ]);
+  const walk = explanation.steps.join(" ");
+  assert.match(walk, /R1C1 has only 2 and 7 as candidates/);
+  assert.match(walk, /R1C1 and R1C6 share Row 1, which can contain 2 only once/);
+  assert.match(walk, /in Column 5, 1 can appear only in R1C5 and R4C5/i);
+  assert.match(walk, /R4C5 can contain only one value/);
+  assert.match(walk, /in Row 4, 7 can appear only in R4C5 and R4C3/i);
+  assert.match(walk, /opposite of the starting assumption at R1C1/);
+  assert.match(explanation.conclusion, /Place 7 at R1C1/);
+});
+
+test("Nice Loop engine conversion preserves ordered endpoints and verifies every link reason", () => {
+  const puzzle = ".69..8.1.1.4..3....5......2..75.........3...5..6.1.7...289.5.3.......6...4..2..7.";
+  const grid = emptyGrid();
+  [...puzzle].forEach((value, cell) => {
+    const digit = Number(value);
+    if (digit) setValue(grid, cell, digit);
+  });
+  const step = findStep("NICE_LOOP", grid);
+  assert.ok(step, "the pinned engine should retain its Nice Loop exemplar");
+  const targets = step.placements.length ? step.placements : step.eliminations;
+  const inference = buildStructuredInference(step, grid, targets);
+  assert.ok(inference?.links.length);
+  assert.equal(inference.links.length, step.links?.length);
+  assert.ok(inference.links.every((link) => link.from.length > 0 && link.to.length > 0));
+  assert.ok(inference.links.every((link) => link.reason), "every ordinary Nice Loop link should have a verified cell or house reason");
+  assert.ok(inference.premise || inference.closure === "continuous-loop");
 });
 
 test("original clues cannot be used as editable corners of an Avoidable Rectangle", () => {

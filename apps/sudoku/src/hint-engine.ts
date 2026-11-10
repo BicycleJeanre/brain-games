@@ -11,7 +11,7 @@ import {
 } from "../vendor/sudokui/dist/index.js";
 import type { Hint as HoDoKuHint } from "../vendor/hodoku-ts/dist/index.js";
 import { candidateList } from "./sudoku.ts";
-import type { Hint, HintPath } from "./types.ts";
+import type { Hint, HintHouseRef, HintInferenceLink, HintInferenceReason, HintPath } from "./types.ts";
 
 export const HINT_ENGINE = "sudokUI 1f7831c6";
 
@@ -114,6 +114,83 @@ function uniqueCells(step: Step): number[] {
   ])];
 }
 
+function rowOf(cell: number): number { return Math.floor(cell / 9); }
+function columnOf(cell: number): number { return cell % 9; }
+function boxOf(cell: number): number { return Math.floor(rowOf(cell) / 3) * 3 + Math.floor(columnOf(cell) / 3); }
+
+function cellsInHouse(house: HintHouseRef): number[] {
+  if (house.kind === "row") return Array.from({ length: 9 }, (_, column) => house.index * 9 + column);
+  if (house.kind === "column") return Array.from({ length: 9 }, (_, row) => row * 9 + house.index);
+  const firstRow = Math.floor(house.index / 3) * 3;
+  const firstColumn = (house.index % 3) * 3;
+  return Array.from({ length: 9 }, (_, offset) => (firstRow + Math.floor(offset / 3)) * 9 + firstColumn + (offset % 3));
+}
+
+function commonHouses(cells: readonly number[]): HintHouseRef[] {
+  if (!cells.length) return [];
+  const houses: HintHouseRef[] = [];
+  if (cells.every((cell) => rowOf(cell) === rowOf(cells[0]))) houses.push({ kind: "row", index: rowOf(cells[0]) });
+  if (cells.every((cell) => columnOf(cell) === columnOf(cells[0]))) houses.push({ kind: "column", index: columnOf(cells[0]) });
+  if (cells.every((cell) => boxOf(cell) === boxOf(cells[0]))) houses.push({ kind: "box", index: boxOf(cells[0]) });
+  return houses;
+}
+
+function inferenceReason(
+  link: NonNullable<Step["links"]>[number],
+  grid: Grid,
+): HintInferenceReason | undefined {
+  const nodes = [...link.from, ...link.to];
+  const cells = [...new Set(nodes.map(({ cell }) => cell))];
+  const digits = [...new Set(nodes.map(({ digit }) => digit))];
+  if (cells.length === 1) {
+    if (!link.strong) return { kind: "same-cell-conflict", cell: cells[0] };
+    const liveDigits = candidateListFromMask(grid.cands[cells[0]]);
+    if (liveDigits.length === 2 && digits.every((digit) => liveDigits.includes(digit))) {
+      return { kind: "only-candidates-in-cell", cell: cells[0], digits: liveDigits };
+    }
+    return undefined;
+  }
+  if (digits.length !== 1) return undefined;
+  const digit = digits[0];
+  const houses = commonHouses(cells);
+  if (link.strong) {
+    const nodeCells = new Set(cells);
+    const house = houses.find((candidateHouse) => {
+      const possible = cellsInHouse(candidateHouse).filter((cell) => !grid.values[cell] && Boolean(grid.cands[cell] & bit(digit)));
+      return possible.length > 0 && possible.every((cell) => nodeCells.has(cell));
+    });
+    return house ? { kind: "only-places-in-house", house, digit } : undefined;
+  }
+  const house = houses[0];
+  return house ? { kind: "shared-house-conflict", house, digit } : undefined;
+}
+
+function candidateListFromMask(mask: number): number[] {
+  return Array.from({ length: 9 }, (_, index) => index + 1).filter((digit) => Boolean(mask & bit(digit)));
+}
+
+export function buildStructuredInference(step: Step, grid: Grid, targets: readonly { cell: number; digit: number }[]): Hint["inference"] | undefined {
+  if (!step.links?.length) return undefined;
+  const links: HintInferenceLink[] = step.links.map((link) => ({
+    from: link.from.map(({ cell, digit }) => ({ cell, digit })),
+    to: link.to.map(({ cell, digit }) => ({ cell, digit })),
+    strong: link.strong,
+    reason: inferenceReason(link, grid),
+    sourceText: link.text,
+  }));
+  if (step.tech !== "NICE_LOOP" && step.tech !== "GROUPED_NICE_LOOP") return { links };
+  const target = targets[0];
+  if (step.placements.length && target) {
+    return { links, premise: { candidate: target, assumed: "false" }, closure: "premise-forces-opposite" };
+  }
+  const first = links[0]?.from[0];
+  const discontinuousTarget = targets.find(({ cell, digit }) => cell === first?.cell && digit === first?.digit);
+  if (discontinuousTarget) {
+    return { links, premise: { candidate: discontinuousTarget, assumed: "true" }, closure: "premise-forces-opposite" };
+  }
+  return { links, closure: "continuous-loop" };
+}
+
 function targetMatchesContext(target: { cell: number; digit: number }, kind: Hint["kind"], context: HintContext): boolean {
   if (context.solution) {
     const solvedDigit = Number(context.solution[target.cell]);
@@ -208,7 +285,7 @@ function chuteRemotePairInstruction(step: Step, targets: readonly { cell: number
   };
 }
 
-function convertStep(step: Step, context: HintContext = {}): Hint | null {
+function convertStep(step: Step, grid: Grid, context: HintContext = {}): Hint | null {
   const kind: Hint["kind"] = step.placements.length ? "place" : "eliminate";
   const targets = (kind === "place" ? step.placements : step.eliminations)
     .filter((target) => targetMatchesContext(target, kind, context));
@@ -241,6 +318,7 @@ function convertStep(step: Step, context: HintContext = {}): Hint | null {
     evidence,
     targets,
     links: (step.links || []).flatMap(({ from, to, strong }) => from.length === 1 && to.length === 1 ? [{ from: from[0], to: to[0], strong }] : []),
+    inference: buildStructuredInference(step, grid, targets),
     instruction: {
       provider: "sudokUI",
       revision: "1f7831c6dc0fa118e1c7638e61c99756b1fa9d48",
@@ -276,7 +354,7 @@ export function buildHintPath(values: readonly string[], eliminated: readonly nu
   for (let guard = 0; guard < 1000 && grid.values.some((value) => !value); guard++) {
     const step = findNextStep(grid);
     if (!step) break;
-    const hint = convertStep(step, context);
+    const hint = convertStep(step, grid, context);
     if (!hint) break;
     hints.push(hint);
     applyStep(grid, step);
