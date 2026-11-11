@@ -129,6 +129,14 @@ export interface Hint {
     to: { cell: number; digit: number };
     strong: boolean;
   }>;
+  inference?: {
+    links: HintInferenceLink[];
+    premise?: {
+      candidate: { cell: number; digit: number };
+      assumed: "true" | "false";
+    };
+    closure?: "premise-forces-opposite" | "continuous-loop";
+  };
   instruction?: {
     provider: "sudokUI";
     revision: string;
@@ -145,6 +153,25 @@ export interface Hint {
     units: Array<{ unit: number; role: "primary" | "secondary" }>;
     frames: Array<{ text: string; show: string[] }>;
   };
+}
+
+export interface HintHouseRef {
+  kind: "row" | "column" | "box";
+  index: number;
+}
+
+export type HintInferenceReason =
+  | { kind: "only-candidates-in-cell"; cell: number; digits: number[] }
+  | { kind: "only-places-in-house"; house: HintHouseRef; digit: number }
+  | { kind: "same-cell-conflict"; cell: number }
+  | { kind: "shared-house-conflict"; house: HintHouseRef; digit: number };
+
+export interface HintInferenceLink {
+  from: Array<{ cell: number; digit: number }>;
+  to: Array<{ cell: number; digit: number }>;
+  strong: boolean;
+  reason?: HintInferenceReason;
+  sourceText?: string;
 }
 
 export interface HintPath {

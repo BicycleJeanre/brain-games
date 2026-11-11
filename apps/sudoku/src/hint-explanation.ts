@@ -1,4 +1,4 @@
-import type { Hint } from "./types.ts";
+import type { Hint, HintHouseRef, HintInferenceLink } from "./types.ts";
 
 export interface ContextualHintExplanation {
   title: string;
@@ -180,6 +180,108 @@ function gridSpecificInstructionExplanation(hint: Hint, context: ContextualHintC
 
 function viewFrom(cell: number, other: number): string {
   return sharedHouse(cell, other) || "a shared unit";
+}
+
+function houseName(house: HintHouseRef): string {
+  return `${house.kind[0].toUpperCase()}${house.kind.slice(1)} ${house.index + 1}`;
+}
+
+function inferenceNodeText(nodes: readonly { cell: number; digit: number }[], truth: boolean): string {
+  if (nodes.length === 1) {
+    const node = nodes[0];
+    return truth ? `${compactCell(node.cell)} is ${node.digit}` : `${compactCell(node.cell)} is not ${node.digit}`;
+  }
+  const digit = nodes[0]?.digit;
+  const cells = cellList(nodes.map(({ cell }) => cell));
+  if (nodes.every((node) => node.digit === digit)) {
+    return truth ? `one of ${cells} is ${digit}` : `none of ${cells} is ${digit}`;
+  }
+  const candidates = nodes.map(({ cell, digit }) => `${digit} at ${compactCell(cell)}`).join(" or ");
+  return truth ? `one of ${candidates} is true` : `all of ${candidates} are false`;
+}
+
+function linkReasonText(link: HintInferenceLink): string | null {
+  const reason = link.reason;
+  if (!reason) return null;
+  if (reason.kind === "only-candidates-in-cell") {
+    return `${compactCell(reason.cell)} has only ${reason.digits.join(" and ")} as candidates`;
+  }
+  if (reason.kind === "only-places-in-house") {
+    const cells = cellList([...link.from, ...link.to].map(({ cell }) => cell));
+    return `in ${houseName(reason.house)}, ${reason.digit} can appear only in ${cells}`;
+  }
+  if (reason.kind === "same-cell-conflict") {
+    return `${compactCell(reason.cell)} can contain only one value`;
+  }
+  const cells = cellList([...link.from, ...link.to].map(({ cell }) => cell));
+  return `${cells} share ${houseName(reason.house)}, which can contain ${reason.digit} only once`;
+}
+
+function inferenceStepText(link: HintInferenceLink): string {
+  const reason = linkReasonText(link);
+  const consequence = link.strong
+    ? `if ${inferenceNodeText(link.from, false)}, then ${inferenceNodeText(link.to, true)}`
+    : `if ${inferenceNodeText(link.from, true)}, then ${inferenceNodeText(link.to, false)}`;
+  if (reason) return `${reason[0].toUpperCase()}${reason.slice(1)}. Therefore, ${consequence}.`;
+  if (link.sourceText) return normalizeGridText(link.sourceText);
+  return `${link.strong ? "Strong link" : "Weak link"}: ${consequence}.`;
+}
+
+function niceLoopRoles(hint: Hint, context: ContextualHintContext): HintCellRole[] {
+  const inference = hint.inference;
+  if (!inference) return [];
+  const ordered = inference.links.flatMap((link, index) => index ? link.to : [...link.from, ...link.to]);
+  const cells = [...new Set(ordered.map(({ cell }) => cell))];
+  const premiseCell = inference.premise?.candidate.cell;
+  const loopStartCell = ordered[0]?.cell;
+  let chainNumber = 0;
+  return cells.map((cell) => {
+    const digits = [...new Set(ordered.filter((node) => node.cell === cell).map(({ digit }) => digit))];
+    const shown = context.candidates?.[cell] || [];
+    if (cell === premiseCell) {
+      return {
+        cell,
+        label: "Start assumption",
+        badge: "A",
+        detail: `${compactCell(cell)} · follow candidates ${candidateText(digits)}${shown.length ? ` within the cell's ${candidateText(shown)}` : ""}. The loop returns here to test the assumption.`,
+      };
+    }
+    chainNumber += 1;
+    return {
+      cell,
+      label: premiseCell === undefined && cell === loopStartCell ? "Loop start" : `Chain step ${chainNumber}`,
+      badge: String(chainNumber),
+      detail: `${compactCell(cell)} · the loop uses candidate${digits.length === 1 ? "" : "s"} ${candidateText(digits)} here.`,
+    };
+  });
+}
+
+function niceLoopExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
+  const inference = hint.inference;
+  if (!inference?.links.length || (hint.instruction?.techniqueCode !== "NICE_LOOP" && hint.technique !== "Nice Loop")) return null;
+  const premise = inference.premise;
+  const steps: string[] = [];
+  let definition: string;
+  if (premise) {
+    const candidate = `${premise.candidate.digit} at ${compactCell(premise.candidate.cell)}`;
+    definition = `This loop tests the assumption that ${candidate} is ${premise.assumed === "true" ? "true" : "false"}. Each highlighted link forces the next candidate until the loop returns to the start and forces the opposite. An assumption that contradicts itself cannot be correct.`;
+    steps.push(`Start by assuming ${compactCell(premise.candidate.cell)} is ${premise.assumed === "true" ? "" : "not "}${premise.candidate.digit}.`);
+  } else {
+    definition = "This is a continuous Nice Loop: strong and weak links alternate all the way back to the start. That makes exactly one end of every weak link true, so candidates conflicting with both ends of a weak link can be removed.";
+  }
+  steps.push(...inference.links.map(inferenceStepText));
+  if (premise) {
+    steps.push(`The loop has now forced the opposite of the starting assumption at ${compactCell(premise.candidate.cell)}. The starting assumption is impossible.`);
+  } else {
+    steps.push("The links close without breaking their strong–weak alternation, so each weak link has one true endpoint. Inspect the outlined target that conflicts with both endpoints of one of those weak links.");
+  }
+  return {
+    title: "Walk through this Nice Loop",
+    definition,
+    roles: niceLoopRoles(hint, context),
+    steps,
+    conclusion: actionConclusion(hint),
+  };
 }
 
 function xyWingExplanation(hint: Hint, context: ContextualHintContext): ContextualHintExplanation | null {
@@ -555,6 +657,8 @@ function bugPlusOneExplanation(hint: Hint, context: ContextualHintContext): Cont
 }
 
 export function contextualHintExplanation(hint: Hint, context: ContextualHintContext = {}): ContextualHintExplanation {
+  const niceLoop = niceLoopExplanation(hint, context);
+  if (niceLoop) return niceLoop;
   if (hint.technique === "Bivalue Universal Grave + 1") {
     const explanation = bugPlusOneExplanation(hint, context);
     if (explanation) return explanation;
