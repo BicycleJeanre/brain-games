@@ -11,6 +11,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   showValueSelection: true,
   showCandidateCalculation: true,
   showControlHelp: true,
+  showStrategyChecklist: false,
   autoCandidates: false,
   cleanCandidates: true,
   highlightPeers: true,
@@ -39,7 +40,7 @@ const preferenceValues = {
 } as const;
 
 const booleanPreferenceKeys = [
-  "showTimer", "showColours", "showLines", "showValueSelection", "showCandidateCalculation", "showControlHelp",
+  "showTimer", "showColours", "showLines", "showValueSelection", "showCandidateCalculation", "showControlHelp", "showStrategyChecklist",
   "autoCandidates", "cleanCandidates", "highlightPeers", "highlightMatches", "showMistakes", "mistakeLimit",
 ] as const;
 
@@ -144,6 +145,9 @@ function normalizeGame(game: Game): Game {
   game.history = Array.isArray(game.history) ? game.history.map((item) => normalizeSnapshot(item)) : [];
   game.future = Array.isArray(game.future) ? game.future.map((item) => normalizeSnapshot(item)) : [];
   game.hintHistory = Array.isArray(game.hintHistory) ? game.hintHistory : [];
+  game.strategyChecks = Array.isArray(game.strategyChecks)
+    ? [...new Set(game.strategyChecks.filter((id): id is TrainingTechniqueId => typeof id === "string" && trainingIds.has(id as TrainingTechniqueId)))]
+    : [];
   game.hintPath = normalizeHintPath(game.hintPath);
   let repairedCandidateState = false;
   for (let cell = 0; cell < game.values.length; cell++) {

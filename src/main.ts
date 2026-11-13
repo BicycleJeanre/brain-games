@@ -147,6 +147,7 @@ function settingsView() {
         ${toggleSetting("sudoku", "showLines", "Show line annotations", "Keep candidate-link drawing available in the player.", gamePreferences.sudoku.showLines)}
         ${toggleSetting("sudoku", "showValueSelection", "Show multi-value highlighting", "Allow several digits to be highlighted with OR/AND matching.", gamePreferences.sudoku.showValueSelection)}
         ${toggleSetting("sudoku", "showCandidateCalculation", "Show candidate calculation", "Keep the calculate-all-candidates action available.", gamePreferences.sudoku.showCandidateCalculation)}
+        ${toggleSetting("sudoku", "showStrategyChecklist", "Strategy checklist", "Show an ordered solving checklist in each puzzle, with a link to practise every strategy.", gamePreferences.sudoku.showStrategyChecklist)}
         ${selectSetting("sudoku", "digitSize", "Digit size", "Placed values in the Sudoku grid.", gamePreferences.sudoku.digitSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
         ${selectSetting("sudoku", "noteSize", "Note size", "Corner and centre candidate notes.", gamePreferences.sudoku.noteSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}
         ${selectSetting("sudoku", "menuSize", "Menu text size", "Navigation and primary player controls.", gamePreferences.sudoku.menuSize, [["small", "Small"], ["medium", "Medium"], ["large", "Large"]])}

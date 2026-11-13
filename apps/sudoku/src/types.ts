@@ -55,6 +55,7 @@ export interface Game extends BoardSnapshot {
   hintStage: "none" | "minimal" | "preview";
   hintId: string | null;
   hintHistory: HintRecord[];
+  strategyChecks: TrainingTechniqueId[];
   hintPath?: HintPath;
   challenge?: {
     cadence: ChallengeCadence;
@@ -71,6 +72,7 @@ export interface Preferences {
   showValueSelection: boolean;
   showCandidateCalculation: boolean;
   showControlHelp: boolean;
+  showStrategyChecklist: boolean;
   autoCandidates: boolean;
   cleanCandidates: boolean;
   highlightPeers: boolean;

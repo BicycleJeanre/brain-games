@@ -13,6 +13,7 @@ export interface SudokuPreferences {
   showValueSelection: boolean;
   showCandidateCalculation: boolean;
   showControlHelp: boolean;
+  showStrategyChecklist: boolean;
   autoCandidates: boolean;
   cleanCandidates: boolean;
   highlightPeers: boolean;
@@ -48,6 +49,7 @@ export interface GamePreferences {
 export const DEFAULT_SUDOKU_PREFERENCES: SudokuPreferences = {
   theme: "system", noteStyle: "advanced", showTimer: true, showColours: true, showLines: true,
   showValueSelection: true, showCandidateCalculation: true, showControlHelp: true, autoCandidates: false,
+  showStrategyChecklist: false,
   cleanCandidates: true, highlightPeers: true, highlightMatches: true, showMistakes: false, mistakeLimit: true,
   noteSize: "medium", menuSize: "medium", digitSize: "medium", noteColour: "classic", menuColour: "standard",
   digitColour: "cyan", highlightColour: "cyan",

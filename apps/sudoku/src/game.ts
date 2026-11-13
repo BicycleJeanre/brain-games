@@ -56,6 +56,7 @@ export function createGame(puzzle: Puzzle, now = Date.now()): Game {
     hintStage: "none",
     hintId: null,
     hintHistory: [],
+    strategyChecks: [],
   };
 }
 
