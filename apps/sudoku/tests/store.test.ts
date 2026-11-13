@@ -18,8 +18,10 @@ test("player preference presets migrate missing values and reject invalid values
   assert.equal(preferences.showColours, true);
   assert.equal(preferences.showMistakes, false, "immediate mistake highlighting defaults off for existing profiles");
   assert.equal(preferences.mistakeLimit, true, "the three-mistake limit defaults on for existing profiles");
+  assert.equal(preferences.showStrategyChecklist, false, "the strategy checklist is opt-in for existing profiles");
   assert.equal(normalizePreferences({ showMistakes: true }).showMistakes, true);
   assert.equal(normalizePreferences({ mistakeLimit: false }).mistakeLimit, false);
+  assert.equal(normalizePreferences({ showStrategyChecklist: true }).showStrategyChecklist, true);
 });
 
 test("IndexedDB persists active progress and backup import preserves existing IDs", async () => {
@@ -27,6 +29,7 @@ test("IndexedDB persists active progress and backup import preserves existing ID
   const first = new Store();
   await first.load();
   const game = createGame(puzzle, 100);
+  assert.deepEqual(game.strategyChecks, []);
   game.values[0] = "1";
   (game as unknown as { colours: string[] }).colours = ["cyan", ...Array(80).fill("")];
   delete (game as unknown as { lines?: unknown }).lines;
@@ -233,6 +236,7 @@ test("cloud encoding preserves authoritative play state without local history pa
   game.paused = true;
   game.colours[0] = ["cyan", "amber", "indigo"];
   game.lines = [{ from: 0, to: 10, colour: "rose" }];
+  game.strategyChecks = ["naked-single", "hidden-single"];
   game.hintPath = {
     engine: "HoDoKu TS test",
     generatedAt: 701,
@@ -247,6 +251,7 @@ test("cloud encoding preserves authoritative play state without local history pa
   assert.equal("cloudDirty" in encoded, false, "local queue metadata is not uploaded");
   assert.equal(encoded.colours[0], "cyan|amber|indigo");
   assert.deepEqual(encoded.lines, [{ from: 0, to: 10, colour: "rose" }]);
+  assert.deepEqual(encoded.strategyChecks, ["naked-single", "hidden-single"]);
   assert.equal("hintPath" in encoded, false, "regenerable hint paths stay on the device");
   assert.deepEqual(encoded.history, [], "undo history stays on the device");
   assert.deepEqual(encoded.future, [], "redo history stays on the device");
@@ -254,6 +259,7 @@ test("cloud encoding preserves authoritative play state without local history pa
   const decoded = decodeCloudGame(encoded);
   assert.deepEqual(decoded?.colours[0], ["cyan", "amber", "indigo"]);
   assert.deepEqual(decoded?.lines, [{ from: 0, to: 10, colour: "rose" }]);
+  assert.deepEqual(decoded?.strategyChecks, ["naked-single", "hidden-single"]);
   assert.deepEqual(decoded?.challenge, { cadence: "daily", periodKey: "2026-10-10" });
   assert.equal(decoded?.mistakes, 4, "the mistake count syncs with the puzzle session");
   assert.equal(decoded?.failedAt, 703, "the failed-at timestamp syncs across devices");

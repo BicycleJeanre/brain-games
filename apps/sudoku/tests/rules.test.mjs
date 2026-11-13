@@ -34,6 +34,7 @@ test("owners can store and read valid games while other users cannot", async () 
   await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/deselected"), { ...game, id: "deselected", selected: [] }));
   await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/lines"), { ...game, id: "lines", mode: "line", lines: [{ from: 0, to: 10, colour: "indigo" }] }));
   await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/daily"), { ...game, id: "daily", challenge: { cadence: "daily", periodKey: "2026-10-10" } }));
+  await assertSucceeds(setDoc(doc(owner, "users/owner/sudokuGames/checklist"), { ...game, id: "checklist", strategyChecks: ["naked-single", "hidden-single"] }));
   const gameWithHints = structuredClone(localGame);
   gameWithHints.id = "with-hints";
   gameWithHints.hintStage = "minimal";
@@ -53,6 +54,7 @@ test("rules reject malformed games and unauthenticated writes", async () => {
   await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/bad"), { ...game, id: "bad", values: [] }));
   await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/too-many-lines"), { ...game, id: "too-many-lines", lines: Array(161).fill({ from: 0, to: 1, colour: "cyan" }) }));
   await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/bad-challenge"), { ...game, id: "bad-challenge", challenge: { cadence: "monthly", periodKey: "2026-10" } }));
+  await assertFails(setDoc(doc(owner, "users/owner/sudokuGames/too-many-strategy-checks"), { ...game, id: "too-many-strategy-checks", strategyChecks: Array(22).fill("naked-single") }));
   await assertFails(setDoc(doc(guest, "users/owner/sudokuGames/game-1"), game));
 });
 

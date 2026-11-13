@@ -91,6 +91,29 @@ test("one settings surface owns preferences for every game", async ({ page }) =>
   await expect(page).toHaveURL(/brain-games\/?\?view=settings$/);
 });
 
+test("the optional Sudoku strategy checklist follows the curriculum and opens training", async ({ page }) => {
+  await page.goto("./?view=settings");
+  await page.getByLabel("Strategy checklist").check();
+  await expect(page.getByText("Saved for Sudoku.")).toBeVisible();
+
+  await page.getByRole("navigation", { name: "Brain Games" }).getByRole("link", { name: "Home", exact: true }).click();
+  await page.getByRole("link", { name: /Play Sudoku/ }).click();
+  await page.getByRole("button", { name: /Start an Easy puzzle/ }).click();
+
+  const checklist = page.locator(".strategy-checklist");
+  await expect(checklist.getByText("Strategy checklist", { exact: true })).toBeVisible();
+  await expect(checklist.locator("[data-strategy-check]")).toHaveCount(21);
+  await expect(checklist.locator("li").first()).toContainText("1. Naked single");
+  await expect(checklist.locator("li").last()).toContainText("21. Forcing chain");
+
+  await checklist.getByLabel(/1\. Naked single/).check();
+  await expect(checklist).toContainText("1/21 checked for this puzzle");
+  await checklist.getByRole("button", { name: "Open Naked single training" }).click();
+  await expect(page.getByRole("heading", { name: "Naked single", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back to puzzle" }).click();
+  await expect(page.locator(".strategy-checklist").getByLabel(/1\. Naked single/)).toBeChecked();
+});
+
 test("shared settings preserve an unpartitioned combined game record", async ({ page }) => {
   await page.goto("./?view=settings");
   await page.evaluate(async () => {

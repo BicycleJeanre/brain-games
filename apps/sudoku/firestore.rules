@@ -10,7 +10,7 @@ service cloud.firestore {
     function validGame(id) {
       let d = request.resource.data;
       return d.keys().hasAll(['version', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'eliminated', 'history', 'future', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'paused', 'hintStage', 'hintId'])
-        && d.keys().hasOnly(['version', 'cloudRevision', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'failedAt', 'mistakes', 'paused', 'hintStage', 'hintId', 'challenge'])
+        && d.keys().hasOnly(['version', 'cloudRevision', 'id', 'puzzle', 'values', 'corner', 'centre', 'colours', 'lines', 'eliminated', 'selected', 'anchor', 'mode', 'history', 'future', 'hintHistory', 'hintPath', 'elapsed', 'startedAt', 'updatedAt', 'completedAt', 'failedAt', 'mistakes', 'paused', 'hintStage', 'hintId', 'strategyChecks', 'challenge'])
         && d.version == 1
         && (!('cloudRevision' in d) || (d.cloudRevision is int && d.cloudRevision >= 0))
         && d.id == id && validId(id)
@@ -30,6 +30,8 @@ service cloud.firestore {
         && d.future is list && d.future.size() <= 80
         && (!('hintHistory' in d) || (d.hintHistory is list && d.hintHistory.size() <= 40))
         && (!('hintPath' in d) || (d.hintPath is string && d.hintPath.size() <= 200000))
+        && (!('strategyChecks' in d) || (d.strategyChecks is list && d.strategyChecks.size() <= 21
+          && d.strategyChecks.hasOnly(['naked-single', 'hidden-single', 'locked-candidates', 'naked-pair', 'naked-triple', 'x-wing', 'swordfish', 'jellyfish', 'skyscraper', 'two-string-kite', 'empty-rectangle', 'xy-wing', 'xyz-wing', 'w-wing', 'simple-coloring', 'x-chain', 'xy-chain', 'aic', 'unique-rectangle', 'als-xz', 'forcing-chain'])))
         && d.elapsed is int && d.elapsed >= 0 && d.elapsed <= 315576000
         && d.startedAt is number && d.startedAt > 0
         && d.updatedAt is number && d.updatedAt >= d.startedAt
@@ -89,7 +91,7 @@ service cloud.firestore {
         && (!('cloudRevision' in d) || (d.cloudRevision is int && d.cloudRevision >= 0))
         && d.preferences is map
         && d.preferences.keys().hasAll(['theme', 'showTimer', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes'])
-        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'mistakeLimit', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
+        && d.preferences.keys().hasOnly(['theme', 'noteStyle', 'showTimer', 'showColours', 'showLines', 'showValueSelection', 'showCandidateCalculation', 'showControlHelp', 'showStrategyChecklist', 'autoCandidates', 'cleanCandidates', 'highlightPeers', 'highlightMatches', 'showMistakes', 'mistakeLimit', 'noteSize', 'menuSize', 'digitSize', 'noteColour', 'menuColour', 'digitColour', 'highlightColour'])
         && d.preferences.theme in ['system', 'light', 'dark']
         && (!('noteStyle' in d.preferences) || d.preferences.noteStyle in ['simple', 'advanced'])
         && d.preferences.showTimer is bool
@@ -98,6 +100,7 @@ service cloud.firestore {
         && (!('showValueSelection' in d.preferences) || d.preferences.showValueSelection is bool)
         && (!('showCandidateCalculation' in d.preferences) || d.preferences.showCandidateCalculation is bool)
         && (!('showControlHelp' in d.preferences) || d.preferences.showControlHelp is bool)
+        && (!('showStrategyChecklist' in d.preferences) || d.preferences.showStrategyChecklist is bool)
         && d.preferences.autoCandidates is bool
         && d.preferences.cleanCandidates is bool
         && d.preferences.highlightPeers is bool

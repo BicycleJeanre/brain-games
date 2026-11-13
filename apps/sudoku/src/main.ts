@@ -46,6 +46,7 @@ let celebratingGameId: string | null = null;
 let celebrationTimer: number | null = null;
 let activeAnnotationColour: AnnotationColour = "cyan";
 let activeTraining: TrainingTechniqueId | null = null;
+let trainingOpenedFromPlayer = false;
 let trainingStage: "learn" | "find" | "deduce" | "complete" = "learn";
 let trainingSelection = new Set<number>();
 let trainingFeedback = "";
@@ -323,8 +324,9 @@ function renderTrainingHub(scrollToLessons = false) {
   if (scrollToLessons) requestAnimationFrame(() => document.querySelector("#lessons-title")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
 }
 
-function openTraining(id: TrainingTechniqueId) {
+function openTraining(id: TrainingTechniqueId, fromPlayer = false) {
   view = "training";
+  trainingOpenedFromPlayer = fromPlayer;
   activeHint = null;
   revealedHintId = null;
   historicalHintReview = null;
@@ -396,7 +398,15 @@ function renderTrainingLesson() {
   else if (trainingStage === "deduce") panel = `<span class="eyebrow">Step 3 · Make the deduction · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>${escapeHtml(technique.deductionPrompt)}</h2><p>Tap a candidate in the grid. ${position.hint.kind === "place" ? "A correct choice places it." : "A correct choice removes it."}</p>${trainingFeedback ? `<p class="training-feedback" role="status">${escapeHtml(trainingFeedback)}</p>` : ""}<button class="secondary" id="training-answer">${reveal ? "Answer shown" : "Show the answer"}</button>`;
   else panel = `<span class="eyebrow">Lesson complete · Exercise ${trainingPracticeIndex + 1} of ${practiceCount}</span><h2>You used ${escapeHtml(technique.title)}.</h2><p>${trainingAssisted ? "You completed the reasoning with guidance. Repeat it without a clue to build independent mastery." : "You found the pattern and made the deduction independently."}</p><div class="training-complete-mark" aria-hidden="true">✓</div><div class="stack-actions"><button class="primary" id="training-repeat">Practice another position</button><button class="secondary" id="training-next">Next technique</button><button class="text-button" id="training-all">All lessons</button></div>`;
   shell(`<div class="lesson-toolbar"><button class="text-button" id="training-back">← All training</button><div class="lesson-steps" aria-label="Lesson progress">${[1,2,3,4].map((step) => `<i class="${step <= stageNumber ? "active" : ""}">${step}</i>`).join("")}</div></div><section class="lesson-player"><div class="training-board-column">${trainingBoard(position, trainingStage, reveal)}${trainingHighlightControls()}</div><aside class="lesson-panel card">${panel}</aside></section><p class="training-source"><a href="${escapeHtml(position.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(position.origin)}</a> · verified locally by the pinned HoDoKu engine</p>`, `${technique.title} training`);
-  app.querySelector("#training-back")?.addEventListener("click", () => { activeTraining = null; trainingHighlightCell = null; highlightedDigits.clear(); renderTrainingHub(); });
+  const trainingBack = app.querySelector<HTMLButtonElement>("#training-back");
+  if (trainingOpenedFromPlayer && trainingBack) trainingBack.textContent = "← Back to puzzle";
+  trainingBack?.addEventListener("click", () => {
+    activeTraining = null;
+    trainingHighlightCell = null;
+    highlightedDigits.clear();
+    if (trainingOpenedFromPlayer) { trainingOpenedFromPlayer = false; view = "player"; renderPlayer(); }
+    else renderTrainingHub();
+  });
   app.querySelector("#training-practice")?.addEventListener("click", () => { trainingStage = "find"; trainingSelection.clear(); trainingHighlightCell = null; highlightedDigits.clear(); trainingFeedback = ""; renderTrainingLesson(); });
   app.querySelectorAll<HTMLElement>("[data-training-value-cell]").forEach((cell) => cell.addEventListener("click", () => { const index = Number(cell.dataset.trainingValueCell); trainingHighlightCell = index; highlightOnly(Number(position.values[index])); renderTrainingLesson(); }));
   app.querySelectorAll<HTMLElement>("[data-training-highlight-digit]").forEach((button) => button.addEventListener("click", () => { trainingHighlightCell = null; const digit = Number(button.dataset.trainingHighlightDigit); if (store.data.preferences.showValueSelection) toggleHighlight(digit); else highlightOnly(digit); renderTrainingLesson(); }));
@@ -426,7 +436,7 @@ function renderTrainingLesson() {
     renderTrainingLesson();
   });
   app.querySelector("#training-all")?.addEventListener("click", () => { activeTraining = null; trainingHighlightCell = null; highlightedDigits.clear(); renderTrainingHub(); });
-  app.querySelector("#training-next")?.addEventListener("click", () => { const index = TRAINING_TECHNIQUES.findIndex((item) => item.id === activeTraining); openTraining(TRAINING_TECHNIQUES[(index + 1) % TRAINING_TECHNIQUES.length].id); });
+  app.querySelector("#training-next")?.addEventListener("click", () => { const index = TRAINING_TECHNIQUES.findIndex((item) => item.id === activeTraining); openTraining(TRAINING_TECHNIQUES[(index + 1) % TRAINING_TECHNIQUES.length].id, trainingOpenedFromPlayer); });
   app.querySelectorAll<HTMLElement>("#main, .app-header").forEach((surface) => surface.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
     if ((!highlightedDigits.size && trainingHighlightCell === null) || target.closest(".training-board, .training-highlight-controls, button, a, input, select, textarea, dialog")) return;
@@ -678,6 +688,18 @@ function hintTrainingMarkup(hint: Hint): string {
   return training ? `<button class="text-button hint-training-link" data-hint-training="${training.id}">Practice ${escapeHtml(training.title)} →</button>` : "";
 }
 
+function strategyChecklistMarkup(game: Game): string {
+  const checked = new Set(game.strategyChecks);
+  return `<details class="strategy-checklist" open>
+    <summary><span><strong>Strategy checklist</strong><small data-strategy-count>${checked.size}/${TRAINING_TECHNIQUES.length} checked for this puzzle</small></span><span aria-hidden="true">⌄</span></summary>
+    <p>Start at the top. Check each strategy after you have looked for it, then move to the next one.</p>
+    <ol>${TRAINING_TECHNIQUES.map((technique, index) => `<li>
+      <label><input type="checkbox" data-strategy-check="${technique.id}" ${checked.has(technique.id) ? "checked" : ""}/><span><b>${index + 1}. ${escapeHtml(technique.title)}</b><small>${escapeHtml(technique.family)}</small></span></label>
+      <button class="text-button" data-strategy-training="${technique.id}" aria-label="Open ${escapeHtml(technique.title)} training">Train</button>
+    </li>`).join("")}</ol>
+  </details>`;
+}
+
 function showHintHistory(game: Game) {
   const items = game.hintHistory.filter((hint) => hintRespectsGivens(hint, game.puzzle.givens)).reverse();
   showDialog(`<span class="eyebrow">Puzzle notebook</span><h2>Previous hints</h2>${items.length ? `<div class="hint-history">${items.map((hint) => {
@@ -750,6 +772,7 @@ function renderPlayer() {
         <div class="toolbar"><button id="undo" aria-label="Undo" ${terminal || !game.history.length ? "disabled" : ""}>↶<small>Undo</small></button><button id="redo" aria-label="Redo" ${terminal || !game.future.length ? "disabled" : ""}>↷<small>Redo</small></button><button id="pause" aria-label="${game.paused ? "Resume" : "Pause"} puzzle" ${terminal ? "disabled" : ""}>${game.paused ? "▶" : "Ⅱ"}<small>${game.paused ? "Resume" : "Pause"}</small></button><button id="hint" aria-label="Get a logical hint" ${terminal ? "disabled" : ""}>?<small>Hint</small></button></div>
         ${hintPanel}
         ${game.hintHistory.some((hint) => hintRespectsGivens(hint, game.puzzle.givens)) ? `<button id="hint-history" class="history-button">Previous hints (${game.hintHistory.filter((hint) => hintRespectsGivens(hint, game.puzzle.givens)).length})</button>` : ""}
+        ${preferences.showStrategyChecklist ? strategyChecklistMarkup(game) : ""}
         ${(() => { const modes: [EntryMode, string][] = [["normal", "Digit"], ...(preferences.noteStyle === "advanced" ? [["corner", "Corner"]] as [EntryMode, string][] : []), ["centre", preferences.noteStyle === "simple" ? "Notes" : "Centre"], ...(preferences.showColours ? [["colour", "Colour"]] as [EntryMode, string][] : []), ...(preferences.showLines ? [["line", "Lines"]] as [EntryMode, string][] : [])]; return `<div class="mode-switch" style="--mode-count:${modes.length}" role="group" aria-label="Entry mode">${modes.map(([mode,label]) => `<button data-mode="${mode}" class="${game.mode === mode ? "active" : ""}" aria-pressed="${game.mode === mode}">${label}</button>`).join("")}</div>`; })()}
         ${game.mode === "colour" || game.mode === "line" ? annotationPalette(game) : `<div class="number-pad" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9].map((digit) => { const complete = digitIsComplete(game.values, digit); const active = highlightedDigits.has(digit); return `<button data-digit="${digit}" class="${active ? "active-digit " : ""}${complete ? "complete-digit" : ""}" aria-pressed="${active}" aria-label="${digit}${complete ? ", all placed" : ""}" ${terminal ? "disabled" : ""}>${digit}</button>`; }).join("")}<button id="clear" class="clear-key" ${terminal ? "disabled" : ""}>Clear</button></div><div class="highlight-options ${highlightMode ? "" : "hidden"}"><p>Highlight cells containing:</p><div role="group" aria-label="Multiple digit matching"><button data-highlight-operator="or" aria-pressed="${highlightOperator === "or"}">Any digit · OR</button><button data-highlight-operator="and" aria-pressed="${highlightOperator === "and"}">All digits · AND</button></div></div>`}
         <div class="selection-tools ${preferences.showValueSelection ? "" : "single"}"><button id="multi" class="multi-toggle ${multiSelect ? "active" : ""}" aria-pressed="${multiSelect}"><span aria-hidden="true">▦</span> Multi-select ${multiSelect ? "on" : "off"}</button>${preferences.showValueSelection ? `<button id="highlight-mode" class="multi-toggle ${highlightMode ? "active" : ""}" aria-label="Highlight multiple values" aria-pressed="${highlightMode}"><span aria-hidden="true">◎</span> Highlight values ${highlightMode ? "on" : "off"}</button>` : ""}</div>
@@ -855,8 +878,20 @@ function bindPlayer(game: Game) {
   const hintTrainingButton = app.querySelector<HTMLElement>("[data-hint-training]");
   hintTrainingButton?.addEventListener("click", () => {
     const trainingId = hintTrainingButton.dataset.hintTraining as TrainingTechniqueId;
-    setTimeout(() => openTraining(trainingId), 0);
+    setTimeout(() => openTraining(trainingId, true), 0);
   });
+  app.querySelectorAll<HTMLInputElement>("[data-strategy-check]").forEach((input) => input.addEventListener("change", async () => {
+    const id = input.dataset.strategyCheck as TrainingTechniqueId;
+    const checked = new Set(game.strategyChecks);
+    if (input.checked) checked.add(id); else checked.delete(id);
+    game.strategyChecks = TRAINING_TECHNIQUES.map((technique) => technique.id).filter((techniqueId) => checked.has(techniqueId));
+    await store.putGame(game);
+    const count = app.querySelector<HTMLElement>("[data-strategy-count]");
+    if (count) count.textContent = `${game.strategyChecks.length}/${TRAINING_TECHNIQUES.length} checked for this puzzle`;
+  }));
+  app.querySelectorAll<HTMLElement>("[data-strategy-training]").forEach((button) => button.addEventListener("click", () => {
+    openTraining(button.dataset.strategyTraining as TrainingTechniqueId, true);
+  }));
   app.querySelector("#apply-hint")?.addEventListener("click", async () => {
     const hint = activeHint;
     if (!hint) return;
